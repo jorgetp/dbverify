@@ -52,3 +52,20 @@ You can code down your own Tamarin model for a given protocol. Take into account
   where ```V``` is the verifier's name, ```P``` is the prover's name who the claim is being made about, ```ch``` is the fast phase challenge, and ```rp``` is the fast phase response.
 
 Once you have coded your protocol, say into ```my_protocol.spthy```, add the line ```//GENERIC CODE AFTER THIS LINE``` right before ```end```. Then run ```Makefile``` which outputs the proof in ```my_protocol.proof```.
+
+## Read the results
+
+Each lemma in ```generic``` has a column in the table depicted in ```results.html```. To identify the attacks, these are a few hints:
+* Run Tamarin in interactive mode ```tamarin-prover interactive my_protocol.spthy``` and inspect the trace that invalidates ```dbsec```.
+* If the lemma ```dbsec_on_honest_prover``` fails then there's a **mafia fraud**.
+* If the lemma ```dbsec_on_corrupt_prover``` fails then there's a **distance fraud** or a **distance hijacking** or both.
+
+## On wellformedness warnings
+
+The warnings reported here are due to equational theory of ```xor```.
+
+## Contact
+
+Should you have any inquiries, email me at ```jorgeXtoroYuniXlu``` where ```X``` is dot and ```Y``` is at.
+
+
