@@ -1,0 +1,721 @@
+maude tool: 'maude'
+ checking version: 2.7.1. OK.
+ checking installation: OK.
+SAPIC tool: 'sapic'
+Checking availablity ... OK.
+
+theory paysafe begin
+
+// Function signature and definition of the equational theory E
+
+functions: MAC/4, adec/2, aenc/2, fst/1, pair/2, pk/1, sdec/2, senc/2,
+           sign/2, snd/1, true/0, verify/3
+equations:
+    adec(aenc(x.1, pk(x.2)), x.2) = x.1,
+    fst(<x.1, x.2>) = x.1,
+    sdec(senc(x.1, x.2), x.2) = x.1,
+    snd(<x.1, x.2>) = x.2,
+    verify(sign(x.1, x.2), x.1, pk(x.2)) = true
+
+rule (modulo E) Card1Constant:
+   [ Fr( ~nc ) ]
+  --[ Start( ~nc ), Action( $C ) ]->
+   [ Send( $C, 'hello' ), Card1( $C, ~nc, 'ATC' ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Reader1:
+   [ Fr( ~UN ), Fr( ~amount ), In( 'hello' ) ]
+  --[ Start( ~UN ), Send( $R, <~UN, ~amount> ) ]->
+   [ Out( <~UN, ~amount> ), Reader1( $R, ~UN, ~amount ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Card2:
+   [ Card1( C, nc, ATC ), In( <UN, amount> ) ]
+  --[ Action( C ) ]->
+   [ Send( C, <ATC, nc> ), Card2( C, nc, ATC, UN, amount ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Reader2:
+   [ Reader1( R, UN, amount ), Recv( R, <ATC, nc> ) ]
+  -->
+   [ Reader2( R, UN, amount, ATC, nc ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Reader3:
+   [ Reader2( R, UN, amount, ATC, nc ) ]
+  -->
+   [ Out( 'hi' ), Reader3( R, UN, amount, ATC, nc ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Card3:
+   [
+   Card2( C, nc, ATC, UN, amount ), In( 'hi' ), !Ltk( C, ltkC ),
+   !Shk( $R, C, KM )
+   ]
+  --[ Action( C ), End( nc ) ]->
+   [
+   Send( C,
+         <sign(<nc, UN, MAC(senc(ATC, KM), amount, ATC, UN)>, ltkC), 
+          MAC(senc(ATC, KM), amount, ATC, UN)>
+   )
+   ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Reader4:
+   [
+   Reader3( R, UN, amount, ATC, nc ),
+   In( <SDAD, MAC(senc(ATC, KM), amount, ATC, UN)> ), !Pk( $C, pkC ),
+   !Shk( R, $C, KM )
+   ]
+  --[
+  Eq( verify(SDAD, <nc, UN, MAC(senc(ATC, KM), amount, ATC, UN)>, pkC),
+      true
+  ),
+  DBSec( R, $C, <UN, amount>, <ATC, nc> ), End( UN )
+  ]->
+   [ ]
+
+  /*
+  rule (modulo AC) Reader4:
+     [
+     Reader3( R, UN, amount, ATC, nc ),
+     In( <SDAD, MAC(senc(ATC, KM), amount, ATC, UN)> ), !Pk( $C, pkC ),
+     !Shk( R, $C, KM )
+     ]
+    --[ Eq( z, true ), DBSec( R, $C, <UN, amount>, <ATC, nc> ), End( UN ) ]->
+     [ ]
+    variants (modulo AC)
+    1. ATC   = ATC.11
+       KM    = KM.11
+       SDAD  = SDAD.11
+       UN    = UN.11
+       amount
+             = amount.11
+       nc    = nc.11
+       pkC   = pkC.11
+       z     = verify(SDAD.11,
+                      <nc.11, UN.11, MAC(senc(ATC.11, KM.11), amount.11, ATC.11, UN.11)>,
+                      pkC.11)
+    
+    2. ATC   = x.11
+       KM    = x.15
+       SDAD  = sign(<x.12, x.13, MAC(senc(x.11, x.15), x.16, x.11, x.13)>, x.14)
+       UN    = x.13
+       amount
+             = x.16
+       nc    = x.12
+       pkC   = pk(x.14)
+       z     = true
+  */
+
+lemma complete_trace_exists:
+  exists-trace
+  "∃ R C nc UN amount ATC #t1 #t2 #t3 #t4 #t5 #t6.
+    ((((((((((((Start( nc ) @ #t1) ∧ (Action( C ) @ #t1)) ∧
+              (Start( UN ) @ #t2)) ∧
+             (Send( R, <UN, amount> ) @ #t2)) ∧
+            (Action( C ) @ #t3)) ∧
+           (Recv( R, <ATC, nc> ) @ #t4)) ∧
+          (Action( C ) @ #t5)) ∧
+         (DBSec( R, C, <UN, amount>, <ATC, nc> ) @ #t6)) ∧
+        (#t1 < #t2)) ∧
+       (#t2 < #t3)) ∧
+      (#t3 < #t4)) ∧
+     (#t4 < #t5)) ∧
+    (#t5 < #t6)"
+/*
+guarded formula characterizing all satisfying traces:
+"∃ R C nc UN amount ATC #t1 #t2 #t3 #t4 #t5 #t6.
+  (Start( nc ) @ #t1) ∧
+  (Action( C ) @ #t1) ∧
+  (Start( UN ) @ #t2) ∧
+  (Send( R, <UN, amount> ) @ #t2) ∧
+  (Action( C ) @ #t3) ∧
+  (Recv( R, <ATC, nc> ) @ #t4) ∧
+  (Action( C ) @ #t5) ∧
+  (DBSec( R, C, <UN, amount>, <ATC, nc> ) @ #t6)
+ ∧
+  (#t1 < #t2) ∧ (#t2 < #t3) ∧ (#t3 < #t4) ∧ (#t4 < #t5) ∧ (#t5 < #t6)"
+*/
+simplify
+solve( Send( $A, <ATC, nc> ) ▶₀ #t4 )
+  case Adv_case_1
+  solve( Reader3( $R, ~UN, ~amount, ATC, nc ) ▶₀ #t6 )
+    case Reader3_case_1
+    solve( !Pk( $C, pk(x) ) ▶₂ #t6 )
+      case AsymKey
+      solve( !Shk( $R, $C, KM ) ▶₃ #t6 )
+        case SymKey
+        solve( Start( ~nc ) @ #t1 )
+          case Card1Constant
+          solve( Action( $C ) @ #t1 )
+            case Card1Constant
+            solve( Start( ~UN ) @ #t2 )
+              case Reader1
+              solve( Action( $A ) @ #t3 )
+                case Card1Constant
+                solve( Action( $A ) @ #t5 )
+                  case Card1Constant
+                  solve( !KU( sign(<~nc, ~UN, MAC(senc('ATC', ~k), ~amount, 'ATC', ~UN)>,
+                                   ~k.1)
+                         ) @ #vk.2 )
+                    case Net
+                    solve( !KU( ~nc ) @ #vk.6 )
+                      case Net
+                      solve( !KU( ~UN ) @ #vk.8 )
+                        case Reader1
+                        solve( !KU( ~amount ) @ #vk.9 )
+                          case Reader1
+                          solve( !KU( MAC(senc('ATC', ~k), ~amount, 'ATC', ~UN) ) @ #vk.8 )
+                            case Net
+                            SOLVED // trace found
+                          qed
+                        qed
+                      qed
+                    qed
+                  qed
+                qed
+              qed
+            qed
+          qed
+        qed
+      qed
+    qed
+  qed
+qed
+
+restriction equals:
+  "∀ a b #i. (Eq( a, b ) @ #i) ⇒ (a = b)"
+  // safety formula
+
+rule (modulo E) AsymKey:
+   [ Fr( ~k ) ]
+  --[ Once( $A ) ]->
+   [ !Ltk( $A, ~k ), !Pk( $A, pk(~k) ), Out( pk(~k) ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) SymKey:
+   [ Fr( ~k ) ] --[ Once( <$A, $B> ) ]-> [ !Shk( $A, $B, ~k ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) LtkReveal:
+   [ !Ltk( $A, k ) ] --[ Corrupt( $A ) ]-> [ !CorruptAgnt( $A ), Out( k ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) ShkRevealA:
+   [ !Shk( $A, $B, k ) ]
+  --[ Corrupt( $A ) ]->
+   [ !CorruptAgnt( $A ), Out( k ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) ShkRevealB:
+   [ !Shk( $A, $B, k ) ]
+  --[ Corrupt( $B ) ]->
+   [ !CorruptAgnt( $B ), Out( k ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Adv:
+   [ In( m ), !CorruptAgnt( $A ) ] --[ Action( $A ) ]-> [ Send( $A, m ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Net:
+   [ Send( $A, m ) ] --[ Recv( $B, m ) ]-> [ Recv( $B, m ), Out( m ) ]
+
+  /* has exactly the trivial AC variant */
+
+lemma unique_runid:
+  all-traces
+  "∀ x #i #j. ((Start( x ) @ #i) ∧ (Start( x ) @ #j)) ⇒ (#i = #j)"
+/*
+guarded formula characterizing all counter-examples:
+"∃ x #i #j. (Start( x ) @ #i) ∧ (Start( x ) @ #j) ∧ ¬(#i = #j)"
+*/
+simplify
+solve( (#i < #j)  ∥ (#j < #i) )
+  case case_1
+  solve( Start( x ) @ #i )
+    case Card1Constant
+    solve( Start( ~nc ) @ #j )
+      case Card1Constant
+      by contradiction /* cyclic */
+    qed
+  next
+    case Reader1
+    solve( Start( ~UN ) @ #j )
+      case Reader1
+      by contradiction /* cyclic */
+    qed
+  qed
+next
+  case case_2
+  solve( Start( x ) @ #i )
+    case Card1Constant
+    solve( Start( ~nc ) @ #j )
+      case Card1Constant
+      by contradiction /* cyclic */
+    qed
+  next
+    case Reader1
+    solve( Start( ~UN ) @ #j )
+      case Reader1
+      by contradiction /* cyclic */
+    qed
+  qed
+qed
+
+lemma end_after_start:
+  all-traces
+  "∀ x #j.
+    (End( x ) @ #j) ⇒ (∃ #i. (Start( x ) @ #i) ∧ ((#i = #j) ∨ (#i < #j)))"
+/*
+guarded formula characterizing all counter-examples:
+"∃ x #j.
+  (End( x ) @ #j) ∧ ∀ #i. (Start( x ) @ #i) ⇒ (¬(#i = #j)) ∧ (¬(#i < #j))"
+*/
+simplify
+solve( End( x ) @ #j )
+  case Card3
+  solve( Card2( C, x, ATC, UN, amount ) ▶₀ #j )
+    case Card2
+    by contradiction /* from formulas */
+  qed
+next
+  case Reader4
+  solve( Reader3( R, x, amount, ATC, nc ) ▶₀ #j )
+    case Reader3_case_1
+    by contradiction /* from formulas */
+  next
+    case Reader3_case_2
+    by contradiction /* from formulas */
+  next
+    case Reader3_case_3
+    by contradiction /* from formulas */
+  next
+    case Reader3_case_4
+    by contradiction /* from formulas */
+  next
+    case Reader3_case_5
+    by contradiction /* from formulas */
+  qed
+qed
+
+restriction once:
+  "∀ x #i #j. ((Once( x ) @ #i) ∧ (Once( x ) @ #j)) ⇒ (#i = #j)"
+  // safety formula
+
+lemma dbsec:
+  all-traces
+  "∀ V P ch rp #l.
+    (DBSec( V, P, ch, rp ) @ #l) ⇒
+    (((∃ #i. (Corrupt( V ) @ #i) ∧ (#i < #l)) ∨
+      (∃ #i #j #k.
+        (((((Send( V, ch ) @ #i) ∧ (Action( P ) @ #j)) ∧ (Recv( V, rp ) @ #k)) ∧
+          (#i < #j)) ∧
+         (#j < #k)) ∧
+        (#k < #l))) ∨
+     (∃ A #a #p #i #j #k.
+       (((((((((Corrupt( A ) @ #a) ∧ (#a < #l)) ∧ (Corrupt( P ) @ #p)) ∧
+             (#p < #l)) ∧
+            (Send( V, ch ) @ #i)) ∧
+           (Action( A ) @ #j)) ∧
+          (Recv( V, rp ) @ #k)) ∧
+         (#i < #j)) ∧
+        (#j < #k)) ∧
+       (#k < #l)))"
+/*
+guarded formula characterizing all counter-examples:
+"∃ V P ch rp #l.
+  (DBSec( V, P, ch, rp ) @ #l)
+ ∧
+  (∀ #i. (Corrupt( V ) @ #i) ⇒ ¬(#i < #l)) ∧
+  (∀ #i #j #k.
+    (Send( V, ch ) @ #i) ∧ (Action( P ) @ #j) ∧ (Recv( V, rp ) @ #k)
+   ⇒
+    ((¬(#i < #j)) ∨ (¬(#j < #k)) ∨ (¬(#k < #l)))) ∧
+  (∀ A #a #p #i #j #k.
+    (Corrupt( A ) @ #a) ∧
+    (Corrupt( P ) @ #p) ∧
+    (Send( V, ch ) @ #i) ∧
+    (Action( A ) @ #j) ∧
+    (Recv( V, rp ) @ #k)
+   ⇒
+    ((¬(#a < #l)) ∨
+     (¬(#p < #l)) ∨
+     (¬(#i < #j)) ∨
+     (¬(#j < #k)) ∨
+     (¬(#k < #l))))"
+*/
+simplify
+solve( Reader3( V, UN, amount, ATC, nc ) ▶₀ #l )
+  case Reader3_case_1
+  solve( !Pk( $C, pk(x) ) ▶₂ #l )
+    case AsymKey
+    solve( !Shk( $R, $C, KM ) ▶₃ #l )
+      case SymKey
+      solve( !KU( sign(<~nc, ~UN, MAC(senc('ATC', ~k), ~amount, 'ATC', ~UN)>,
+                       ~k.1)
+             ) @ #vk.1 )
+        case c_sign
+        solve( !KU( ~k.1 ) @ #vk.9 )
+          case LtkReveal
+          solve( !KU( MAC(senc('ATC', ~k), ~amount, 'ATC', ~UN) ) @ #vk.3 )
+            case Net
+            solve( (¬(#vr.2 < #vr.10))  ∥ (¬(#vr.10 < #vr.3)) )
+              case case_2
+              solve( (¬(#vr.2 < #vr.12))  ∥ (¬(#vr.12 < #vr.3)) )
+                case case_2
+                solve( (¬(#vr.2 < #vr.13))  ∥ (¬(#vr.13 < #vr.3)) )
+                  case case_1
+                  solve( !KU( ~nc ) @ #vk.10 )
+                    case Net
+                    solve( !KU( ~UN ) @ #vk.11 )
+                      case Reader1
+                      solve( !KU( ~amount ) @ #vk.14 )
+                        case Reader1
+                        SOLVED // trace found
+                      qed
+                    qed
+                  qed
+                qed
+              qed
+            qed
+          qed
+        qed
+      qed
+    qed
+  qed
+qed
+
+lemma dbsec_on_honest_prover:
+  all-traces
+  "∀ V P ch rp #l.
+    (DBSec( V, P, ch, rp ) @ #l) ⇒
+    (((∃ #i. (Corrupt( V ) @ #i) ∧ (#i < #l)) ∨
+      (∃ #i. (Corrupt( P ) @ #i) ∧ (#i < #l))) ∨
+     (∃ #i #j #k.
+       (((((Send( V, ch ) @ #i) ∧ (Action( P ) @ #j)) ∧ (Recv( V, rp ) @ #k)) ∧
+         (#i < #j)) ∧
+        (#j < #k)) ∧
+       (#k < #l)))"
+/*
+guarded formula characterizing all counter-examples:
+"∃ V P ch rp #l.
+  (DBSec( V, P, ch, rp ) @ #l)
+ ∧
+  (∀ #i. (Corrupt( V ) @ #i) ⇒ ¬(#i < #l)) ∧
+  (∀ #i. (Corrupt( P ) @ #i) ⇒ ¬(#i < #l)) ∧
+  (∀ #i #j #k.
+    (Send( V, ch ) @ #i) ∧ (Action( P ) @ #j) ∧ (Recv( V, rp ) @ #k)
+   ⇒
+    ((¬(#i < #j)) ∨ (¬(#j < #k)) ∨ (¬(#k < #l))))"
+*/
+simplify
+solve( Reader3( V, UN, amount, ATC, nc ) ▶₀ #l )
+  case Reader3_case_1
+  solve( !Pk( $C, pk(x) ) ▶₂ #l )
+    case AsymKey
+    solve( !Shk( $R, $C, KM ) ▶₃ #l )
+      case SymKey
+      solve( !KU( sign(<~nc, ~UN, MAC(senc('ATC', ~k), ~amount, 'ATC', ~UN)>,
+                       ~k.1)
+             ) @ #vk.1 )
+        case Net
+        solve( (¬(#vr.2 < #vr.9))  ∥ (¬(#vr.9 < #vr.3)) )
+          case case_1
+          solve( !KU( ~UN ) @ #vk.5 )
+            case Reader1
+            by contradiction /* cyclic */
+          qed
+        next
+          case case_2
+          solve( !KU( ~UN ) @ #vk.5 )
+            case Reader1
+            by contradiction /* cyclic */
+          qed
+        qed
+      next
+        case c_sign
+        solve( !KU( ~k.1 ) @ #vk.9 )
+          case LtkReveal
+          by contradiction /* from formulas */
+        qed
+      qed
+    qed
+  qed
+next
+  case Reader3_case_2
+  solve( !Pk( $C, pk(x) ) ▶₂ #l )
+    case AsymKey
+    solve( !Shk( $R, $C, KM ) ▶₃ #l )
+      case SymKey
+      solve( !KU( sign(<MAC(senc('ATC', ~k), amount.1, 'ATC', UN.1), ~UN, 
+                        MAC(senc(sign(<~nc, UN.1, MAC(senc('ATC', ~k), amount.1, 'ATC', UN.1)>,
+                                      ~k.1),
+                                 ~k.2),
+                            ~amount,
+                            sign(<~nc, UN.1, MAC(senc('ATC', ~k), amount.1, 'ATC', UN.1)>, ~k.1),
+                            ~UN)
+                       >,
+                       ~k.3)
+             ) @ #vk.1 )
+        case c_sign
+        solve( !KU( ~k.3 ) @ #vk.10 )
+          case LtkReveal
+          by contradiction /* from formulas */
+        qed
+      qed
+    qed
+  qed
+next
+  case Reader3_case_3
+  solve( !Pk( $C, pk(x) ) ▶₂ #l )
+    case AsymKey
+    solve( !Shk( $R, $C, KM ) ▶₃ #l )
+      case SymKey
+      solve( !KU( sign(<nc, ~UN, MAC(senc(ATC, ~k), ~amount, ATC, ~UN)>, ~k.1)
+             ) @ #vk.1 )
+        case Net
+        solve( (¬(#vr.2 < #vr.10))  ∥ (¬(#vr.10 < #vr.3)) )
+          case case_1
+          solve( !KU( ~UN ) @ #vk.9 )
+            case Reader1
+            by contradiction /* cyclic */
+          qed
+        next
+          case case_2
+          solve( (¬(#vr.2 < #vr.12))  ∥ (¬(#vr.12 < #vr.3)) )
+            case case_1
+            solve( !KU( ~UN ) @ #vk.9 )
+              case Reader1
+              by contradiction /* cyclic */
+            qed
+          next
+            case case_2
+            solve( (¬(#vr.2 < #vr.13))  ∥ (¬(#vr.13 < #vr.3)) )
+              case case_1
+              solve( !KU( ~nc ) @ #vk.6 )
+                case Net
+                by contradiction /* cyclic */
+              qed
+            next
+              case case_2
+              solve( !KU( ~nc ) @ #vk.6 )
+                case Net
+                by contradiction /* cyclic */
+              qed
+            qed
+          qed
+        qed
+      next
+        case c_sign
+        solve( !KU( ~k.1 ) @ #vk.9 )
+          case LtkReveal
+          by contradiction /* from formulas */
+        qed
+      qed
+    qed
+  qed
+next
+  case Reader3_case_4
+  solve( !Pk( $C, pk(x) ) ▶₂ #l )
+    case AsymKey
+    solve( !Shk( $R, $C, KM ) ▶₃ #l )
+      case SymKey
+      solve( !KU( sign(<nc, ~UN, MAC(senc(ATC, ~k), ~amount, ATC, ~UN)>, ~k.1)
+             ) @ #vk.1 )
+        case Net
+        solve( (¬(#vr.2 < #vr.10))  ∥ (¬(#vr.10 < #vr.3)) )
+          case case_1
+          solve( !KU( ~UN ) @ #vk.9 )
+            case Reader1
+            by contradiction /* cyclic */
+          qed
+        next
+          case case_2
+          solve( (¬(#vr.2 < #vr.12))  ∥ (¬(#vr.12 < #vr.3)) )
+            case case_1
+            solve( !KU( ~UN ) @ #vk.9 )
+              case Reader1
+              by contradiction /* cyclic */
+            qed
+          next
+            case case_2
+            solve( (¬(#vr.2 < #vr.13))  ∥ (¬(#vr.13 < #vr.3)) )
+              case case_1
+              solve( !KU( ~nc ) @ #vk.6 )
+                case Net
+                by contradiction /* cyclic */
+              qed
+            next
+              case case_2
+              solve( !KU( ~nc ) @ #vk.6 )
+                case Net
+                by contradiction /* cyclic */
+              qed
+            qed
+          qed
+        qed
+      next
+        case c_sign
+        solve( !KU( ~k.1 ) @ #vk.9 )
+          case LtkReveal
+          by contradiction /* from formulas */
+        qed
+      qed
+    qed
+  qed
+next
+  case Reader3_case_5
+  solve( !Pk( $C, pk(x) ) ▶₂ #l )
+    case AsymKey
+    solve( !Shk( $R, $C, KM ) ▶₃ #l )
+      case SymKey
+      solve( !KU( sign(<nc, ~UN, MAC(senc(ATC, ~k), ~amount, ATC, ~UN)>, ~k.1)
+             ) @ #vk.1 )
+        case Net
+        solve( (¬(#vr.2 < #vr.10))  ∥ (¬(#vr.10 < #vr.3)) )
+          case case_1
+          solve( !KU( ~UN ) @ #vk.9 )
+            case Reader1
+            by contradiction /* cyclic */
+          qed
+        next
+          case case_2
+          solve( (¬(#vr.2 < #vr.12))  ∥ (¬(#vr.12 < #vr.3)) )
+            case case_1
+            solve( !KU( ~UN ) @ #vk.9 )
+              case Reader1
+              by contradiction /* cyclic */
+            qed
+          next
+            case case_2
+            solve( (¬(#vr.2 < #vr.13))  ∥ (¬(#vr.13 < #vr.3)) )
+              case case_1
+              solve( !KU( ~nc ) @ #vk.6 )
+                case Net
+                by contradiction /* cyclic */
+              qed
+            next
+              case case_2
+              solve( !KU( ~nc ) @ #vk.6 )
+                case Net
+                by contradiction /* cyclic */
+              qed
+            qed
+          qed
+        qed
+      next
+        case c_sign
+        solve( !KU( ~k.1 ) @ #vk.9 )
+          case LtkReveal
+          by contradiction /* from formulas */
+        qed
+      qed
+    qed
+  qed
+qed
+
+lemma dbsec_on_corrupt_prover:
+  all-traces
+  "∀ V P ch rp #l.
+    (DBSec( V, P, ch, rp ) @ #l) ⇒
+    (((∃ #i. (Corrupt( V ) @ #i) ∧ (#i < #l)) ∨
+      (¬(∃ #i. (Corrupt( P ) @ #i) ∧ (#i < #l)))) ∨
+     (∃ A #a #i #j #k.
+       (((((((Corrupt( A ) @ #a) ∧ (#a < #l)) ∧ (Send( V, ch ) @ #i)) ∧
+           (Action( A ) @ #j)) ∧
+          (Recv( V, rp ) @ #k)) ∧
+         (#i < #j)) ∧
+        (#j < #k)) ∧
+       (#k < #l)))"
+/*
+guarded formula characterizing all counter-examples:
+"∃ V P ch rp #l.
+  (DBSec( V, P, ch, rp ) @ #l)
+ ∧
+  (∀ #i. (Corrupt( V ) @ #i) ⇒ ¬(#i < #l)) ∧
+  (∃ #i. (Corrupt( P ) @ #i) ∧ #i < #l) ∧
+  (∀ A #a #i #j #k.
+    (Corrupt( A ) @ #a) ∧
+    (Send( V, ch ) @ #i) ∧
+    (Action( A ) @ #j) ∧
+    (Recv( V, rp ) @ #k)
+   ⇒
+    ((¬(#a < #l)) ∨ (¬(#i < #j)) ∨ (¬(#j < #k)) ∨ (¬(#k < #l))))"
+*/
+simplify
+solve( Reader3( V, UN, amount, ATC, nc ) ▶₀ #l )
+  case Reader3_case_1
+  solve( !Pk( $C, pk(x) ) ▶₂ #l )
+    case AsymKey
+    solve( !Shk( $R, $C, KM ) ▶₃ #l )
+      case SymKey
+      solve( Corrupt( $C ) @ #i )
+        case LtkReveal
+        solve( !Ltk( $C, k ) ▶₀ #i )
+          case AsymKey
+          solve( !KU( sign(<~nc, ~UN, MAC(senc('ATC', ~k.1), ~amount, 'ATC', ~UN)>,
+                           ~k)
+                 ) @ #vk.1 )
+            case c_sign
+            solve( !KU( MAC(senc('ATC', ~k.1), ~amount, 'ATC', ~UN) ) @ #vk.2 )
+              case Net
+              solve( (¬(#vr.2 < #vr.9))  ∥ (¬(#vr.9 < #vr.3)) )
+                case case_2
+                solve( (¬(#vr.2 < #vr.11))  ∥ (¬(#vr.11 < #vr.3)) )
+                  case case_2
+                  solve( (¬(#vr.2 < #vr.12))  ∥ (¬(#vr.12 < #vr.3)) )
+                    case case_1
+                    solve( !KU( ~k ) @ #vk.9 )
+                      case LtkReveal
+                      solve( !KU( ~nc ) @ #vk.10 )
+                        case Net
+                        solve( !KU( ~UN ) @ #vk.11 )
+                          case Reader1
+                          solve( !KU( ~amount ) @ #vk.14 )
+                            case Reader1
+                            SOLVED // trace found
+                          qed
+                        qed
+                      qed
+                    qed
+                  qed
+                qed
+              qed
+            qed
+          qed
+        qed
+      qed
+    qed
+  qed
+qed
+
+/* All well-formedness checks were successful. */
+
+end
+
+==============================================================================
+summary of summaries:
+
+analyzed: paysafe.spthy
+
+  complete_trace_exists (exists-trace): verified (16 steps)
+  unique_runid (all-traces): verified (12 steps)
+  end_after_start (all-traces): verified (10 steps)
+  dbsec (all-traces): falsified - found trace (14 steps)
+  dbsec_on_honest_prover (all-traces): verified (65 steps)
+  dbsec_on_corrupt_prover (all-traces): falsified - found trace (16 steps)
+
+==============================================================================

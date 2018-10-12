@@ -18,7 +18,7 @@ For further details see our **IEEE S\&P'18** paper [Distance-Bounding Protocols:
 Execute the ```Makefile``` which does the following:
 
 1. The content of ```generic``` is written after the line ```//GENERIC CODE AFTER THIS LINE``` in each one of the ```.spthy``` files.
- ***Be aware that this overwrites whatever is thereafter***.
+ *Be aware that this overrides whatever is thereafter*.
 2. The Tamarin proof of each one of the files from step above is written into the corresponding ```.proof``` file.
 
 ## DBVerify your own protocol

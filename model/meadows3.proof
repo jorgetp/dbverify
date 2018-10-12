@@ -1,0 +1,1500 @@
+maude tool: 'maude'
+ checking version: 2.7.1. OK.
+ checking installation: OK.
+SAPIC tool: 'sapic'
+Checking availablity ... OK.
+
+theory meadows3 begin
+
+// Function signature and definition of the equational theory E
+
+functions: adec/2, aenc/2, f/3, fst/1, h/2, pair/2, pk/1, sdec/2, senc/2,
+           snd/1
+equations:
+    adec(aenc(x.1, pk(x.2)), x.2) = x.1,
+    fst(<x.1, x.2>) = x.1,
+    sdec(senc(x.1, x.2), x.2) = x.1,
+    snd(<x.1, x.2>) = x.2
+
+rule (modulo E) Verifier1:
+   [ Fr( ~nv ) ]
+  --[ Start( ~nv ) ]->
+   [ Out( <$V, 'hello'> ), VerifierState1( $V, ~nv ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Prover1:
+   [ Fr( ~np ), In( <V, 'hello'> ) ]
+  --[ Start( ~np ), Action( $P ) ]->
+   [ ProverState1( V, $P, ~np ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Verifier2:
+   [ VerifierState1( V, nv ) ]
+  --[ Send( V, nv ) ]->
+   [ Out( nv ), VerifierState2( V, nv ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Prover2:
+   [ ProverState1( V, P, np ), In( nv ) ]
+  --[ Action( P ) ]->
+   [ Send( P, f(nv, P, np) ), ProverState2( V, P, np, nv ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Verifier3:
+   [ VerifierState2( V, nv ), Recv( V, resp ) ]
+  -->
+   [ VerifierState3( V, nv, resp ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Prover3:
+   [ ProverState2( V, P, np, nv ), !Shk( V, P, k ) ]
+  --[ Action( P ), End( np ) ]->
+   [ Send( P, <<P, 'locP', np, nv>, h(k, <P, 'locP', np, nv>)> ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Verifier4:
+   [
+   VerifierState3( V, nv, f(nv, P, np) ),
+   In( <<P, locP, np, nv>, h(k, <P, locP, np, nv>)> ), !Shk( V, P, k )
+   ]
+  --[ DBSec( V, P, nv, f(nv, P, np) ), End( nv ) ]->
+   [ ]
+
+  /* has exactly the trivial AC variant */
+
+lemma complete_trace_exists:
+  exists-trace
+  "∃ V P nv np #t1 #t2 #t3 #t4 #t5 #t6 #t7.
+    (((((((((((((Start( nv ) @ #t1) ∧ (Start( np ) @ #t2)) ∧
+               (Action( P ) @ #t2)) ∧
+              (Send( V, nv ) @ #t3)) ∧
+             (Action( P ) @ #t4)) ∧
+            (Recv( V, f(nv, P, np) ) @ #t5)) ∧
+           (Action( P ) @ #t6)) ∧
+          (DBSec( V, P, nv, f(nv, P, np) ) @ #t7)) ∧
+         (#t1 < #t2)) ∧
+        (#t2 < #t3)) ∧
+       (#t3 < #t4)) ∧
+      (#t4 < #t5)) ∧
+     (#t5 < #t6)) ∧
+    (#t6 < #t7)"
+/*
+guarded formula characterizing all satisfying traces:
+"∃ V P nv np #t1 #t2 #t3 #t4 #t5 #t6 #t7.
+  (Start( nv ) @ #t1) ∧
+  (Start( np ) @ #t2) ∧
+  (Action( P ) @ #t2) ∧
+  (Send( V, nv ) @ #t3) ∧
+  (Action( P ) @ #t4) ∧
+  (Recv( V, f(nv, P, np) ) @ #t5) ∧
+  (Action( P ) @ #t6) ∧
+  (DBSec( V, P, nv, f(nv, P, np) ) @ #t7)
+ ∧
+  (#t1 < #t2) ∧
+  (#t2 < #t3) ∧
+  (#t3 < #t4) ∧
+  (#t4 < #t5) ∧
+  (#t5 < #t6) ∧
+  (#t6 < #t7)"
+*/
+simplify
+solve( VerifierState1( $B, nv ) ▶₀ #t3 )
+  case Verifier1
+  solve( Send( $A, f(~nv, P, np) ) ▶₀ #t5 )
+    case Adv_case_1
+    solve( VerifierState3( $B, ~nv, f(~nv, P, np) ) ▶₀ #t7 )
+      case Verifier3_case_1
+      solve( !Shk( $B, $A.1, k ) ▶₂ #t7 )
+        case SymKey
+        solve( Start( ~nv ) @ #t1 )
+          case Verifier1
+          solve( Start( ~np ) @ #t2 )
+            case Prover1
+            solve( Action( $A ) @ #t2 )
+              case Prover1
+              solve( Action( $A ) @ #t4 )
+                case Adv
+                solve( !CorruptAgnt( $A ) ▶₁ #t4 )
+                  case LtkReveal
+                  solve( Action( $A ) @ #t6 )
+                    case Prover1
+                    solve( !KU( ~np ) @ #vk.6 )
+                      case Net
+                      solve( !KU( h(~k, <$A.1, locP, ~np, ~nv>) ) @ #vk.8 )
+                        case Net
+                        solve( !KU( ~nv ) @ #vk.8 )
+                          case Verifier2
+                          solve( !KU( f(~nv, $A.1, ~np) ) @ #vk.9 )
+                            case Net
+                            SOLVED // trace found
+                          qed
+                        qed
+                      qed
+                    qed
+                  qed
+                qed
+              qed
+            qed
+          qed
+        qed
+      qed
+    qed
+  qed
+qed
+
+rule (modulo E) AsymKey:
+   [ Fr( ~k ) ]
+  --[ Once( $A ) ]->
+   [ !Ltk( $A, ~k ), !Pk( $A, pk(~k) ), Out( pk(~k) ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) SymKey:
+   [ Fr( ~k ) ] --[ Once( <$A, $B> ) ]-> [ !Shk( $A, $B, ~k ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) LtkReveal:
+   [ !Ltk( $A, k ) ] --[ Corrupt( $A ) ]-> [ !CorruptAgnt( $A ), Out( k ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) ShkRevealA:
+   [ !Shk( $A, $B, k ) ]
+  --[ Corrupt( $A ) ]->
+   [ !CorruptAgnt( $A ), Out( k ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) ShkRevealB:
+   [ !Shk( $A, $B, k ) ]
+  --[ Corrupt( $B ) ]->
+   [ !CorruptAgnt( $B ), Out( k ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Adv:
+   [ In( m ), !CorruptAgnt( $A ) ] --[ Action( $A ) ]-> [ Send( $A, m ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Net:
+   [ Send( $A, m ) ] --[ Recv( $B, m ) ]-> [ Recv( $B, m ), Out( m ) ]
+
+  /* has exactly the trivial AC variant */
+
+lemma unique_runid:
+  all-traces
+  "∀ x #i #j. ((Start( x ) @ #i) ∧ (Start( x ) @ #j)) ⇒ (#i = #j)"
+/*
+guarded formula characterizing all counter-examples:
+"∃ x #i #j. (Start( x ) @ #i) ∧ (Start( x ) @ #j) ∧ ¬(#i = #j)"
+*/
+simplify
+solve( (#i < #j)  ∥ (#j < #i) )
+  case case_1
+  solve( Start( x ) @ #i )
+    case Prover1
+    solve( Start( ~np ) @ #j )
+      case Prover1
+      by contradiction /* cyclic */
+    qed
+  next
+    case Verifier1
+    solve( Start( ~nv ) @ #j )
+      case Verifier1
+      by contradiction /* cyclic */
+    qed
+  qed
+next
+  case case_2
+  solve( Start( x ) @ #i )
+    case Prover1
+    solve( Start( ~np ) @ #j )
+      case Prover1
+      by contradiction /* cyclic */
+    qed
+  next
+    case Verifier1
+    solve( Start( ~nv ) @ #j )
+      case Verifier1
+      by contradiction /* cyclic */
+    qed
+  qed
+qed
+
+lemma end_after_start:
+  all-traces
+  "∀ x #j.
+    (End( x ) @ #j) ⇒ (∃ #i. (Start( x ) @ #i) ∧ ((#i = #j) ∨ (#i < #j)))"
+/*
+guarded formula characterizing all counter-examples:
+"∃ x #j.
+  (End( x ) @ #j) ∧ ∀ #i. (Start( x ) @ #i) ⇒ (¬(#i = #j)) ∧ (¬(#i < #j))"
+*/
+simplify
+solve( End( x ) @ #j )
+  case Prover3
+  solve( ProverState2( V, P, x, nv ) ▶₀ #j )
+    case Prover2
+    by contradiction /* from formulas */
+  qed
+next
+  case Verifier4
+  solve( VerifierState3( V, x, f(x, P, np) ) ▶₀ #j )
+    case Verifier3_case_1
+    by contradiction /* from formulas */
+  next
+    case Verifier3_case_2
+    by contradiction /* from formulas */
+  next
+    case Verifier3_case_3
+    by contradiction /* from formulas */
+  next
+    case Verifier3_case_4
+    by contradiction /* from formulas */
+  qed
+qed
+
+restriction once:
+  "∀ x #i #j. ((Once( x ) @ #i) ∧ (Once( x ) @ #j)) ⇒ (#i = #j)"
+  // safety formula
+
+lemma dbsec:
+  all-traces
+  "∀ V P ch rp #l.
+    (DBSec( V, P, ch, rp ) @ #l) ⇒
+    (((∃ #i. (Corrupt( V ) @ #i) ∧ (#i < #l)) ∨
+      (∃ #i #j #k.
+        (((((Send( V, ch ) @ #i) ∧ (Action( P ) @ #j)) ∧ (Recv( V, rp ) @ #k)) ∧
+          (#i < #j)) ∧
+         (#j < #k)) ∧
+        (#k < #l))) ∨
+     (∃ A #a #p #i #j #k.
+       (((((((((Corrupt( A ) @ #a) ∧ (#a < #l)) ∧ (Corrupt( P ) @ #p)) ∧
+             (#p < #l)) ∧
+            (Send( V, ch ) @ #i)) ∧
+           (Action( A ) @ #j)) ∧
+          (Recv( V, rp ) @ #k)) ∧
+         (#i < #j)) ∧
+        (#j < #k)) ∧
+       (#k < #l)))"
+/*
+guarded formula characterizing all counter-examples:
+"∃ V P ch rp #l.
+  (DBSec( V, P, ch, rp ) @ #l)
+ ∧
+  (∀ #i. (Corrupt( V ) @ #i) ⇒ ¬(#i < #l)) ∧
+  (∀ #i #j #k.
+    (Send( V, ch ) @ #i) ∧ (Action( P ) @ #j) ∧ (Recv( V, rp ) @ #k)
+   ⇒
+    ((¬(#i < #j)) ∨ (¬(#j < #k)) ∨ (¬(#k < #l)))) ∧
+  (∀ A #a #p #i #j #k.
+    (Corrupt( A ) @ #a) ∧
+    (Corrupt( P ) @ #p) ∧
+    (Send( V, ch ) @ #i) ∧
+    (Action( A ) @ #j) ∧
+    (Recv( V, rp ) @ #k)
+   ⇒
+    ((¬(#a < #l)) ∨
+     (¬(#p < #l)) ∨
+     (¬(#i < #j)) ∨
+     (¬(#j < #k)) ∨
+     (¬(#k < #l))))"
+*/
+simplify
+solve( VerifierState3( V, ch, f(ch, P, np) ) ▶₀ #l )
+  case Verifier3_case_1
+  solve( !Shk( $B, $A, k ) ▶₂ #l )
+    case SymKey
+    solve( !KU( ~nv ) @ #vk.7 )
+      case Verifier2
+      by contradiction /* cyclic */
+    qed
+  qed
+next
+  case Verifier3_case_2
+  solve( !Shk( $B, P, k ) ▶₂ #l )
+    case SymKey
+    solve( !KU( h(~k, <$B.1, locP, np, ~nv>) ) @ #vk.8 )
+      case Net
+      solve( (¬(#vr.1 < #vr.9))  ∥ (¬(#vr.9 < #vr.2)) )
+        case case_1
+        solve( !KU( ~nv ) @ #vk.8 )
+          case Verifier2
+          by contradiction /* cyclic */
+        qed
+      next
+        case case_2
+        solve( (¬(#vr.1 < #vr.11))  ∥ (¬(#vr.11 < #vr.2)) )
+          case case_1
+          solve( !KU( ~nv ) @ #vk.8 )
+            case Verifier2
+            by contradiction /* cyclic */
+          qed
+        next
+          case case_2
+          solve( (¬(#vr.1 < #vr.12))  ∥ (¬(#vr.12 < #vr.2)) )
+            case case_1
+            solve( !KU( f(~nv, $B.1, ~np) ) @ #vk.9 )
+              case Net
+              by contradiction /* cyclic */
+            next
+              case c_f
+              solve( !KU( ~np ) @ #vk.8 )
+                case Net
+                by contradiction /* cyclic */
+              qed
+            qed
+          next
+            case case_2
+            solve( !KU( f(~nv, $B.1, ~np) ) @ #vk.9 )
+              case Net
+              by contradiction /* cyclic */
+            next
+              case c_f
+              solve( !KU( ~np ) @ #vk.8 )
+                case Net
+                by contradiction /* cyclic */
+              qed
+            qed
+          qed
+        qed
+      qed
+    next
+      case c_h
+      solve( !KU( ~k ) @ #vk.10 )
+        case ShkRevealA
+        by contradiction /* from formulas */
+      next
+        case ShkRevealB
+        solve( !KU( f(~nv, $B.1, np) ) @ #vk.10 )
+          case Net
+          solve( !KU( ~nv ) @ #vk.10 )
+            case Verifier2
+            by contradiction /* cyclic */
+          qed
+        next
+          case c_f
+          solve( !KU( ~nv ) @ #vk.10 )
+            case Verifier2
+            by contradiction /* cyclic */
+          qed
+        qed
+      qed
+    qed
+  qed
+next
+  case Verifier3_case_3
+  solve( !Shk( $B, P, k ) ▶₂ #l )
+    case SymKey
+    solve( !KU( h(~k, <$B.1, locP, np, ~nv>) ) @ #vk.8 )
+      case Net
+      solve( (¬(#vr.1 < #vr.9))  ∥ (¬(#vr.9 < #vr.2)) )
+        case case_1
+        solve( !KU( ~nv ) @ #vk.8 )
+          case Verifier2
+          by contradiction /* cyclic */
+        qed
+      next
+        case case_2
+        solve( (¬(#vr.1 < #vr.11))  ∥ (¬(#vr.11 < #vr.2)) )
+          case case_1
+          solve( !KU( ~nv ) @ #vk.8 )
+            case Verifier2
+            by contradiction /* cyclic */
+          qed
+        next
+          case case_2
+          solve( (¬(#vr.1 < #vr.12))  ∥ (¬(#vr.12 < #vr.2)) )
+            case case_1
+            solve( !KU( f(~nv, $B.1, ~np) ) @ #vk.9 )
+              case Net
+              by contradiction /* cyclic */
+            next
+              case c_f
+              solve( !KU( ~np ) @ #vk.8 )
+                case Net
+                by contradiction /* cyclic */
+              qed
+            qed
+          next
+            case case_2
+            solve( !KU( f(~nv, $B.1, ~np) ) @ #vk.9 )
+              case Net
+              by contradiction /* cyclic */
+            next
+              case c_f
+              solve( !KU( ~np ) @ #vk.8 )
+                case Net
+                by contradiction /* cyclic */
+              qed
+            qed
+          qed
+        qed
+      qed
+    next
+      case c_h
+      solve( !KU( ~k ) @ #vk.10 )
+        case ShkRevealA
+        by contradiction /* from formulas */
+      next
+        case ShkRevealB
+        solve( !KU( f(~nv, $B.1, np) ) @ #vk.10 )
+          case Net
+          solve( !KU( ~nv ) @ #vk.10 )
+            case Verifier2
+            by contradiction /* cyclic */
+          qed
+        next
+          case c_f
+          solve( !KU( ~nv ) @ #vk.10 )
+            case Verifier2
+            by contradiction /* cyclic */
+          qed
+        qed
+      qed
+    qed
+  qed
+next
+  case Verifier3_case_4
+  solve( !Shk( $B, P, k ) ▶₂ #l )
+    case SymKey
+    solve( !KU( h(~k, <$B.1, locP, np, ~nv>) ) @ #vk.8 )
+      case Net
+      solve( (¬(#vr.1 < #vr.9))  ∥ (¬(#vr.9 < #vr.2)) )
+        case case_1
+        solve( !KU( ~nv ) @ #vk.8 )
+          case Verifier2
+          by contradiction /* cyclic */
+        qed
+      next
+        case case_2
+        solve( (¬(#vr.1 < #vr.11))  ∥ (¬(#vr.11 < #vr.2)) )
+          case case_1
+          solve( !KU( ~nv ) @ #vk.8 )
+            case Verifier2
+            by contradiction /* cyclic */
+          qed
+        next
+          case case_2
+          solve( (¬(#vr.1 < #vr.12))  ∥ (¬(#vr.12 < #vr.2)) )
+            case case_1
+            solve( !KU( f(~nv, $B.1, ~np) ) @ #vk.9 )
+              case Net
+              by contradiction /* cyclic */
+            next
+              case c_f
+              solve( !KU( ~np ) @ #vk.8 )
+                case Net
+                by contradiction /* cyclic */
+              qed
+            qed
+          next
+            case case_2
+            solve( !KU( f(~nv, $B.1, ~np) ) @ #vk.9 )
+              case Net
+              by contradiction /* cyclic */
+            next
+              case c_f
+              solve( !KU( ~np ) @ #vk.8 )
+                case Net
+                by contradiction /* cyclic */
+              qed
+            qed
+          qed
+        qed
+      qed
+    next
+      case c_h
+      solve( !KU( ~k ) @ #vk.10 )
+        case ShkRevealA
+        by contradiction /* from formulas */
+      next
+        case ShkRevealB
+        solve( !KU( f(~nv, $B.1, np) ) @ #vk.10 )
+          case Net
+          solve( !KU( ~nv ) @ #vk.10 )
+            case Verifier2
+            by contradiction /* cyclic */
+          qed
+        next
+          case c_f
+          solve( !KU( ~nv ) @ #vk.10 )
+            case Verifier2
+            by contradiction /* cyclic */
+          qed
+        qed
+      qed
+    qed
+  qed
+qed
+
+lemma dbsec_on_honest_prover:
+  all-traces
+  "∀ V P ch rp #l.
+    (DBSec( V, P, ch, rp ) @ #l) ⇒
+    (((∃ #i. (Corrupt( V ) @ #i) ∧ (#i < #l)) ∨
+      (∃ #i. (Corrupt( P ) @ #i) ∧ (#i < #l))) ∨
+     (∃ #i #j #k.
+       (((((Send( V, ch ) @ #i) ∧ (Action( P ) @ #j)) ∧ (Recv( V, rp ) @ #k)) ∧
+         (#i < #j)) ∧
+        (#j < #k)) ∧
+       (#k < #l)))"
+/*
+guarded formula characterizing all counter-examples:
+"∃ V P ch rp #l.
+  (DBSec( V, P, ch, rp ) @ #l)
+ ∧
+  (∀ #i. (Corrupt( V ) @ #i) ⇒ ¬(#i < #l)) ∧
+  (∀ #i. (Corrupt( P ) @ #i) ⇒ ¬(#i < #l)) ∧
+  (∀ #i #j #k.
+    (Send( V, ch ) @ #i) ∧ (Action( P ) @ #j) ∧ (Recv( V, rp ) @ #k)
+   ⇒
+    ((¬(#i < #j)) ∨ (¬(#j < #k)) ∨ (¬(#k < #l))))"
+*/
+simplify
+solve( VerifierState3( V, ch, f(ch, P, np) ) ▶₀ #l )
+  case Verifier3_case_1
+  solve( !Shk( $B, $A, k ) ▶₂ #l )
+    case SymKey
+    solve( !KU( ~nv ) @ #vk.7 )
+      case Verifier2
+      by contradiction /* cyclic */
+    qed
+  qed
+next
+  case Verifier3_case_2
+  solve( !Shk( $B, P, k ) ▶₂ #l )
+    case SymKey
+    solve( !KU( h(~k, <$B.1, locP, np, ~nv>) ) @ #vk.8 )
+      case Net
+      solve( (¬(#vr.1 < #vr.9))  ∥ (¬(#vr.9 < #vr.2)) )
+        case case_1
+        solve( !KU( ~nv ) @ #vk.8 )
+          case Verifier2
+          by contradiction /* cyclic */
+        qed
+      next
+        case case_2
+        solve( (¬(#vr.1 < #vr.11))  ∥ (¬(#vr.11 < #vr.2)) )
+          case case_1
+          solve( !KU( ~nv ) @ #vk.8 )
+            case Verifier2
+            by contradiction /* cyclic */
+          qed
+        next
+          case case_2
+          solve( (¬(#vr.1 < #vr.12))  ∥ (¬(#vr.12 < #vr.2)) )
+            case case_1
+            solve( !KU( f(~nv, $B.1, ~np) ) @ #vk.9 )
+              case Net
+              by contradiction /* cyclic */
+            next
+              case c_f
+              solve( !KU( ~np ) @ #vk.8 )
+                case Net
+                by contradiction /* cyclic */
+              qed
+            qed
+          next
+            case case_2
+            solve( !KU( f(~nv, $B.1, ~np) ) @ #vk.9 )
+              case Net
+              by contradiction /* cyclic */
+            next
+              case c_f
+              solve( !KU( ~np ) @ #vk.8 )
+                case Net
+                by contradiction /* cyclic */
+              qed
+            qed
+          qed
+        qed
+      qed
+    next
+      case c_h
+      solve( !KU( ~k ) @ #vk.10 )
+        case ShkRevealA
+        by contradiction /* from formulas */
+      next
+        case ShkRevealB
+        by contradiction /* from formulas */
+      qed
+    qed
+  qed
+next
+  case Verifier3_case_3
+  solve( !Shk( $B, P, k ) ▶₂ #l )
+    case SymKey
+    solve( !KU( h(~k, <$B.1, locP, np, ~nv>) ) @ #vk.8 )
+      case Net
+      solve( (¬(#vr.1 < #vr.9))  ∥ (¬(#vr.9 < #vr.2)) )
+        case case_1
+        solve( !KU( ~nv ) @ #vk.8 )
+          case Verifier2
+          by contradiction /* cyclic */
+        qed
+      next
+        case case_2
+        solve( (¬(#vr.1 < #vr.11))  ∥ (¬(#vr.11 < #vr.2)) )
+          case case_1
+          solve( !KU( ~nv ) @ #vk.8 )
+            case Verifier2
+            by contradiction /* cyclic */
+          qed
+        next
+          case case_2
+          solve( (¬(#vr.1 < #vr.12))  ∥ (¬(#vr.12 < #vr.2)) )
+            case case_1
+            solve( !KU( f(~nv, $B.1, ~np) ) @ #vk.9 )
+              case Net
+              by contradiction /* cyclic */
+            next
+              case c_f
+              solve( !KU( ~np ) @ #vk.8 )
+                case Net
+                by contradiction /* cyclic */
+              qed
+            qed
+          next
+            case case_2
+            solve( !KU( f(~nv, $B.1, ~np) ) @ #vk.9 )
+              case Net
+              by contradiction /* cyclic */
+            next
+              case c_f
+              solve( !KU( ~np ) @ #vk.8 )
+                case Net
+                by contradiction /* cyclic */
+              qed
+            qed
+          qed
+        qed
+      qed
+    next
+      case c_h
+      solve( !KU( ~k ) @ #vk.10 )
+        case ShkRevealA
+        by contradiction /* from formulas */
+      next
+        case ShkRevealB
+        by contradiction /* from formulas */
+      qed
+    qed
+  qed
+next
+  case Verifier3_case_4
+  solve( !Shk( $B, P, k ) ▶₂ #l )
+    case SymKey
+    solve( !KU( h(~k, <$B.1, locP, np, ~nv>) ) @ #vk.8 )
+      case Net
+      solve( (¬(#vr.1 < #vr.9))  ∥ (¬(#vr.9 < #vr.2)) )
+        case case_1
+        solve( !KU( ~nv ) @ #vk.8 )
+          case Verifier2
+          by contradiction /* cyclic */
+        qed
+      next
+        case case_2
+        solve( (¬(#vr.1 < #vr.11))  ∥ (¬(#vr.11 < #vr.2)) )
+          case case_1
+          solve( !KU( ~nv ) @ #vk.8 )
+            case Verifier2
+            by contradiction /* cyclic */
+          qed
+        next
+          case case_2
+          solve( (¬(#vr.1 < #vr.12))  ∥ (¬(#vr.12 < #vr.2)) )
+            case case_1
+            solve( !KU( f(~nv, $B.1, ~np) ) @ #vk.9 )
+              case Net
+              by contradiction /* cyclic */
+            next
+              case c_f
+              solve( !KU( ~np ) @ #vk.8 )
+                case Net
+                by contradiction /* cyclic */
+              qed
+            qed
+          next
+            case case_2
+            solve( !KU( f(~nv, $B.1, ~np) ) @ #vk.9 )
+              case Net
+              by contradiction /* cyclic */
+            next
+              case c_f
+              solve( !KU( ~np ) @ #vk.8 )
+                case Net
+                by contradiction /* cyclic */
+              qed
+            qed
+          qed
+        qed
+      qed
+    next
+      case c_h
+      solve( !KU( ~k ) @ #vk.10 )
+        case ShkRevealA
+        by contradiction /* from formulas */
+      next
+        case ShkRevealB
+        by contradiction /* from formulas */
+      qed
+    qed
+  qed
+qed
+
+lemma dbsec_on_corrupt_prover:
+  all-traces
+  "∀ V P ch rp #l.
+    (DBSec( V, P, ch, rp ) @ #l) ⇒
+    (((∃ #i. (Corrupt( V ) @ #i) ∧ (#i < #l)) ∨
+      (¬(∃ #i. (Corrupt( P ) @ #i) ∧ (#i < #l)))) ∨
+     (∃ A #a #i #j #k.
+       (((((((Corrupt( A ) @ #a) ∧ (#a < #l)) ∧ (Send( V, ch ) @ #i)) ∧
+           (Action( A ) @ #j)) ∧
+          (Recv( V, rp ) @ #k)) ∧
+         (#i < #j)) ∧
+        (#j < #k)) ∧
+       (#k < #l)))"
+/*
+guarded formula characterizing all counter-examples:
+"∃ V P ch rp #l.
+  (DBSec( V, P, ch, rp ) @ #l)
+ ∧
+  (∀ #i. (Corrupt( V ) @ #i) ⇒ ¬(#i < #l)) ∧
+  (∃ #i. (Corrupt( P ) @ #i) ∧ #i < #l) ∧
+  (∀ A #a #i #j #k.
+    (Corrupt( A ) @ #a) ∧
+    (Send( V, ch ) @ #i) ∧
+    (Action( A ) @ #j) ∧
+    (Recv( V, rp ) @ #k)
+   ⇒
+    ((¬(#a < #l)) ∨ (¬(#i < #j)) ∨ (¬(#j < #k)) ∨ (¬(#k < #l))))"
+*/
+simplify
+solve( VerifierState3( V, ch, f(ch, P, np) ) ▶₀ #l )
+  case Verifier3_case_1
+  solve( !Shk( $B, $A, k ) ▶₂ #l )
+    case SymKey
+    solve( Corrupt( $A ) @ #i )
+      case LtkReveal
+      solve( !Ltk( $A, k ) ▶₀ #i )
+        case AsymKey
+        solve( !KU( ~nv ) @ #vk.7 )
+          case Verifier2
+          by contradiction /* cyclic */
+        qed
+      qed
+    next
+      case ShkRevealA
+      solve( !Shk( $A, $B, k ) ▶₀ #i )
+        case SymKey
+        solve( !KU( ~nv ) @ #vk.7 )
+          case Verifier2
+          by contradiction /* cyclic */
+        qed
+      qed
+    next
+      case ShkRevealB
+      solve( !Shk( $A, $A.1, k ) ▶₀ #i )
+        case SymKey
+        solve( !KU( ~nv ) @ #vk.7 )
+          case Verifier2
+          by contradiction /* cyclic */
+        qed
+      qed
+    qed
+  qed
+next
+  case Verifier3_case_2
+  solve( !Shk( $B, P, k ) ▶₂ #l )
+    case SymKey
+    solve( Corrupt( $B.1 ) @ #i )
+      case LtkReveal
+      solve( !Ltk( $B, k ) ▶₀ #i )
+        case AsymKey
+        solve( !KU( h(~k.1, <$B, locP, np, ~nv>) ) @ #vk.8 )
+          case Net
+          solve( (¬(#vr.1 < #vr.10))  ∥ (¬(#vr.10 < #vr.2)) )
+            case case_1
+            solve( !KU( ~nv ) @ #vk.8 )
+              case Verifier2
+              by contradiction /* cyclic */
+            qed
+          next
+            case case_2
+            solve( (¬(#vr.1 < #vr.12))  ∥ (¬(#vr.12 < #vr.2)) )
+              case case_1
+              solve( !KU( ~nv ) @ #vk.8 )
+                case Verifier2
+                by contradiction /* cyclic */
+              qed
+            next
+              case case_2
+              solve( (¬(#vr.1 < #vr.13))  ∥ (¬(#vr.13 < #vr.2)) )
+                case case_1
+                solve( !KU( f(~nv, $B, ~np) ) @ #vk.9 )
+                  case Net
+                  by contradiction /* cyclic */
+                next
+                  case c_f
+                  solve( !KU( ~nv ) @ #vk.9 )
+                    case Verifier2
+                    by contradiction /* cyclic */
+                  qed
+                qed
+              next
+                case case_2
+                solve( !KU( f(~nv, $B, ~np) ) @ #vk.9 )
+                  case Net
+                  by contradiction /* cyclic */
+                next
+                  case c_f
+                  solve( !KU( ~nv ) @ #vk.9 )
+                    case Verifier2
+                    by contradiction /* cyclic */
+                  qed
+                qed
+              qed
+            qed
+          qed
+        next
+          case c_h
+          solve( !KU( ~k.1 ) @ #vk.10 )
+            case ShkRevealA
+            by contradiction /* from formulas */
+          next
+            case ShkRevealB
+            solve( !KU( f(~nv, $B, np) ) @ #vk.10 )
+              case Net
+              solve( !KU( ~nv ) @ #vk.10 )
+                case Verifier2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_f
+              solve( !KU( ~nv ) @ #vk.10 )
+                case Verifier2
+                by contradiction /* cyclic */
+              qed
+            qed
+          qed
+        qed
+      qed
+    next
+      case ShkRevealA
+      solve( !Shk( $B, $B.1, k ) ▶₀ #i )
+        case SymKey
+        solve( !KU( h(~k.1, <$B, locP, np, ~nv>) ) @ #vk.8 )
+          case Net
+          solve( (¬(#vr.1 < #vr.10))  ∥ (¬(#vr.10 < #vr.2)) )
+            case case_1
+            solve( !KU( ~nv ) @ #vk.8 )
+              case Verifier2
+              by contradiction /* cyclic */
+            qed
+          next
+            case case_2
+            solve( (¬(#vr.1 < #vr.12))  ∥ (¬(#vr.12 < #vr.2)) )
+              case case_1
+              solve( !KU( ~nv ) @ #vk.8 )
+                case Verifier2
+                by contradiction /* cyclic */
+              qed
+            next
+              case case_2
+              solve( (¬(#vr.1 < #vr.13))  ∥ (¬(#vr.13 < #vr.2)) )
+                case case_1
+                solve( !KU( f(~nv, $B, ~np) ) @ #vk.9 )
+                  case Net
+                  by contradiction /* cyclic */
+                next
+                  case c_f
+                  solve( !KU( ~nv ) @ #vk.9 )
+                    case Verifier2
+                    by contradiction /* cyclic */
+                  qed
+                qed
+              next
+                case case_2
+                solve( !KU( f(~nv, $B, ~np) ) @ #vk.9 )
+                  case Net
+                  by contradiction /* cyclic */
+                next
+                  case c_f
+                  solve( !KU( ~nv ) @ #vk.9 )
+                    case Verifier2
+                    by contradiction /* cyclic */
+                  qed
+                qed
+              qed
+            qed
+          qed
+        next
+          case c_h
+          solve( !KU( ~k.1 ) @ #vk.10 )
+            case ShkRevealA
+            by contradiction /* from formulas */
+          next
+            case ShkRevealB
+            solve( !KU( f(~nv, $B, np) ) @ #vk.10 )
+              case Net
+              solve( !KU( ~nv ) @ #vk.10 )
+                case Verifier2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_f
+              solve( !KU( ~nv ) @ #vk.10 )
+                case Verifier2
+                by contradiction /* cyclic */
+              qed
+            qed
+          qed
+        qed
+      qed
+    next
+      case ShkRevealB
+      solve( !Shk( $A, $B, k ) ▶₀ #i )
+        case SymKey
+        solve( !KU( h(~k.1, <$B, locP, np, ~nv>) ) @ #vk.8 )
+          case Net
+          solve( (¬(#vr.1 < #vr.10))  ∥ (¬(#vr.10 < #vr.2)) )
+            case case_1
+            solve( !KU( ~nv ) @ #vk.8 )
+              case Verifier2
+              by contradiction /* cyclic */
+            qed
+          next
+            case case_2
+            solve( (¬(#vr.1 < #vr.12))  ∥ (¬(#vr.12 < #vr.2)) )
+              case case_1
+              solve( !KU( ~nv ) @ #vk.8 )
+                case Verifier2
+                by contradiction /* cyclic */
+              qed
+            next
+              case case_2
+              solve( (¬(#vr.1 < #vr.13))  ∥ (¬(#vr.13 < #vr.2)) )
+                case case_1
+                solve( !KU( f(~nv, $B, ~np) ) @ #vk.9 )
+                  case Net
+                  by contradiction /* cyclic */
+                next
+                  case c_f
+                  solve( !KU( ~nv ) @ #vk.9 )
+                    case Verifier2
+                    by contradiction /* cyclic */
+                  qed
+                qed
+              next
+                case case_2
+                solve( !KU( f(~nv, $B, ~np) ) @ #vk.9 )
+                  case Net
+                  by contradiction /* cyclic */
+                next
+                  case c_f
+                  solve( !KU( ~nv ) @ #vk.9 )
+                    case Verifier2
+                    by contradiction /* cyclic */
+                  qed
+                qed
+              qed
+            qed
+          qed
+        next
+          case c_h
+          solve( !KU( ~k.1 ) @ #vk.10 )
+            case ShkRevealA
+            by contradiction /* from formulas */
+          next
+            case ShkRevealB
+            solve( !KU( f(~nv, $B, np) ) @ #vk.10 )
+              case Net
+              solve( !KU( ~nv ) @ #vk.10 )
+                case Verifier2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_f
+              solve( !KU( ~nv ) @ #vk.10 )
+                case Verifier2
+                by contradiction /* cyclic */
+              qed
+            qed
+          qed
+        qed
+      qed
+    qed
+  qed
+next
+  case Verifier3_case_3
+  solve( !Shk( $B, P, k ) ▶₂ #l )
+    case SymKey
+    solve( Corrupt( $B.1 ) @ #i )
+      case LtkReveal
+      solve( !Ltk( $B, k ) ▶₀ #i )
+        case AsymKey
+        solve( !KU( h(~k.1, <$B, locP, np, ~nv>) ) @ #vk.8 )
+          case Net
+          solve( (¬(#vr.1 < #vr.10))  ∥ (¬(#vr.10 < #vr.2)) )
+            case case_1
+            solve( !KU( ~nv ) @ #vk.8 )
+              case Verifier2
+              by contradiction /* cyclic */
+            qed
+          next
+            case case_2
+            solve( (¬(#vr.1 < #vr.12))  ∥ (¬(#vr.12 < #vr.2)) )
+              case case_1
+              solve( !KU( ~nv ) @ #vk.8 )
+                case Verifier2
+                by contradiction /* cyclic */
+              qed
+            next
+              case case_2
+              solve( (¬(#vr.1 < #vr.13))  ∥ (¬(#vr.13 < #vr.2)) )
+                case case_1
+                solve( !KU( f(~nv, $B, ~np) ) @ #vk.9 )
+                  case Net
+                  by contradiction /* cyclic */
+                next
+                  case c_f
+                  solve( !KU( ~nv ) @ #vk.9 )
+                    case Verifier2
+                    by contradiction /* cyclic */
+                  qed
+                qed
+              next
+                case case_2
+                solve( !KU( f(~nv, $B, ~np) ) @ #vk.9 )
+                  case Net
+                  by contradiction /* cyclic */
+                next
+                  case c_f
+                  solve( !KU( ~nv ) @ #vk.9 )
+                    case Verifier2
+                    by contradiction /* cyclic */
+                  qed
+                qed
+              qed
+            qed
+          qed
+        next
+          case c_h
+          solve( !KU( ~k.1 ) @ #vk.10 )
+            case ShkRevealA
+            by contradiction /* from formulas */
+          next
+            case ShkRevealB
+            solve( !KU( f(~nv, $B, np) ) @ #vk.10 )
+              case Net
+              solve( !KU( ~nv ) @ #vk.10 )
+                case Verifier2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_f
+              solve( !KU( ~nv ) @ #vk.10 )
+                case Verifier2
+                by contradiction /* cyclic */
+              qed
+            qed
+          qed
+        qed
+      qed
+    next
+      case ShkRevealA
+      solve( !Shk( $B, $B.1, k ) ▶₀ #i )
+        case SymKey
+        solve( !KU( h(~k.1, <$B, locP, np, ~nv>) ) @ #vk.8 )
+          case Net
+          solve( (¬(#vr.1 < #vr.10))  ∥ (¬(#vr.10 < #vr.2)) )
+            case case_1
+            solve( !KU( ~nv ) @ #vk.8 )
+              case Verifier2
+              by contradiction /* cyclic */
+            qed
+          next
+            case case_2
+            solve( (¬(#vr.1 < #vr.12))  ∥ (¬(#vr.12 < #vr.2)) )
+              case case_1
+              solve( !KU( ~nv ) @ #vk.8 )
+                case Verifier2
+                by contradiction /* cyclic */
+              qed
+            next
+              case case_2
+              solve( (¬(#vr.1 < #vr.13))  ∥ (¬(#vr.13 < #vr.2)) )
+                case case_1
+                solve( !KU( f(~nv, $B, ~np) ) @ #vk.9 )
+                  case Net
+                  by contradiction /* cyclic */
+                next
+                  case c_f
+                  solve( !KU( ~nv ) @ #vk.9 )
+                    case Verifier2
+                    by contradiction /* cyclic */
+                  qed
+                qed
+              next
+                case case_2
+                solve( !KU( f(~nv, $B, ~np) ) @ #vk.9 )
+                  case Net
+                  by contradiction /* cyclic */
+                next
+                  case c_f
+                  solve( !KU( ~nv ) @ #vk.9 )
+                    case Verifier2
+                    by contradiction /* cyclic */
+                  qed
+                qed
+              qed
+            qed
+          qed
+        next
+          case c_h
+          solve( !KU( ~k.1 ) @ #vk.10 )
+            case ShkRevealA
+            by contradiction /* from formulas */
+          next
+            case ShkRevealB
+            solve( !KU( f(~nv, $B, np) ) @ #vk.10 )
+              case Net
+              solve( !KU( ~nv ) @ #vk.10 )
+                case Verifier2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_f
+              solve( !KU( ~nv ) @ #vk.10 )
+                case Verifier2
+                by contradiction /* cyclic */
+              qed
+            qed
+          qed
+        qed
+      qed
+    next
+      case ShkRevealB
+      solve( !Shk( $A, $B, k ) ▶₀ #i )
+        case SymKey
+        solve( !KU( h(~k.1, <$B, locP, np, ~nv>) ) @ #vk.8 )
+          case Net
+          solve( (¬(#vr.1 < #vr.10))  ∥ (¬(#vr.10 < #vr.2)) )
+            case case_1
+            solve( !KU( ~nv ) @ #vk.8 )
+              case Verifier2
+              by contradiction /* cyclic */
+            qed
+          next
+            case case_2
+            solve( (¬(#vr.1 < #vr.12))  ∥ (¬(#vr.12 < #vr.2)) )
+              case case_1
+              solve( !KU( ~nv ) @ #vk.8 )
+                case Verifier2
+                by contradiction /* cyclic */
+              qed
+            next
+              case case_2
+              solve( (¬(#vr.1 < #vr.13))  ∥ (¬(#vr.13 < #vr.2)) )
+                case case_1
+                solve( !KU( f(~nv, $B, ~np) ) @ #vk.9 )
+                  case Net
+                  by contradiction /* cyclic */
+                next
+                  case c_f
+                  solve( !KU( ~nv ) @ #vk.9 )
+                    case Verifier2
+                    by contradiction /* cyclic */
+                  qed
+                qed
+              next
+                case case_2
+                solve( !KU( f(~nv, $B, ~np) ) @ #vk.9 )
+                  case Net
+                  by contradiction /* cyclic */
+                next
+                  case c_f
+                  solve( !KU( ~nv ) @ #vk.9 )
+                    case Verifier2
+                    by contradiction /* cyclic */
+                  qed
+                qed
+              qed
+            qed
+          qed
+        next
+          case c_h
+          solve( !KU( ~k.1 ) @ #vk.10 )
+            case ShkRevealA
+            by contradiction /* from formulas */
+          next
+            case ShkRevealB
+            solve( !KU( f(~nv, $B, np) ) @ #vk.10 )
+              case Net
+              solve( !KU( ~nv ) @ #vk.10 )
+                case Verifier2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_f
+              solve( !KU( ~nv ) @ #vk.10 )
+                case Verifier2
+                by contradiction /* cyclic */
+              qed
+            qed
+          qed
+        qed
+      qed
+    qed
+  qed
+next
+  case Verifier3_case_4
+  solve( !Shk( $B, P, k ) ▶₂ #l )
+    case SymKey
+    solve( Corrupt( $B.1 ) @ #i )
+      case LtkReveal
+      solve( !Ltk( $B, k ) ▶₀ #i )
+        case AsymKey
+        solve( !KU( h(~k.1, <$B, locP, np, ~nv>) ) @ #vk.8 )
+          case Net
+          solve( (¬(#vr.1 < #vr.10))  ∥ (¬(#vr.10 < #vr.2)) )
+            case case_1
+            solve( !KU( ~nv ) @ #vk.8 )
+              case Verifier2
+              by contradiction /* cyclic */
+            qed
+          next
+            case case_2
+            solve( (¬(#vr.1 < #vr.12))  ∥ (¬(#vr.12 < #vr.2)) )
+              case case_1
+              solve( !KU( ~nv ) @ #vk.8 )
+                case Verifier2
+                by contradiction /* cyclic */
+              qed
+            next
+              case case_2
+              solve( (¬(#vr.1 < #vr.13))  ∥ (¬(#vr.13 < #vr.2)) )
+                case case_1
+                solve( !KU( f(~nv, $B, ~np) ) @ #vk.9 )
+                  case Net
+                  by contradiction /* cyclic */
+                next
+                  case c_f
+                  solve( !KU( ~nv ) @ #vk.9 )
+                    case Verifier2
+                    by contradiction /* cyclic */
+                  qed
+                qed
+              next
+                case case_2
+                solve( !KU( f(~nv, $B, ~np) ) @ #vk.9 )
+                  case Net
+                  by contradiction /* cyclic */
+                next
+                  case c_f
+                  solve( !KU( ~nv ) @ #vk.9 )
+                    case Verifier2
+                    by contradiction /* cyclic */
+                  qed
+                qed
+              qed
+            qed
+          qed
+        next
+          case c_h
+          solve( !KU( ~k.1 ) @ #vk.10 )
+            case ShkRevealA
+            by contradiction /* from formulas */
+          next
+            case ShkRevealB
+            solve( !KU( f(~nv, $B, np) ) @ #vk.10 )
+              case Net
+              solve( !KU( ~nv ) @ #vk.10 )
+                case Verifier2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_f
+              solve( !KU( ~nv ) @ #vk.10 )
+                case Verifier2
+                by contradiction /* cyclic */
+              qed
+            qed
+          qed
+        qed
+      qed
+    next
+      case ShkRevealA
+      solve( !Shk( $B, $B.1, k ) ▶₀ #i )
+        case SymKey
+        solve( !KU( h(~k.1, <$B, locP, np, ~nv>) ) @ #vk.8 )
+          case Net
+          solve( (¬(#vr.1 < #vr.10))  ∥ (¬(#vr.10 < #vr.2)) )
+            case case_1
+            solve( !KU( ~nv ) @ #vk.8 )
+              case Verifier2
+              by contradiction /* cyclic */
+            qed
+          next
+            case case_2
+            solve( (¬(#vr.1 < #vr.12))  ∥ (¬(#vr.12 < #vr.2)) )
+              case case_1
+              solve( !KU( ~nv ) @ #vk.8 )
+                case Verifier2
+                by contradiction /* cyclic */
+              qed
+            next
+              case case_2
+              solve( (¬(#vr.1 < #vr.13))  ∥ (¬(#vr.13 < #vr.2)) )
+                case case_1
+                solve( !KU( f(~nv, $B, ~np) ) @ #vk.9 )
+                  case Net
+                  by contradiction /* cyclic */
+                next
+                  case c_f
+                  solve( !KU( ~nv ) @ #vk.9 )
+                    case Verifier2
+                    by contradiction /* cyclic */
+                  qed
+                qed
+              next
+                case case_2
+                solve( !KU( f(~nv, $B, ~np) ) @ #vk.9 )
+                  case Net
+                  by contradiction /* cyclic */
+                next
+                  case c_f
+                  solve( !KU( ~nv ) @ #vk.9 )
+                    case Verifier2
+                    by contradiction /* cyclic */
+                  qed
+                qed
+              qed
+            qed
+          qed
+        next
+          case c_h
+          solve( !KU( ~k.1 ) @ #vk.10 )
+            case ShkRevealA
+            by contradiction /* from formulas */
+          next
+            case ShkRevealB
+            solve( !KU( f(~nv, $B, np) ) @ #vk.10 )
+              case Net
+              solve( !KU( ~nv ) @ #vk.10 )
+                case Verifier2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_f
+              solve( !KU( ~nv ) @ #vk.10 )
+                case Verifier2
+                by contradiction /* cyclic */
+              qed
+            qed
+          qed
+        qed
+      qed
+    next
+      case ShkRevealB
+      solve( !Shk( $A, $B, k ) ▶₀ #i )
+        case SymKey
+        solve( !KU( h(~k.1, <$B, locP, np, ~nv>) ) @ #vk.8 )
+          case Net
+          solve( (¬(#vr.1 < #vr.10))  ∥ (¬(#vr.10 < #vr.2)) )
+            case case_1
+            solve( !KU( ~nv ) @ #vk.8 )
+              case Verifier2
+              by contradiction /* cyclic */
+            qed
+          next
+            case case_2
+            solve( (¬(#vr.1 < #vr.12))  ∥ (¬(#vr.12 < #vr.2)) )
+              case case_1
+              solve( !KU( ~nv ) @ #vk.8 )
+                case Verifier2
+                by contradiction /* cyclic */
+              qed
+            next
+              case case_2
+              solve( (¬(#vr.1 < #vr.13))  ∥ (¬(#vr.13 < #vr.2)) )
+                case case_1
+                solve( !KU( f(~nv, $B, ~np) ) @ #vk.9 )
+                  case Net
+                  by contradiction /* cyclic */
+                next
+                  case c_f
+                  solve( !KU( ~nv ) @ #vk.9 )
+                    case Verifier2
+                    by contradiction /* cyclic */
+                  qed
+                qed
+              next
+                case case_2
+                solve( !KU( f(~nv, $B, ~np) ) @ #vk.9 )
+                  case Net
+                  by contradiction /* cyclic */
+                next
+                  case c_f
+                  solve( !KU( ~nv ) @ #vk.9 )
+                    case Verifier2
+                    by contradiction /* cyclic */
+                  qed
+                qed
+              qed
+            qed
+          qed
+        next
+          case c_h
+          solve( !KU( ~k.1 ) @ #vk.10 )
+            case ShkRevealA
+            by contradiction /* from formulas */
+          next
+            case ShkRevealB
+            solve( !KU( f(~nv, $B, np) ) @ #vk.10 )
+              case Net
+              solve( !KU( ~nv ) @ #vk.10 )
+                case Verifier2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_f
+              solve( !KU( ~nv ) @ #vk.10 )
+                case Verifier2
+                by contradiction /* cyclic */
+              qed
+            qed
+          qed
+        qed
+      qed
+    qed
+  qed
+qed
+
+/* All well-formedness checks were successful. */
+
+end
+
+==============================================================================
+summary of summaries:
+
+analyzed: meadows3.spthy
+
+  complete_trace_exists (exists-trace): verified (16 steps)
+  unique_runid (all-traces): verified (12 steps)
+  end_after_start (all-traces): verified (9 steps)
+  dbsec (all-traces): verified (77 steps)
+  dbsec_on_honest_prover (all-traces): verified (65 steps)
+  dbsec_on_corrupt_prover (all-traces): verified (235 steps)
+
+==============================================================================
