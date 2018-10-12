@@ -1,6 +1,6 @@
 # DBVerify
 
-**Will add the models soon**
+**Will add the models soon!!!**
 
 This repository contains [Tamarin](https://tamarin-prover.github.io/)-based symbolic models for a number of state-of-the-art **distance bounding protocols**. Those are cryptogrphic protocols that, in addition to authentication, are meant to guarantee physical proximity between the principals.
 
@@ -28,7 +28,7 @@ Execute the ```Makefile``` which does the following:
 
 1. The content of ```generic``` is written after the line ```//GENERIC CODE AFTER THIS LINE``` in each one of the ```.spthy``` files. *Be aware that this DOES overwrite whatever is thereafter*.
 2. The Tamarin proof of each one of the files from step above is written into the corresponding ```.proof``` file.
-  ```
+
 ## DBVerify your own protocol
 
 You can code down your own Tamarin model for a given protocol. Take into account that this verification framework is generic and consequently for it to work, it must hold the following requirements:
