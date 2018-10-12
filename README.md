@@ -1,12 +1,10 @@
 # DBVerify
 
+**Will add the models soon**
+
 This repository contains [Tamarin](https://tamarin-prover.github.io/)-based symbolic models for a number of state-of-the-art **distance bounding protocols**. Those are cryptogrphic protocols that, in addition to authentication, are meant to guarantee physical proximity between the principals.
 
 For further details see our **IEEE S\&P'18** paper [Distance-Bounding Protocols: Verification without Time and Location](https://drive.google.com/file/d/1VtMDUKLYr8BTgKy8aSjLG-UBS8VcKcuR/view).
-
-**Will fill up the repo soon**
-
-Find installation guide and other helpful information on Tamarin [manual](https://tamarin-prover.github.io/manual/).
 
 ## Folder layout
 * ```msc```
@@ -26,16 +24,14 @@ Find installation guide and other helpful information on Tamarin [manual](https:
   * ```results.html```: the ouput of the Python script
 
 ## How to DBVerify
-Execute the ```makefile``` which does the following:
+Execute the ```Makefile``` which does the following:
 
-1. The content of ```generic``` is written after the line ```//GENERIC CODE AFTER THIS LINE``` in each one of the ```.spthy``` files.
-2. The Tamarin proof of each one of the files from step above is written into the corresponding ```.proof``` file by running:
-  ```
-  tamarin-prover --prove proto.spthy > proto.proof
+1. The content of ```generic``` is written after the line ```//GENERIC CODE AFTER THIS LINE``` in each one of the ```.spthy``` files. *Be aware that this DOES overwrite whatever is thereafter*.
+2. The Tamarin proof of each one of the files from step above is written into the corresponding ```.proof``` file.
   ```
 ## DBVerify your own protocol
 
-You can write down your own Tamarin model for a given protocol. Take into account that this verification framework is generic. Hence, for it to work, it must hold the following requirements:
+You can code down your own Tamarin model for a given protocol. Take into account that this verification framework is generic and consequently for it to work, it must hold the following requirements:
 
 * No protocol rule (other than those in ```generic```) models adversary actions, or the network, or long-term keys registering.
 * Every **prover rule** is of the form
@@ -59,6 +55,10 @@ You can write down your own Tamarin model for a given protocol. Take into accoun
    ```
    where ```V``` is the verifier's name and ```m``` is the message being received.
    
-* The verifier's claim fact is of the form ```DBSec(V, P, ch, rp)``` where ```V``` is the verifier's name, ```P``` is the prover's name who the claim is being made about, ```ch``` is the fast-phase challenge message, and ```rp``` is the fast-phase response message.
+* Every **verifier rule** that models the claim **secure distance-bounding** is of the form
+  ```
+  DBSec(V, P, ch, rp)
+  ```
+  where ```V``` is the verifier's name, ```P``` is the prover's name who the claim is being made about, ```ch``` is the fast phase challenge, and ```rp``` is the fast phase response.
 
-Once you have coded your protocol into ```my_protocol.spthy```, add the line ```//GENERIC CODE AFTER THIS LINE``` right before ```end```. Then run ```Makefile``` which will put the proof in ```my_protocol.proof```.
+Once you have coded your protocol into, say, ```my_protocol.spthy```, add the line ```//GENERIC CODE AFTER THIS LINE``` right before ```end```. Then run ```Makefile``` which will put the proof in ```my_protocol.proof```.
