@@ -1,0 +1,183 @@
+/* Implementation of Reid et al's protocol */
+/* By Jorge Toro */
+
+theory reid
+
+begin
+
+builtins: symmetric-encryption, asymmetric-encryption
+
+functions: KDF/2, f/2
+
+// -------------------- Protocol Rules -------------------- //
+rule Ver1:
+	  [ Fr(~rB) ]
+	--[ Start(~rB) ]->
+	  [ Out(<$B, ~rB>),
+			VerifyState1($B, ~rB) ]
+
+rule Prov1:
+	  let k = KDF(s, <$A, B, ~rA, rB>)
+	      c = senc{s}k
+	  in
+	  [ Fr(~rA),
+			In(<B, rB>),
+			!Shk($A, B, s) ]
+	--[ Start(~rA),
+			Action($A) ]->
+	  [ Send($A, <$A, ~rA>),
+			ProverState1($A, B, ~rA, c, k) ]
+
+rule Ver2:		//fast phase starts
+	  [ VerifyState1(B, rB),
+			Fr(~alpha),
+			In(<A, rA>) ]
+	--[ Send(B, ~alpha) ]->
+	  [ VerifyState2(A, B, rA, rB, ~alpha),
+			Out( ~alpha ) ]
+
+rule Prov2:
+	  [ ProverState1(A, B, rA, c, k),
+			In(alpha) ]
+	--[ Action(A),
+			End(rA) ]->
+	  [ Send(A, f(alpha, <c, k>) ) ]
+
+rule Ver3:			//fast phase ends
+	  let k = KDF(s, <A, B, rA, rB>)
+	      c = senc{s}k
+	      resp = f(alpha, <c, k>)
+	  in
+	  [ VerifyState2(A, B, rA, rB, alpha),
+			Recv(B, resp),
+			!Shk(A, B, s) ]
+	--[ DBSec(B, A, alpha, resp),
+			End(rB) ]->
+	  [ ]
+
+// -------------------- Reachability Lemmas ------------------ //
+
+lemma complete_trace_exists:
+	exists-trace
+	"
+	Ex A B s rA rB alpha #t1 #t2 #t3 #t4 #t5 #t6.
+		
+		//initial phase
+		Start(rB) @ t1 &
+		Start(rA) @ t2 &
+		Action(A) @ t2 &
+
+		//fast phase
+		Send(B, alpha) @ t3 &
+		Action(A) @ t4 &
+		Recv(B, f(alpha, <senc{s}KDF(s, <A, B, rA, rB>), 
+			KDF(s, <A, B, rA, rB>) >) ) @ t5 &
+
+		//verification
+		DBSec(B, A, alpha, f(alpha, <senc{s}KDF(s, <A, B, rA, rB>), 
+			KDF(s, <A, B, rA, rB>) >)) @ t6 &
+
+		//order check
+		t1 < t2 & t2 < t3 & t3 < t4 & t4 < t5 & t5 < t6
+	"
+
+//GENERIC CODE AFTER THIS LINE
+//comment out whatever not needed
+
+// ------------- Key Generation Rules -------------------- //
+rule AsymKey:
+	[ Fr(~k) ]--[ Once($A) ]->[ !Ltk($A, ~k), !Pk($A, pk(~k)), Out(pk(~k)) ]
+
+rule SymKey:
+	[ Fr(~k) ]--[ Once(<$A, $B>) ]->[ !Shk($A, $B, ~k) ]
+
+
+// ------------------ Corruption Rules -----------//
+rule LtkReveal:
+	[ !Ltk($A, k) ]--[ Corrupt($A) ]->[ !CorruptAgnt($A), Out(k) ]
+
+rule ShkRevealA:
+	[ !Shk($A, $B, k) ]--[ Corrupt($A) ]->[ !CorruptAgnt($A), Out(k) ]
+
+rule ShkRevealB:
+	[ !Shk($A, $B, k) ]--[ Corrupt($B) ]->[ !CorruptAgnt($B), Out(k) ]
+
+// ---------- Adversary and Network Rules ------------------//
+rule Adv:
+	[ In(m), !CorruptAgnt($A) ]--[ Action($A) ]->[ Send($A, m) ]
+
+rule Net:
+	[ Send($A, m) ]--[ Recv($B, m) ]->[ Recv($B, m), Out(m) ]
+
+// -------------------- Sanity Check ------------------ //
+
+//Each run id is unique
+lemma unique_runid:
+	"
+	All x #i #j. ( Start(x) @ i & Start(x) @ j ) ==> #i = #j
+	"
+
+//Each run ends after it starts
+lemma end_after_start:
+	"
+	All x #j. End(x) @ j ==> Ex #i. Start(x) @ i & (#i = #j | i < j)
+	"
+
+// Only traces where Once(x) happened once
+restriction once:
+	"
+	All x #i #j. ( Once (x) @ i & Once (x) @ j ) ==> #i = #j
+	"
+
+// -------------------- Security Lemmas ------------------------ //
+
+lemma dbsec:
+	"
+	All V P ch rp #l. DBSec(V, P, ch, rp) @ l ==>
+	(	//EITHER V is corrupt 	
+		Ex #i. Corrupt(V) @ i & i < l
+	) | 
+	(	//OR P is active in fast phase
+		Ex #i #j #k.
+			Send(V, ch) @ i &
+			Action(P) @ j &
+			Recv(V, rp) @ k &
+			i < j & j < k & k < l
+	) | 
+	(	//OR (P is corrupt AND there's a corrupt 
+		//agent active in fast phase)
+		Ex A #a #p #i #j #k.
+			Corrupt(A) @ a & a < l &
+			Corrupt(P) @ p & p < l &
+			Send(V, ch) @ i &
+			Action(A) @ j &
+			Recv(V, rp) @ k &
+			i < j & j < k & k < l
+	)
+	"
+
+lemma dbsec_on_honest_prover:
+	"
+	All V P ch rp #l. DBSec(V, P, ch, rp) @ l ==>
+		(Ex #i. Corrupt(V) @ i & i < l) |
+		(Ex #i. Corrupt(P) @ i & i < l) |
+		(Ex #i #j #k.
+			Send(V, ch) @ i &
+			Action(P) @ j &
+			Recv(V, rp) @ k &
+			i < j & j < k & k < l)
+	"
+
+lemma dbsec_on_corrupt_prover:
+	"
+	All V P ch rp #l. DBSec(V, P, ch, rp) @ l ==>
+		(Ex #i. Corrupt(V) @ i & i < l) |
+		not (Ex #i. Corrupt(P) @ i & i < l) |
+		(Ex A #a #i #j #k.
+			Corrupt(A) @ a & a < l &
+			Send(V, ch) @ i &
+			Action(A) @ j &
+			Recv(V, rp) @ k &
+			i < j & j < k & k < l)
+	"
+end
