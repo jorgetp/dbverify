@@ -51,6 +51,10 @@ def create_html_code():
 
 			global_results.append(results)
 
+	# move 'warning' column to the end		
+	if 'WARNING' in lemmas:
+		index = lemmas.index('WARNING')
+		lemmas = lemmas[:index] + lemmas[index+1:] + ['WARNING']
 
 	# create HTML code
 
