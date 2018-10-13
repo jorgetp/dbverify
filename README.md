@@ -1,13 +1,13 @@
 # DBVerify
 
-This repository contains [Tamarin](https://tamarin-prover.github.io/)-based symbolic models for a number of state-of-the-art **distance bounding protocols**. Those are cryptogrphic protocols that, in addition to authentication, are meant to guarantee physical proximity between the principals.
+This repository contains [Tamarin](https://tamarin-prover.github.io/)-based symbolic models for a number of state-of-the-art **distance bounding protocols**, which are cryptogrphic protocols that, in addition to authentication, are meant to guarantee physical proximity between the principals.
 
 For further details see our **IEEE S\&P'18** paper [Distance-Bounding Protocols: Verification without Time and Location](https://drive.google.com/file/d/1VtMDUKLYr8BTgKy8aSjLG-UBS8VcKcuR/view).
 
 ## Folder layout
 * ```msc```: contains the message sequence charts of the protocols
-* ```model```: contains the Tamarin model of the protocols (```.spthy``` files), their proofs (```.proof``` files), and
-  * ```generic```: the generic Tamarin code (including the security lemmas)
+* ```model```: contains the Tamarin models (```.spthy``` files), their proofs (```.proof``` files), and
+  * ```generic```: the generic Tamarin code (includes the security lemmas)
   * ```Makefile```: to verify all protocols in this folder
   * ```collect.py```: a Python script to collect the results of the verification
   * ```results.html```: the ouput of the Python script
@@ -15,8 +15,7 @@ For further details see our **IEEE S\&P'18** paper [Distance-Bounding Protocols:
 ## How to DBVerify
 Execute the ```Makefile``` which does the following:
 
-1. The content of ```generic``` is written after the line ```//GENERIC CODE AFTER THIS LINE``` in each one of the ```.spthy``` files.
- *Be aware that this overrides whatever is thereafter*.
+1. The content of ```generic``` is written right after the line ```//GENERIC CODE AFTER THIS LINE``` in each one of the ```.spthy``` files. *Be aware that this overrides whatever is thereafter!!!*.
 2. The Tamarin proof of each one of the files from step above is written into the corresponding ```.proof``` file.
 
 ## DBVerify your own protocol
@@ -45,20 +44,25 @@ You can code down your own Tamarin model for a given protocol. Take into account
    ```
    where ```V``` is the verifier's name and ```m``` is the message being received.
    
-* The **verifier rule** that models the **secure distance-bounding** claim is of the form
+* Every **verifier rule** that models a **secure distance-bounding** claim is of the form
   ```
-  DBSec(V, P, ch, rp)
+  [...]-[..., DBSec(V, P, ch, rp), ...]->[...]
   ```
-  where ```V``` is the verifier's name, ```P``` is the prover's name who the claim is being made about, ```ch``` is the fast phase challenge, and ```rp``` is the fast phase response.
+  where ```V``` is the verifier's name, ```P``` is the prover's name, ```ch``` is the challenge, and ```rp``` is the response.
 
-Once you have coded your protocol, say into ```my_protocol.spthy```, add the line ```//GENERIC CODE AFTER THIS LINE``` right before ```end```. Then run ```Makefile``` which outputs the proof in ```my_protocol.proof```.
+Once you have coded your protocol, say into ```my_protocol.spthy```, add the line ```//GENERIC CODE AFTER THIS LINE``` right before ```end```. Then run ```Makefile``` which outputs the proof in ```my_protocol.proof```. Finally, run ```python collect.py``` to gather the results in ```results.html```. 
 
 ## Read the results
 
-Each lemma in ```generic``` has a column in the table depicted in ```results.html```. To identify the attacks, these are a few hints:
-* Run Tamarin in interactive mode ```tamarin-prover interactive my_protocol.spthy``` and inspect the trace that invalidates ```dbsec```.
-* If the lemma ```dbsec_on_honest_prover``` fails then there's a **mafia fraud**.
-* If the lemma ```dbsec_on_corrupt_prover``` fails then there's a **distance fraud** or a **distance hijacking** or both.
+Each lemma in ```generic``` has a column in the table depicted in ```results.html```. To identify the type of attack(s), run Tamarin in interactive mode 
+```
+tamarin-prover interactive my_protocol.spthy
+```
+and inspect the trace that invalidates ```dbsec```.
+
+Here a few hints:
+* If lemma ```dbsec_on_honest_prover``` fails then there is a **mafia fraud**.
+* If lemma ```dbsec_on_corrupt_prover``` fails then there is a **distance fraud**, or a **distance hijacking**, or both.
 
 ## On wellformedness warnings
 
@@ -66,6 +70,6 @@ The warnings reported here are due to equational theory of ```xor```.
 
 ## Contact
 
-Should you have any inquiries, email me at ```jorgeXtoroYuniXlu``` where ```X``` is dot and ```Y``` is at.
+Should you have any inquiries, email me at ```jorgeXtoroYuniXlu``` (where ```X``` is dot and ```Y``` is at).
 
 

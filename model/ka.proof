@@ -1,0 +1,1168 @@
+maude tool: 'maude'
+ checking version: 2.7.1. OK.
+ checking installation: OK.
+SAPIC tool: 'sapic'
+Checking availablity ... OK.
+
+theory ka begin
+
+// Function signature and definition of the equational theory E
+
+functions: adec/2, aenc/2, f/2, fst/1, g/3, h1/3, h2/3, h3/3, h4/3,
+           pair/2, pk/1, snd/1
+equations:
+    adec(aenc(x.1, pk(x.2)), x.2) = x.1,
+    fst(<x.1, x.2>) = x.1,
+    snd(<x.1, x.2>) = x.2
+
+rule (modulo E) Reader1:
+   [ Fr( ~n ) ] --[ Start( ~n ) ]-> [ Out( ~n ), RState1( $Reader, ~n ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Tag1:
+   [ Fr( ~m ), In( n ), !Shk( $Reader, $Tag, k ) ]
+  --[ Start( ~m ), Action( $Tag ) ]->
+   [
+   Send( $Tag, ~m ),
+   TState1( $Reader, $Tag, ~m, h1(k, n, ~m), h2(k, n, ~m), h3(k, n, ~m),
+            h4(k, n, ~m)
+   )
+   ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Reader2:
+   [ RState1( Reader, n ), Fr( ~s ), In( m ), !Shk( Reader, $Tag, k ) ]
+  --[ Send( Reader, g(h1(k, n, m), h2(k, n, m), ~s) ) ]->
+   [
+   RState2( Reader, $Tag, n, m, h1(k, n, m), h2(k, n, m), h3(k, n, m),
+            h4(k, n, m), ~s
+   ),
+   Out( g(h1(k, n, m), h2(k, n, m), ~s) )
+   ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Tag2:
+   [ TState1( Reader, Tag, m, t, d, v0, v1 ), In( c ) ]
+  --[ Action( Tag ), End( m ) ]->
+   [ Send( Tag, f(c, <t, d, v0, v1>) ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Reader3:
+   [
+   RState2( Reader, Tag, n, m, t, d, v0, v1, s ),
+   Recv( Reader, f(g(t, d, s), <t, d, v0, v1>) ), !Shk( Reader, Tag, k )
+   ]
+  --[
+  DBSec( Reader, Tag, g(t, d, s), f(g(t, d, s), <t, d, v0, v1>) ), End( n )
+  ]->
+   [ ]
+
+  /* has exactly the trivial AC variant */
+
+lemma complete_trace_exists:
+  exists-trace
+  "∃ Reader Tag k n m s #t1 #t2 #t3 #t4 #t5 #t6.
+    (((((((((((Start( n ) @ #t1) ∧ (Start( m ) @ #t2)) ∧
+             (Action( Tag ) @ #t2)) ∧
+            (Send( Reader, g(h1(k, n, m), h2(k, n, m), s) ) @ #t3)) ∧
+           (Action( Tag ) @ #t4)) ∧
+          (Recv( Reader,
+                 f(g(h1(k, n, m), h2(k, n, m), s),
+                   <h1(k, n, m), h2(k, n, m), h3(k, n, m), h4(k, n, m)>)
+           ) @ #t5)) ∧
+         (DBSec( Reader, Tag, g(h1(k, n, m), h2(k, n, m), s),
+                 f(g(h1(k, n, m), h2(k, n, m), s),
+                   <h1(k, n, m), h2(k, n, m), h3(k, n, m), h4(k, n, m)>)
+          ) @ #t6)) ∧
+        (#t1 < #t2)) ∧
+       (#t2 < #t3)) ∧
+      (#t3 < #t4)) ∧
+     (#t4 < #t5)) ∧
+    (#t5 < #t6)"
+/*
+guarded formula characterizing all satisfying traces:
+"∃ Reader Tag k n m s #t1 #t2 #t3 #t4 #t5 #t6.
+  (Start( n ) @ #t1) ∧
+  (Start( m ) @ #t2) ∧
+  (Action( Tag ) @ #t2) ∧
+  (Send( Reader, g(h1(k, n, m), h2(k, n, m), s) ) @ #t3) ∧
+  (Action( Tag ) @ #t4) ∧
+  (Recv( Reader,
+         f(g(h1(k, n, m), h2(k, n, m), s),
+           <h1(k, n, m), h2(k, n, m), h3(k, n, m), h4(k, n, m)>)
+   ) @ #t5) ∧
+  (DBSec( Reader, Tag, g(h1(k, n, m), h2(k, n, m), s),
+          f(g(h1(k, n, m), h2(k, n, m), s),
+            <h1(k, n, m), h2(k, n, m), h3(k, n, m), h4(k, n, m)>)
+   ) @ #t6)
+ ∧
+  (#t1 < #t2) ∧ (#t2 < #t3) ∧ (#t3 < #t4) ∧ (#t4 < #t5) ∧ (#t5 < #t6)"
+*/
+simplify
+solve( RState1( $B, n ) ▶₀ #t3 )
+  case Reader1
+  solve( !Shk( $B, $Tag, k ) ▶₃ #t3 )
+    case SymKey
+    solve( Send( $A,
+                 f(g(h1(~k, ~n, m), h2(~k, ~n, m), ~s),
+                   <h1(~k, ~n, m), h2(~k, ~n, m), h3(~k, ~n, m), h4(~k, ~n, m)>)
+           ) ▶₀ #t5 )
+      case Tag2
+      solve( RState2( $B, Tag, n.1, m.1, h1(~k, ~n, ~m), h2(~k, ~n, ~m),
+                      h3(~k, ~n, ~m), h4(~k, ~n, ~m), ~s
+             ) ▶₀ #t6 )
+        case Reader2
+        solve( Recv( $B,
+                     f(g(h1(~k, ~n, ~m), h2(~k, ~n, ~m), ~s),
+                       <h1(~k, ~n, ~m), h2(~k, ~n, ~m), h3(~k, ~n, ~m), h4(~k, ~n, ~m)>)
+               ) ▶₁ #t6 )
+          case Net_case_1
+          solve( !Shk( $B, $A, k.1 ) ▶₂ #t6 )
+            case SymKey
+            solve( Start( ~n ) @ #t1 )
+              case Reader1
+              solve( Start( ~m ) @ #t2 )
+                case Tag1
+                solve( Action( $A ) @ #t2 )
+                  case Tag1
+                  solve( Action( $A ) @ #t4 )
+                    case Adv
+                    solve( !CorruptAgnt( $A ) ▶₁ #t4 )
+                      case LtkReveal
+                      solve( !KU( ~m ) @ #vk )
+                        case Net
+                        solve( !KU( ~n ) @ #vk.2 )
+                          case Reader1
+                          solve( !KU( g(h1(~k, ~n, ~m), h2(~k, ~n, ~m), ~s) ) @ #vk.2 )
+                            case Reader2
+                            SOLVED // trace found
+                          qed
+                        qed
+                      qed
+                    qed
+                  qed
+                qed
+              qed
+            qed
+          qed
+        qed
+      qed
+    qed
+  qed
+qed
+
+rule (modulo E) AsymKey:
+   [ Fr( ~k ) ]
+  --[ Once( $A ) ]->
+   [ !Ltk( $A, ~k ), !Pk( $A, pk(~k) ), Out( pk(~k) ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) SymKey:
+   [ Fr( ~k ) ] --[ Once( <$A, $B> ) ]-> [ !Shk( $A, $B, ~k ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) LtkReveal:
+   [ !Ltk( $A, k ) ] --[ Corrupt( $A ) ]-> [ !CorruptAgnt( $A ), Out( k ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) ShkRevealA:
+   [ !Shk( $A, $B, k ) ]
+  --[ Corrupt( $A ) ]->
+   [ !CorruptAgnt( $A ), Out( k ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) ShkRevealB:
+   [ !Shk( $A, $B, k ) ]
+  --[ Corrupt( $B ) ]->
+   [ !CorruptAgnt( $B ), Out( k ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Adv:
+   [ In( m ), !CorruptAgnt( $A ) ] --[ Action( $A ) ]-> [ Send( $A, m ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Net:
+   [ Send( $A, m ) ] --[ Recv( $B, m ) ]-> [ Recv( $B, m ), Out( m ) ]
+
+  /* has exactly the trivial AC variant */
+
+lemma unique_runid:
+  all-traces
+  "∀ x #i #j. ((Start( x ) @ #i) ∧ (Start( x ) @ #j)) ⇒ (#i = #j)"
+/*
+guarded formula characterizing all counter-examples:
+"∃ x #i #j. (Start( x ) @ #i) ∧ (Start( x ) @ #j) ∧ ¬(#i = #j)"
+*/
+simplify
+solve( (#i < #j)  ∥ (#j < #i) )
+  case case_1
+  solve( Start( x ) @ #i )
+    case Reader1
+    solve( Start( ~n ) @ #j )
+      case Reader1
+      by contradiction /* cyclic */
+    qed
+  next
+    case Tag1
+    solve( !Shk( $Reader, $Tag, k ) ▶₂ #i )
+      case SymKey
+      solve( Start( ~m ) @ #j )
+        case Tag1
+        by contradiction /* cyclic */
+      qed
+    qed
+  qed
+next
+  case case_2
+  solve( Start( x ) @ #i )
+    case Reader1
+    solve( Start( ~n ) @ #j )
+      case Reader1
+      by contradiction /* cyclic */
+    qed
+  next
+    case Tag1
+    solve( !Shk( $Reader, $Tag, k ) ▶₂ #i )
+      case SymKey
+      solve( Start( ~m ) @ #j )
+        case Tag1
+        by contradiction /* cyclic */
+      qed
+    qed
+  qed
+qed
+
+lemma end_after_start:
+  all-traces
+  "∀ x #j.
+    (End( x ) @ #j) ⇒ (∃ #i. (Start( x ) @ #i) ∧ ((#i = #j) ∨ (#i < #j)))"
+/*
+guarded formula characterizing all counter-examples:
+"∃ x #j.
+  (End( x ) @ #j) ∧ ∀ #i. (Start( x ) @ #i) ⇒ (¬(#i = #j)) ∧ (¬(#i < #j))"
+*/
+simplify
+solve( End( x ) @ #j )
+  case Reader3
+  solve( RState2( Reader, Tag, x, m, t, d, v0, v1, s ) ▶₀ #j )
+    case Reader2
+    by contradiction /* from formulas */
+  qed
+next
+  case Tag2
+  solve( TState1( Reader, Tag, x, t, d, v0, v1 ) ▶₀ #j )
+    case Tag1
+    by contradiction /* from formulas */
+  qed
+qed
+
+restriction once:
+  "∀ x #i #j. ((Once( x ) @ #i) ∧ (Once( x ) @ #j)) ⇒ (#i = #j)"
+  // safety formula
+
+lemma dbsec:
+  all-traces
+  "∀ V P ch rp #l.
+    (DBSec( V, P, ch, rp ) @ #l) ⇒
+    (((∃ #i. (Corrupt( V ) @ #i) ∧ (#i < #l)) ∨
+      (∃ #i #j #k.
+        (((((Send( V, ch ) @ #i) ∧ (Action( P ) @ #j)) ∧ (Recv( V, rp ) @ #k)) ∧
+          (#i < #j)) ∧
+         (#j < #k)) ∧
+        (#k < #l))) ∨
+     (∃ A #a #p #i #j #k.
+       (((((((((Corrupt( A ) @ #a) ∧ (#a < #l)) ∧ (Corrupt( P ) @ #p)) ∧
+             (#p < #l)) ∧
+            (Send( V, ch ) @ #i)) ∧
+           (Action( A ) @ #j)) ∧
+          (Recv( V, rp ) @ #k)) ∧
+         (#i < #j)) ∧
+        (#j < #k)) ∧
+       (#k < #l)))"
+/*
+guarded formula characterizing all counter-examples:
+"∃ V P ch rp #l.
+  (DBSec( V, P, ch, rp ) @ #l)
+ ∧
+  (∀ #i. (Corrupt( V ) @ #i) ⇒ ¬(#i < #l)) ∧
+  (∀ #i #j #k.
+    (Send( V, ch ) @ #i) ∧ (Action( P ) @ #j) ∧ (Recv( V, rp ) @ #k)
+   ⇒
+    ((¬(#i < #j)) ∨ (¬(#j < #k)) ∨ (¬(#k < #l)))) ∧
+  (∀ A #a #p #i #j #k.
+    (Corrupt( A ) @ #a) ∧
+    (Corrupt( P ) @ #p) ∧
+    (Send( V, ch ) @ #i) ∧
+    (Action( A ) @ #j) ∧
+    (Recv( V, rp ) @ #k)
+   ⇒
+    ((¬(#a < #l)) ∨
+     (¬(#p < #l)) ∨
+     (¬(#i < #j)) ∨
+     (¬(#j < #k)) ∨
+     (¬(#k < #l))))"
+*/
+simplify
+solve( RState2( V, P, n, m, t, d, v0, v1, s ) ▶₀ #l )
+  case Reader2
+  solve( Recv( $Reader,
+               f(g(h1(~k, ~n, m), h2(~k, ~n, m), ~s),
+                 <h1(~k, ~n, m), h2(~k, ~n, m), h3(~k, ~n, m), h4(~k, ~n, m)>)
+         ) ▶₁ #l )
+    case Net_case_1
+    solve( !Shk( $Reader, $Tag, k.1 ) ▶₂ #l )
+      case SymKey
+      solve( !KU( ~m ) @ #vk )
+        case Net
+        solve( !KU( g(h1(~k, ~n, ~m), h2(~k, ~n, ~m), ~s) ) @ #vk.1 )
+          case Reader2
+          by contradiction /* cyclic */
+        next
+          case c_g
+          by solve( !KU( ~s ) @ #vk.5 )
+        qed
+      qed
+    qed
+  next
+    case Net_case_2
+    solve( !Shk( $Reader, $Tag, k.1 ) ▶₂ #l )
+      case SymKey
+      solve( !KU( f(g(h1(~k, ~n, m), h2(~k, ~n, m), ~s),
+                    <h1(~k, ~n, m), h2(~k, ~n, m), h3(~k, ~n, m), h4(~k, ~n, m)>)
+             ) @ #vk.1 )
+        case Net
+        solve( !KU( ~m ) @ #vk.1 )
+          case Net
+          solve( !KU( g(h1(~k, ~n, ~m), h2(~k, ~n, ~m), ~s) ) @ #vk.2 )
+            case Reader2
+            by contradiction /* cyclic */
+          next
+            case c_g
+            by solve( !KU( ~s ) @ #vk.6 )
+          qed
+        qed
+      next
+        case c_f
+        solve( !KU( h1(~k, ~n, m) ) @ #vk.4 )
+          case c_h1
+          solve( !KU( ~k ) @ #vk.10 )
+            case ShkRevealA
+            by contradiction /* from formulas */
+          next
+            case ShkRevealB
+            solve( !KU( h2(~k, ~n, m) ) @ #vk.7 )
+              case c_h2
+              solve( !KU( h3(~k, ~n, m) ) @ #vk.9 )
+                case c_h3
+                solve( !KU( h4(~k, ~n, m) ) @ #vk.10 )
+                  case c_h4
+                  solve( !KU( g(h1(~k, ~n, m), h2(~k, ~n, m), ~s) ) @ #vk.10 )
+                    case Reader2
+                    by contradiction /* cyclic */
+                  next
+                    case c_g
+                    by solve( !KU( ~s ) @ #vk.12 )
+                  qed
+                qed
+              qed
+            qed
+          qed
+        qed
+      qed
+    qed
+  next
+    case Net_case_3
+    solve( !Shk( $Reader, $Tag, k.1 ) ▶₂ #l )
+      case SymKey
+      solve( !KU( f(g(h1(~k, ~n, m), h2(~k, ~n, m), ~s),
+                    <h1(~k, ~n, m), h2(~k, ~n, m), h3(~k, ~n, m), h4(~k, ~n, m)>)
+             ) @ #vk.1 )
+        case Net
+        solve( !KU( ~m ) @ #vk.1 )
+          case Net
+          solve( !KU( g(h1(~k, ~n, ~m), h2(~k, ~n, ~m), ~s) ) @ #vk.2 )
+            case Reader2
+            by contradiction /* cyclic */
+          next
+            case c_g
+            by solve( !KU( ~s ) @ #vk.6 )
+          qed
+        qed
+      next
+        case c_f
+        solve( !KU( h1(~k, ~n, m) ) @ #vk.4 )
+          case c_h1
+          solve( !KU( ~k ) @ #vk.10 )
+            case ShkRevealA
+            by contradiction /* from formulas */
+          next
+            case ShkRevealB
+            solve( !KU( h2(~k, ~n, m) ) @ #vk.7 )
+              case c_h2
+              solve( !KU( h3(~k, ~n, m) ) @ #vk.9 )
+                case c_h3
+                solve( !KU( h4(~k, ~n, m) ) @ #vk.10 )
+                  case c_h4
+                  solve( !KU( g(h1(~k, ~n, m), h2(~k, ~n, m), ~s) ) @ #vk.10 )
+                    case Reader2
+                    by contradiction /* cyclic */
+                  next
+                    case c_g
+                    by solve( !KU( ~s ) @ #vk.12 )
+                  qed
+                qed
+              qed
+            qed
+          qed
+        qed
+      qed
+    qed
+  next
+    case Net_case_4
+    solve( !Shk( $Reader, $Tag, k.1 ) ▶₂ #l )
+      case SymKey
+      solve( !KU( f(g(h1(~k, ~n, m), h2(~k, ~n, m), ~s),
+                    <h1(~k, ~n, m), h2(~k, ~n, m), h3(~k, ~n, m), h4(~k, ~n, m)>)
+             ) @ #vk.1 )
+        case Net
+        solve( !KU( ~m ) @ #vk.1 )
+          case Net
+          solve( !KU( g(h1(~k, ~n, ~m), h2(~k, ~n, ~m), ~s) ) @ #vk.2 )
+            case Reader2
+            by contradiction /* cyclic */
+          next
+            case c_g
+            by solve( !KU( ~s ) @ #vk.6 )
+          qed
+        qed
+      next
+        case c_f
+        solve( !KU( h1(~k, ~n, m) ) @ #vk.4 )
+          case c_h1
+          solve( !KU( ~k ) @ #vk.10 )
+            case ShkRevealA
+            by contradiction /* from formulas */
+          next
+            case ShkRevealB
+            solve( !KU( h2(~k, ~n, m) ) @ #vk.7 )
+              case c_h2
+              solve( !KU( h3(~k, ~n, m) ) @ #vk.9 )
+                case c_h3
+                solve( !KU( h4(~k, ~n, m) ) @ #vk.10 )
+                  case c_h4
+                  solve( !KU( g(h1(~k, ~n, m), h2(~k, ~n, m), ~s) ) @ #vk.10 )
+                    case Reader2
+                    by contradiction /* cyclic */
+                  next
+                    case c_g
+                    by solve( !KU( ~s ) @ #vk.12 )
+                  qed
+                qed
+              qed
+            qed
+          qed
+        qed
+      qed
+    qed
+  qed
+qed
+
+lemma dbsec_on_honest_prover:
+  all-traces
+  "∀ V P ch rp #l.
+    (DBSec( V, P, ch, rp ) @ #l) ⇒
+    (((∃ #i. (Corrupt( V ) @ #i) ∧ (#i < #l)) ∨
+      (∃ #i. (Corrupt( P ) @ #i) ∧ (#i < #l))) ∨
+     (∃ #i #j #k.
+       (((((Send( V, ch ) @ #i) ∧ (Action( P ) @ #j)) ∧ (Recv( V, rp ) @ #k)) ∧
+         (#i < #j)) ∧
+        (#j < #k)) ∧
+       (#k < #l)))"
+/*
+guarded formula characterizing all counter-examples:
+"∃ V P ch rp #l.
+  (DBSec( V, P, ch, rp ) @ #l)
+ ∧
+  (∀ #i. (Corrupt( V ) @ #i) ⇒ ¬(#i < #l)) ∧
+  (∀ #i. (Corrupt( P ) @ #i) ⇒ ¬(#i < #l)) ∧
+  (∀ #i #j #k.
+    (Send( V, ch ) @ #i) ∧ (Action( P ) @ #j) ∧ (Recv( V, rp ) @ #k)
+   ⇒
+    ((¬(#i < #j)) ∨ (¬(#j < #k)) ∨ (¬(#k < #l))))"
+*/
+simplify
+solve( RState2( V, P, n, m, t, d, v0, v1, s ) ▶₀ #l )
+  case Reader2
+  solve( Recv( $Reader,
+               f(g(h1(~k, ~n, m), h2(~k, ~n, m), ~s),
+                 <h1(~k, ~n, m), h2(~k, ~n, m), h3(~k, ~n, m), h4(~k, ~n, m)>)
+         ) ▶₁ #l )
+    case Net_case_1
+    solve( !Shk( $Reader, $Tag, k.1 ) ▶₂ #l )
+      case SymKey
+      solve( !KU( ~m ) @ #vk )
+        case Net
+        solve( !KU( g(h1(~k, ~n, ~m), h2(~k, ~n, ~m), ~s) ) @ #vk.1 )
+          case Reader2
+          by contradiction /* cyclic */
+        next
+          case c_g
+          by solve( !KU( ~s ) @ #vk.5 )
+        qed
+      qed
+    qed
+  next
+    case Net_case_2
+    solve( !Shk( $Reader, $Tag, k.1 ) ▶₂ #l )
+      case SymKey
+      solve( !KU( f(g(h1(~k, ~n, m), h2(~k, ~n, m), ~s),
+                    <h1(~k, ~n, m), h2(~k, ~n, m), h3(~k, ~n, m), h4(~k, ~n, m)>)
+             ) @ #vk.1 )
+        case Net
+        solve( !KU( ~m ) @ #vk.1 )
+          case Net
+          solve( !KU( g(h1(~k, ~n, ~m), h2(~k, ~n, ~m), ~s) ) @ #vk.2 )
+            case Reader2
+            by contradiction /* cyclic */
+          next
+            case c_g
+            by solve( !KU( ~s ) @ #vk.6 )
+          qed
+        qed
+      next
+        case c_f
+        solve( !KU( h1(~k, ~n, m) ) @ #vk.4 )
+          case c_h1
+          solve( !KU( ~k ) @ #vk.10 )
+            case ShkRevealA
+            by contradiction /* from formulas */
+          next
+            case ShkRevealB
+            by contradiction /* from formulas */
+          qed
+        qed
+      qed
+    qed
+  next
+    case Net_case_3
+    solve( !Shk( $Reader, $Tag, k.1 ) ▶₂ #l )
+      case SymKey
+      solve( !KU( f(g(h1(~k, ~n, m), h2(~k, ~n, m), ~s),
+                    <h1(~k, ~n, m), h2(~k, ~n, m), h3(~k, ~n, m), h4(~k, ~n, m)>)
+             ) @ #vk.1 )
+        case Net
+        solve( !KU( ~m ) @ #vk.1 )
+          case Net
+          solve( !KU( g(h1(~k, ~n, ~m), h2(~k, ~n, ~m), ~s) ) @ #vk.2 )
+            case Reader2
+            by contradiction /* cyclic */
+          next
+            case c_g
+            by solve( !KU( ~s ) @ #vk.6 )
+          qed
+        qed
+      next
+        case c_f
+        solve( !KU( h1(~k, ~n, m) ) @ #vk.4 )
+          case c_h1
+          solve( !KU( ~k ) @ #vk.10 )
+            case ShkRevealA
+            by contradiction /* from formulas */
+          next
+            case ShkRevealB
+            by contradiction /* from formulas */
+          qed
+        qed
+      qed
+    qed
+  next
+    case Net_case_4
+    solve( !Shk( $Reader, $Tag, k.1 ) ▶₂ #l )
+      case SymKey
+      solve( !KU( f(g(h1(~k, ~n, m), h2(~k, ~n, m), ~s),
+                    <h1(~k, ~n, m), h2(~k, ~n, m), h3(~k, ~n, m), h4(~k, ~n, m)>)
+             ) @ #vk.1 )
+        case Net
+        solve( !KU( ~m ) @ #vk.1 )
+          case Net
+          solve( !KU( g(h1(~k, ~n, ~m), h2(~k, ~n, ~m), ~s) ) @ #vk.2 )
+            case Reader2
+            by contradiction /* cyclic */
+          next
+            case c_g
+            by solve( !KU( ~s ) @ #vk.6 )
+          qed
+        qed
+      next
+        case c_f
+        solve( !KU( h1(~k, ~n, m) ) @ #vk.4 )
+          case c_h1
+          solve( !KU( ~k ) @ #vk.10 )
+            case ShkRevealA
+            by contradiction /* from formulas */
+          next
+            case ShkRevealB
+            by contradiction /* from formulas */
+          qed
+        qed
+      qed
+    qed
+  qed
+qed
+
+lemma dbsec_on_corrupt_prover:
+  all-traces
+  "∀ V P ch rp #l.
+    (DBSec( V, P, ch, rp ) @ #l) ⇒
+    (((∃ #i. (Corrupt( V ) @ #i) ∧ (#i < #l)) ∨
+      (¬(∃ #i. (Corrupt( P ) @ #i) ∧ (#i < #l)))) ∨
+     (∃ A #a #i #j #k.
+       (((((((Corrupt( A ) @ #a) ∧ (#a < #l)) ∧ (Send( V, ch ) @ #i)) ∧
+           (Action( A ) @ #j)) ∧
+          (Recv( V, rp ) @ #k)) ∧
+         (#i < #j)) ∧
+        (#j < #k)) ∧
+       (#k < #l)))"
+/*
+guarded formula characterizing all counter-examples:
+"∃ V P ch rp #l.
+  (DBSec( V, P, ch, rp ) @ #l)
+ ∧
+  (∀ #i. (Corrupt( V ) @ #i) ⇒ ¬(#i < #l)) ∧
+  (∃ #i. (Corrupt( P ) @ #i) ∧ #i < #l) ∧
+  (∀ A #a #i #j #k.
+    (Corrupt( A ) @ #a) ∧
+    (Send( V, ch ) @ #i) ∧
+    (Action( A ) @ #j) ∧
+    (Recv( V, rp ) @ #k)
+   ⇒
+    ((¬(#a < #l)) ∨ (¬(#i < #j)) ∨ (¬(#j < #k)) ∨ (¬(#k < #l))))"
+*/
+simplify
+solve( RState2( V, P, n, m, t, d, v0, v1, s ) ▶₀ #l )
+  case Reader2
+  solve( Recv( $Reader,
+               f(g(h1(~k, ~n, m), h2(~k, ~n, m), ~s),
+                 <h1(~k, ~n, m), h2(~k, ~n, m), h3(~k, ~n, m), h4(~k, ~n, m)>)
+         ) ▶₁ #l )
+    case Net_case_1
+    solve( !Shk( $Reader, $Tag, k.1 ) ▶₂ #l )
+      case SymKey
+      solve( Corrupt( $Tag ) @ #i )
+        case LtkReveal
+        solve( !Ltk( $Tag, k ) ▶₀ #i )
+          case AsymKey
+          solve( !KU( ~m ) @ #vk )
+            case Net
+            solve( !KU( g(h1(~k.1, ~n, ~m), h2(~k.1, ~n, ~m), ~s) ) @ #vk.1 )
+              case Reader2
+              by contradiction /* cyclic */
+            next
+              case c_g
+              by solve( !KU( ~s ) @ #vk.5 )
+            qed
+          qed
+        qed
+      next
+        case ShkRevealA
+        solve( !Shk( $Tag, $B, k ) ▶₀ #i )
+          case SymKey
+          solve( !KU( ~m ) @ #vk )
+            case Net
+            solve( !KU( g(h1(~k.1, ~n, ~m), h2(~k.1, ~n, ~m), ~s) ) @ #vk.1 )
+              case Reader2
+              by contradiction /* cyclic */
+            next
+              case c_g
+              by solve( !KU( ~s ) @ #vk.5 )
+            qed
+          qed
+        qed
+      next
+        case ShkRevealB
+        solve( !Shk( $A, $Tag, k ) ▶₀ #i )
+          case SymKey
+          solve( !KU( ~m ) @ #vk )
+            case Net
+            solve( !KU( g(h1(~k.1, ~n, ~m), h2(~k.1, ~n, ~m), ~s) ) @ #vk.1 )
+              case Reader2
+              by contradiction /* cyclic */
+            next
+              case c_g
+              by solve( !KU( ~s ) @ #vk.5 )
+            qed
+          qed
+        qed
+      qed
+    qed
+  next
+    case Net_case_2
+    solve( !Shk( $Reader, $Tag, k.1 ) ▶₂ #l )
+      case SymKey
+      solve( Corrupt( $Tag ) @ #i )
+        case LtkReveal
+        solve( !Ltk( $Tag, k ) ▶₀ #i )
+          case AsymKey
+          solve( !KU( f(g(h1(~k.1, ~n, m), h2(~k.1, ~n, m), ~s),
+                        <h1(~k.1, ~n, m), h2(~k.1, ~n, m), h3(~k.1, ~n, m), h4(~k.1, ~n, m)>)
+                 ) @ #vk.1 )
+            case Net
+            solve( !KU( ~m ) @ #vk.1 )
+              case Net
+              solve( !KU( g(h1(~k.1, ~n, ~m), h2(~k.1, ~n, ~m), ~s) ) @ #vk.2 )
+                case Reader2
+                by contradiction /* cyclic */
+              next
+                case c_g
+                by solve( !KU( ~s ) @ #vk.6 )
+              qed
+            qed
+          next
+            case c_f
+            solve( !KU( h1(~k.1, ~n, m) ) @ #vk.4 )
+              case c_h1
+              solve( !KU( ~k.1 ) @ #vk.10 )
+                case ShkRevealA
+                by contradiction /* from formulas */
+              next
+                case ShkRevealB
+                solve( !KU( h2(~k.1, ~n, m) ) @ #vk.7 )
+                  case c_h2
+                  solve( !KU( h3(~k.1, ~n, m) ) @ #vk.9 )
+                    case c_h3
+                    solve( !KU( h4(~k.1, ~n, m) ) @ #vk.10 )
+                      case c_h4
+                      solve( !KU( g(h1(~k.1, ~n, m), h2(~k.1, ~n, m), ~s) ) @ #vk.10 )
+                        case Reader2
+                        by contradiction /* cyclic */
+                      next
+                        case c_g
+                        by solve( !KU( ~s ) @ #vk.12 )
+                      qed
+                    qed
+                  qed
+                qed
+              qed
+            qed
+          qed
+        qed
+      next
+        case ShkRevealA
+        solve( !Shk( $Tag, $B, k ) ▶₀ #i )
+          case SymKey
+          solve( !KU( f(g(h1(~k.1, ~n, m), h2(~k.1, ~n, m), ~s),
+                        <h1(~k.1, ~n, m), h2(~k.1, ~n, m), h3(~k.1, ~n, m), h4(~k.1, ~n, m)>)
+                 ) @ #vk.1 )
+            case Net
+            solve( !KU( ~m ) @ #vk.1 )
+              case Net
+              solve( !KU( g(h1(~k.1, ~n, ~m), h2(~k.1, ~n, ~m), ~s) ) @ #vk.2 )
+                case Reader2
+                by contradiction /* cyclic */
+              next
+                case c_g
+                by solve( !KU( ~s ) @ #vk.6 )
+              qed
+            qed
+          next
+            case c_f
+            solve( !KU( h1(~k.1, ~n, m) ) @ #vk.4 )
+              case c_h1
+              solve( !KU( ~k.1 ) @ #vk.10 )
+                case ShkRevealA
+                by contradiction /* from formulas */
+              next
+                case ShkRevealB
+                solve( !KU( h2(~k.1, ~n, m) ) @ #vk.7 )
+                  case c_h2
+                  solve( !KU( h3(~k.1, ~n, m) ) @ #vk.9 )
+                    case c_h3
+                    solve( !KU( h4(~k.1, ~n, m) ) @ #vk.10 )
+                      case c_h4
+                      solve( !KU( g(h1(~k.1, ~n, m), h2(~k.1, ~n, m), ~s) ) @ #vk.10 )
+                        case Reader2
+                        by contradiction /* cyclic */
+                      next
+                        case c_g
+                        by solve( !KU( ~s ) @ #vk.12 )
+                      qed
+                    qed
+                  qed
+                qed
+              qed
+            qed
+          qed
+        qed
+      next
+        case ShkRevealB
+        solve( !Shk( $A, $Tag, k ) ▶₀ #i )
+          case SymKey
+          solve( !KU( f(g(h1(~k.1, ~n, m), h2(~k.1, ~n, m), ~s),
+                        <h1(~k.1, ~n, m), h2(~k.1, ~n, m), h3(~k.1, ~n, m), h4(~k.1, ~n, m)>)
+                 ) @ #vk.1 )
+            case Net
+            solve( !KU( ~m ) @ #vk.1 )
+              case Net
+              solve( !KU( g(h1(~k.1, ~n, ~m), h2(~k.1, ~n, ~m), ~s) ) @ #vk.2 )
+                case Reader2
+                by contradiction /* cyclic */
+              next
+                case c_g
+                by solve( !KU( ~s ) @ #vk.6 )
+              qed
+            qed
+          next
+            case c_f
+            solve( !KU( h1(~k.1, ~n, m) ) @ #vk.4 )
+              case c_h1
+              solve( !KU( ~k.1 ) @ #vk.10 )
+                case ShkRevealA
+                by contradiction /* from formulas */
+              next
+                case ShkRevealB
+                solve( !KU( h2(~k.1, ~n, m) ) @ #vk.7 )
+                  case c_h2
+                  solve( !KU( h3(~k.1, ~n, m) ) @ #vk.9 )
+                    case c_h3
+                    solve( !KU( h4(~k.1, ~n, m) ) @ #vk.10 )
+                      case c_h4
+                      solve( !KU( g(h1(~k.1, ~n, m), h2(~k.1, ~n, m), ~s) ) @ #vk.10 )
+                        case Reader2
+                        by contradiction /* cyclic */
+                      next
+                        case c_g
+                        by solve( !KU( ~s ) @ #vk.12 )
+                      qed
+                    qed
+                  qed
+                qed
+              qed
+            qed
+          qed
+        qed
+      qed
+    qed
+  next
+    case Net_case_3
+    solve( !Shk( $Reader, $Tag, k.1 ) ▶₂ #l )
+      case SymKey
+      solve( Corrupt( $Tag ) @ #i )
+        case LtkReveal
+        solve( !Ltk( $Tag, k ) ▶₀ #i )
+          case AsymKey
+          solve( !KU( f(g(h1(~k.1, ~n, m), h2(~k.1, ~n, m), ~s),
+                        <h1(~k.1, ~n, m), h2(~k.1, ~n, m), h3(~k.1, ~n, m), h4(~k.1, ~n, m)>)
+                 ) @ #vk.1 )
+            case Net
+            solve( !KU( ~m ) @ #vk.1 )
+              case Net
+              solve( !KU( g(h1(~k.1, ~n, ~m), h2(~k.1, ~n, ~m), ~s) ) @ #vk.2 )
+                case Reader2
+                by contradiction /* cyclic */
+              next
+                case c_g
+                by solve( !KU( ~s ) @ #vk.6 )
+              qed
+            qed
+          next
+            case c_f
+            solve( !KU( h1(~k.1, ~n, m) ) @ #vk.4 )
+              case c_h1
+              solve( !KU( ~k.1 ) @ #vk.10 )
+                case ShkRevealA
+                by contradiction /* from formulas */
+              next
+                case ShkRevealB
+                solve( !KU( h2(~k.1, ~n, m) ) @ #vk.7 )
+                  case c_h2
+                  solve( !KU( h3(~k.1, ~n, m) ) @ #vk.9 )
+                    case c_h3
+                    solve( !KU( h4(~k.1, ~n, m) ) @ #vk.10 )
+                      case c_h4
+                      solve( !KU( g(h1(~k.1, ~n, m), h2(~k.1, ~n, m), ~s) ) @ #vk.10 )
+                        case Reader2
+                        by contradiction /* cyclic */
+                      next
+                        case c_g
+                        by solve( !KU( ~s ) @ #vk.12 )
+                      qed
+                    qed
+                  qed
+                qed
+              qed
+            qed
+          qed
+        qed
+      next
+        case ShkRevealA
+        solve( !Shk( $Tag, $B, k ) ▶₀ #i )
+          case SymKey
+          solve( !KU( f(g(h1(~k.1, ~n, m), h2(~k.1, ~n, m), ~s),
+                        <h1(~k.1, ~n, m), h2(~k.1, ~n, m), h3(~k.1, ~n, m), h4(~k.1, ~n, m)>)
+                 ) @ #vk.1 )
+            case Net
+            solve( !KU( ~m ) @ #vk.1 )
+              case Net
+              solve( !KU( g(h1(~k.1, ~n, ~m), h2(~k.1, ~n, ~m), ~s) ) @ #vk.2 )
+                case Reader2
+                by contradiction /* cyclic */
+              next
+                case c_g
+                by solve( !KU( ~s ) @ #vk.6 )
+              qed
+            qed
+          next
+            case c_f
+            solve( !KU( h1(~k.1, ~n, m) ) @ #vk.4 )
+              case c_h1
+              solve( !KU( ~k.1 ) @ #vk.10 )
+                case ShkRevealA
+                by contradiction /* from formulas */
+              next
+                case ShkRevealB
+                solve( !KU( h2(~k.1, ~n, m) ) @ #vk.7 )
+                  case c_h2
+                  solve( !KU( h3(~k.1, ~n, m) ) @ #vk.9 )
+                    case c_h3
+                    solve( !KU( h4(~k.1, ~n, m) ) @ #vk.10 )
+                      case c_h4
+                      solve( !KU( g(h1(~k.1, ~n, m), h2(~k.1, ~n, m), ~s) ) @ #vk.10 )
+                        case Reader2
+                        by contradiction /* cyclic */
+                      next
+                        case c_g
+                        by solve( !KU( ~s ) @ #vk.12 )
+                      qed
+                    qed
+                  qed
+                qed
+              qed
+            qed
+          qed
+        qed
+      next
+        case ShkRevealB
+        solve( !Shk( $A, $Tag, k ) ▶₀ #i )
+          case SymKey
+          solve( !KU( f(g(h1(~k.1, ~n, m), h2(~k.1, ~n, m), ~s),
+                        <h1(~k.1, ~n, m), h2(~k.1, ~n, m), h3(~k.1, ~n, m), h4(~k.1, ~n, m)>)
+                 ) @ #vk.1 )
+            case Net
+            solve( !KU( ~m ) @ #vk.1 )
+              case Net
+              solve( !KU( g(h1(~k.1, ~n, ~m), h2(~k.1, ~n, ~m), ~s) ) @ #vk.2 )
+                case Reader2
+                by contradiction /* cyclic */
+              next
+                case c_g
+                by solve( !KU( ~s ) @ #vk.6 )
+              qed
+            qed
+          next
+            case c_f
+            solve( !KU( h1(~k.1, ~n, m) ) @ #vk.4 )
+              case c_h1
+              solve( !KU( ~k.1 ) @ #vk.10 )
+                case ShkRevealA
+                by contradiction /* from formulas */
+              next
+                case ShkRevealB
+                solve( !KU( h2(~k.1, ~n, m) ) @ #vk.7 )
+                  case c_h2
+                  solve( !KU( h3(~k.1, ~n, m) ) @ #vk.9 )
+                    case c_h3
+                    solve( !KU( h4(~k.1, ~n, m) ) @ #vk.10 )
+                      case c_h4
+                      solve( !KU( g(h1(~k.1, ~n, m), h2(~k.1, ~n, m), ~s) ) @ #vk.10 )
+                        case Reader2
+                        by contradiction /* cyclic */
+                      next
+                        case c_g
+                        by solve( !KU( ~s ) @ #vk.12 )
+                      qed
+                    qed
+                  qed
+                qed
+              qed
+            qed
+          qed
+        qed
+      qed
+    qed
+  next
+    case Net_case_4
+    solve( !Shk( $Reader, $Tag, k.1 ) ▶₂ #l )
+      case SymKey
+      solve( Corrupt( $Tag ) @ #i )
+        case LtkReveal
+        solve( !Ltk( $Tag, k ) ▶₀ #i )
+          case AsymKey
+          solve( !KU( f(g(h1(~k.1, ~n, m), h2(~k.1, ~n, m), ~s),
+                        <h1(~k.1, ~n, m), h2(~k.1, ~n, m), h3(~k.1, ~n, m), h4(~k.1, ~n, m)>)
+                 ) @ #vk.1 )
+            case Net
+            solve( !KU( ~m ) @ #vk.1 )
+              case Net
+              solve( !KU( g(h1(~k.1, ~n, ~m), h2(~k.1, ~n, ~m), ~s) ) @ #vk.2 )
+                case Reader2
+                by contradiction /* cyclic */
+              next
+                case c_g
+                by solve( !KU( ~s ) @ #vk.6 )
+              qed
+            qed
+          next
+            case c_f
+            solve( !KU( h1(~k.1, ~n, m) ) @ #vk.4 )
+              case c_h1
+              solve( !KU( ~k.1 ) @ #vk.10 )
+                case ShkRevealA
+                by contradiction /* from formulas */
+              next
+                case ShkRevealB
+                solve( !KU( h2(~k.1, ~n, m) ) @ #vk.7 )
+                  case c_h2
+                  solve( !KU( h3(~k.1, ~n, m) ) @ #vk.9 )
+                    case c_h3
+                    solve( !KU( h4(~k.1, ~n, m) ) @ #vk.10 )
+                      case c_h4
+                      solve( !KU( g(h1(~k.1, ~n, m), h2(~k.1, ~n, m), ~s) ) @ #vk.10 )
+                        case Reader2
+                        by contradiction /* cyclic */
+                      next
+                        case c_g
+                        by solve( !KU( ~s ) @ #vk.12 )
+                      qed
+                    qed
+                  qed
+                qed
+              qed
+            qed
+          qed
+        qed
+      next
+        case ShkRevealA
+        solve( !Shk( $Tag, $B, k ) ▶₀ #i )
+          case SymKey
+          solve( !KU( f(g(h1(~k.1, ~n, m), h2(~k.1, ~n, m), ~s),
+                        <h1(~k.1, ~n, m), h2(~k.1, ~n, m), h3(~k.1, ~n, m), h4(~k.1, ~n, m)>)
+                 ) @ #vk.1 )
+            case Net
+            solve( !KU( ~m ) @ #vk.1 )
+              case Net
+              solve( !KU( g(h1(~k.1, ~n, ~m), h2(~k.1, ~n, ~m), ~s) ) @ #vk.2 )
+                case Reader2
+                by contradiction /* cyclic */
+              next
+                case c_g
+                by solve( !KU( ~s ) @ #vk.6 )
+              qed
+            qed
+          next
+            case c_f
+            solve( !KU( h1(~k.1, ~n, m) ) @ #vk.4 )
+              case c_h1
+              solve( !KU( ~k.1 ) @ #vk.10 )
+                case ShkRevealA
+                by contradiction /* from formulas */
+              next
+                case ShkRevealB
+                solve( !KU( h2(~k.1, ~n, m) ) @ #vk.7 )
+                  case c_h2
+                  solve( !KU( h3(~k.1, ~n, m) ) @ #vk.9 )
+                    case c_h3
+                    solve( !KU( h4(~k.1, ~n, m) ) @ #vk.10 )
+                      case c_h4
+                      solve( !KU( g(h1(~k.1, ~n, m), h2(~k.1, ~n, m), ~s) ) @ #vk.10 )
+                        case Reader2
+                        by contradiction /* cyclic */
+                      next
+                        case c_g
+                        by solve( !KU( ~s ) @ #vk.12 )
+                      qed
+                    qed
+                  qed
+                qed
+              qed
+            qed
+          qed
+        qed
+      next
+        case ShkRevealB
+        solve( !Shk( $A, $Tag, k ) ▶₀ #i )
+          case SymKey
+          solve( !KU( f(g(h1(~k.1, ~n, m), h2(~k.1, ~n, m), ~s),
+                        <h1(~k.1, ~n, m), h2(~k.1, ~n, m), h3(~k.1, ~n, m), h4(~k.1, ~n, m)>)
+                 ) @ #vk.1 )
+            case Net
+            solve( !KU( ~m ) @ #vk.1 )
+              case Net
+              solve( !KU( g(h1(~k.1, ~n, ~m), h2(~k.1, ~n, ~m), ~s) ) @ #vk.2 )
+                case Reader2
+                by contradiction /* cyclic */
+              next
+                case c_g
+                by solve( !KU( ~s ) @ #vk.6 )
+              qed
+            qed
+          next
+            case c_f
+            solve( !KU( h1(~k.1, ~n, m) ) @ #vk.4 )
+              case c_h1
+              solve( !KU( ~k.1 ) @ #vk.10 )
+                case ShkRevealA
+                by contradiction /* from formulas */
+              next
+                case ShkRevealB
+                solve( !KU( h2(~k.1, ~n, m) ) @ #vk.7 )
+                  case c_h2
+                  solve( !KU( h3(~k.1, ~n, m) ) @ #vk.9 )
+                    case c_h3
+                    solve( !KU( h4(~k.1, ~n, m) ) @ #vk.10 )
+                      case c_h4
+                      solve( !KU( g(h1(~k.1, ~n, m), h2(~k.1, ~n, m), ~s) ) @ #vk.10 )
+                        case Reader2
+                        by contradiction /* cyclic */
+                      next
+                        case c_g
+                        by solve( !KU( ~s ) @ #vk.12 )
+                      qed
+                    qed
+                  qed
+                qed
+              qed
+            qed
+          qed
+        qed
+      qed
+    qed
+  qed
+qed
+
+/* All well-formedness checks were successful. */
+
+end
+
+==============================================================================
+summary of summaries:
+
+analyzed: ka.spthy
+
+  complete_trace_exists (exists-trace): verified (16 steps)
+  unique_runid (all-traces): verified (14 steps)
+  end_after_start (all-traces): verified (6 steps)
+  dbsec (all-traces): verified (53 steps)
+  dbsec_on_honest_prover (all-traces): verified (38 steps)
+  dbsec_on_corrupt_prover (all-traces): verified (161 steps)
+
+==============================================================================
