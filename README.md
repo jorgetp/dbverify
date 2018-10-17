@@ -64,9 +64,21 @@ Here a few hints:
 * If lemma ```dbsec_on_honest_prover``` fails then there is a **mafia fraud**.
 * If lemma ```dbsec_on_corrupt_prover``` fails then there is a **distance fraud**, or a **distance hijacking**, or both.
 
-## On wellformedness warnings
+## On exclusive-OR operations
 
-The warnings reported here are due to equational theory of ```xor```.
+Here's what we recommend to deal with exclusive-OR operations (and indeed the approach we took):
+
+1. Define a function for modeling exclusive-OR, let's call it ```XOR```. Do not define any equational theory for it.
+
+2. Run the verification. If lemma ```dbsec``` fails, then go to step 5. Otherwise, go to step 3.
+
+3. If you have exhausted the equational theory for exclusive-OR go to step 4. Otherwise, add an equation into your set of equations for ```XOR``` and go to step 2.
+
+4. The distance bounding protocol is **secure**.
+
+5. The distance bounding protocol is **not secure** and thus an attack exists.
+
+Alternatively, if you have a Tamarin version 1.4.0 or later (see releases [here](https://github.com/tamarin-prover/tamarin-prover/releases)), you can use the built-in ```xor``` as to handle exclusive-OR with its equational theory. Be aware that this induces a substantial delay in the verification. We **did not**use such built-in to model the protocols of this repository.
 
 ## Contact
 
