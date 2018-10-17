@@ -17,7 +17,7 @@ begin
 
 builtins: 	symmetric-encryption, asymmetric-encryption
 
-functions: 	f/2, g/2, xor/2
+functions: 	f/2, g/2, XOR/2
 
 // -------------------- Protocol Rules -------------------- //
 rule Verif1:
@@ -50,12 +50,12 @@ rule Prover2:
 			In(c),
 			!Shk(V, P, x) ]
 	--[ Action(P) ]->
-	  [ Send(P, g(c, <a, xor(a, x)>) ),
+	  [ Send(P, g(c, <a, XOR(a, x)>) ),
 			ProverState2(V, P, n, m, c) ]
 
 rule Verif3:			//fast phase ends
 	  let a = f(x, <'hello', m>)
-		  resp = g(c, <a, xor(a,x)>)
+		  resp = g(c, <a, XOR(a,x)>)
 	  in
 	  [ VerifState2(V, n, m, c),
 			!Shk(V, $P, x),
@@ -101,12 +101,12 @@ lemma complete_trace_exists:
 		Send(V, c) @ t3 &
 		Action(P) @ t4 &
 		Recv(V, 
-			g(c, <f(x, <'hello', m>), xor(f(x, <'hello', m>), x)> ) ) @ t5 &		
+			g(c, <f(x, <'hello', m>), XOR(f(x, <'hello', m>), x)> ) ) @ t5 &		
 		
 		//verification
 		Action(P) @ t6 &
 		DBSec(V, P, c, 
-			g(c, <f(x, <'hello', m>), xor(f(x, <'hello', m>), x)> ) ) @ t7 &
+			g(c, <f(x, <'hello', m>), XOR(f(x, <'hello', m>), x)> ) ) @ t7 &
 		Action(P) @ t8 &
 
 		t1 < t2 & t2 < t3 & t3 < t4 & 

@@ -5,7 +5,7 @@ theory bc_signature
 
 begin
 
-functions: 	f/2, xor/2
+functions: 	f/2, XOR/2
 
 builtins: 	asymmetric-encryption, symmetric-encryption, signing
 
@@ -29,7 +29,7 @@ rule Ver1:				//verifier receives a commit
 
 rule Prov2:				//prover receives a challenge
 									//then sends the response
-		let rp = xor(n, m)
+		let rp = XOR(n, m)
 		in
 		[ ProverState1(P, m, ck), In(n) ]
 	--[ Action(P) ]->
@@ -59,11 +59,11 @@ rule Ver3:				//verifier receives the final message
 			m = sdec(comm, ck)
 			verif_sig = verify(signature, f(n,m), pkP) 
 		in
-		[ VerifierState2(V, n, comm, xor(n,m)),
+		[ VerifierState2(V, n, comm, XOR(n,m)),
 			In(msg),
 			!Pk($P, pkP) ]
 	--[ Eq(verif_sig, true),
-			DBSec(V, $P, n, xor(n,m)),
+			DBSec(V, $P, n, XOR(n,m)),
 			End(n) ]->
 		[ ]
 
@@ -87,11 +87,11 @@ lemma complete_trace_exists:
 		Start(n) @ t2 &
 		Send(V, n) @ t2 &
 		Action(P) @ t3 &
-		Recv(V, xor(n, m)) @ t4 &
+		Recv(V, XOR(n, m)) @ t4 &
 
 		//verification phase
 		Action(P) @ t5 &
-		DBSec(V, P, n, xor(n,m)) @ t6 &
+		DBSec(V, P, n, XOR(n,m)) @ t6 &
 		
 		//check order
 		t1 < t2 & t2 < t3 & t3 < t4 & t4 < t5 & t5 < t6

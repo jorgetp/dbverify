@@ -1,6 +1,6 @@
 /*
 		Implementation of Meadows et al. protocol
-		Version: F(...) := <nv, xor(np, P)>
+		Version: F(...) := <nv, XOR(np, P)>
 
 		By Jorge Toro 
 */
@@ -11,9 +11,9 @@ begin
 
 builtins : symmetric-encryption, asymmetric-encryption
 
-functions: h/2, xor/2
+functions: h/2, XOR/2
 
-equations: xor(xor(x,y), y) = x
+equations: XOR(XOR(x,y), y) = x
 
 // -------------------- Protocol Rules -------------------- //
 rule Verifier1:	
@@ -39,7 +39,7 @@ rule Prover2:
 		[ ProverState1(V, P, np),
 			In(nv) ]
 	--[ Action(P) ]->
-		[ Send(P, <nv, xor(np, P)>),
+		[ Send(P, <nv, XOR(np, P)>),
 			ProverState2(V, P, np, nv) ]
 
 rule Verifier3:			//fast phase ends
@@ -61,9 +61,9 @@ rule Prover3:
 
 rule Verifier4:
 		let s = <P, locP, np, nv>
-				rp = <nv, xor(np, P)>	          
+				rp = <nv, XOR(np, P)>	          
 		in
-		[ VerifierState3(V, nv, xor(np, P)),
+		[ VerifierState3(V, nv, XOR(np, P)),
 			In(<s, h(k, s)>),
 			!Shk(V, P, k) ]
 	--[ DBSec(V, P, nv, rp),
@@ -84,11 +84,11 @@ lemma complete_trace_exists:
 		//fast phase
 		Send(V, nv) @ t3 &
 		Action(P) @ t4 &
-		Recv(V, <nv, xor(np, P)>) @ t5 &
+		Recv(V, <nv, XOR(np, P)>) @ t5 &
 
 		//verification phase
 		Action(P) @ t6 &	
-		DBSec(V, P, nv, <nv, xor(np, P)>) @ t7 &
+		DBSec(V, P, nv, <nv, XOR(np, P)>) @ t7 &
 
 		//check order
 		t1 < t2 & t2 < t3 & t3 < t4 & t4 < t5 & t5 < t6 & t6 < t7

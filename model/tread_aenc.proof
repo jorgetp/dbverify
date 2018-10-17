@@ -8,15 +8,14 @@ theory tread_aenc begin
 
 // Function signature and definition of the equational theory E
 
-functions: adec/2, aenc/2, f/2, fst/1, pair/2, pk/1, sdec/2, senc/2,
-           sign/2, snd/1, true/0, verify/3, xor/2
+functions: XOR/2, adec/2, aenc/2, f/2, fst/1, pair/2, pk/1, sdec/2,
+           senc/2, sign/2, snd/1, true/0, verify/3
 equations:
     adec(aenc(x.1, pk(x.2)), x.2) = x.1,
     fst(<x.1, x.2>) = x.1,
     sdec(senc(x.1, x.2), x.2) = x.1,
     snd(<x.1, x.2>) = x.2,
-    verify(sign(x.1, x.2), x.1, pk(x.2)) = true,
-    xor(xor(x, y), y) = x
+    verify(sign(x.1, x.2), x.1, pk(x.2)) = true
 
 rule (modulo E) Prover1:
    [ Fr( ~a ), Fr( ~b ), !Ltk( $P, ltkP ), !Pk( $V, pkV ) ]
@@ -142,42 +141,16 @@ rule (modulo E) Verifier2:
 rule (modulo E) Prover3:
    [ ProverState2( V, P, a, b, m ), In( c ) ]
   --[ Action( P ), End( a ) ]->
-   [ Send( P, f(c, <a, xor(b, m)>) ) ]
+   [ Send( P, f(c, <a, XOR(b, m)>) ) ]
 
-  /*
-  rule (modulo AC) Prover3:
-     [ ProverState2( V, P, a, b, m ), In( c ) ]
-    --[ Action( P ), End( a ) ]->
-     [ Send( P, f(c, <a, z>) ) ]
-    variants (modulo AC)
-    1. b     = b.8
-       m     = m.8
-       z     = xor(b.8, m.8)
-    
-    2. b     = xor(x.8, x.9)
-       m     = x.9
-       z     = x.8
-  */
+  /* has exactly the trivial AC variant */
 
 rule (modulo E) Verifier3:
-   [ VerifierState2( V, P, m, a, b, c ), Recv( V, f(c, <a, xor(b, m)>) ) ]
-  --[ DBSec( V, P, c, f(c, <a, xor(b, m)>) ), End( m ) ]->
+   [ VerifierState2( V, P, m, a, b, c ), Recv( V, f(c, <a, XOR(b, m)>) ) ]
+  --[ DBSec( V, P, c, f(c, <a, XOR(b, m)>) ), End( m ) ]->
    [ ]
 
-  /*
-  rule (modulo AC) Verifier3:
-     [ VerifierState2( V, P, m, a, b, c ), Recv( V, f(c, <a, z>) ) ]
-    --[ DBSec( V, P, c, f(c, <a, z>) ), End( m ) ]->
-     [ ]
-    variants (modulo AC)
-    1. b     = b.8
-       m     = m.8
-       z     = xor(b.8, m.8)
-    
-    2. b     = xor(x.8, x.9)
-       m     = x.9
-       z     = x.8
-  */
+  /* has exactly the trivial AC variant */
 
 restriction equals:
   "∀ a b #i. (Eq( a, b ) @ #i) ⇒ (a = b)"
@@ -191,8 +164,8 @@ lemma complete_trace_exists:
               (Action( P ) @ #t3)) ∧
              (Send( V, c ) @ #t4)) ∧
             (Action( P ) @ #t5)) ∧
-           (Recv( V, f(c, <a, xor(b, m)>) ) @ #t6)) ∧
-          (DBSec( V, P, c, f(c, <a, xor(b, m)>) ) @ #t7)) ∧
+           (Recv( V, f(c, <a, XOR(b, m)>) ) @ #t6)) ∧
+          (DBSec( V, P, c, f(c, <a, XOR(b, m)>) ) @ #t7)) ∧
          (#t1 < #t2)) ∧
         (#t2 < #t3)) ∧
        (#t3 < #t4)) ∧
@@ -208,8 +181,8 @@ guarded formula characterizing all satisfying traces:
   (Action( P ) @ #t3) ∧
   (Send( V, c ) @ #t4) ∧
   (Action( P ) @ #t5) ∧
-  (Recv( V, f(c, <a, xor(b, m)>) ) @ #t6) ∧
-  (DBSec( V, P, c, f(c, <a, xor(b, m)>) ) @ #t7)
+  (Recv( V, f(c, <a, XOR(b, m)>) ) @ #t6) ∧
+  (DBSec( V, P, c, f(c, <a, XOR(b, m)>) ) @ #t7)
  ∧
   (#t1 < #t2) ∧
   (#t2 < #t3) ∧
@@ -221,46 +194,34 @@ guarded formula characterizing all satisfying traces:
 simplify
 solve( VerifierState1( $B, P, m, a, b ) ▶₀ #t4 )
   case Verifier1
-  solve( Send( $A, f(~c, <a.1, xor(b.1, m.1)>) ) ▶₀ #t6 )
-    case Adv_case_1
-    solve( VerifierState2( $B, P.1, m.2, a.1, b.2, ~c ) ▶₀ #t7 )
+  solve( Send( $A, f(~c, <a.1, XOR(b.1, m.1)>) ) ▶₀ #t6 )
+    case Prover3
+    solve( VerifierState2( $B, P.1, m.1, ~a.1, ~b.1, ~c ) ▶₀ #t7 )
       case Verifier2
-      solve( Recv( $B, f(~c, <a, xor(b.1, m.1)>) ) ▶₁ #t7 )
+      solve( Recv( $B, f(~c, <~a, XOR(~b, ~m)>) ) ▶₁ #t7 )
         case Net_case_1
         solve( Start( ~a ) @ #t1 )
           case Prover1
           solve( Action( $P ) @ #t1 )
             case Prover1
-            solve( Start( m.1 ) @ #t2 )
+            solve( Start( ~m ) @ #t2 )
               case Verifier1
-              solve( !Pk( $P, pk(x.1) ) ▶₂ #t2 )
-                case AsymKey
-                solve( !Ltk( $V.1, ltkV ) ▶₃ #t2 )
-                  case AsymKey
-                  solve( Action( $A ) @ #t3 )
+              solve( Action( $A ) @ #t3 )
+                case Adv
+                solve( !CorruptAgnt( $A ) ▶₁ #t3 )
+                  case LtkReveal
+                  solve( Action( $A ) @ #t5 )
                     case Adv
-                    solve( !CorruptAgnt( $A ) ▶₁ #t3 )
+                    solve( !CorruptAgnt( $A ) ▶₁ #t5 )
                       case LtkReveal
-                      solve( Action( $A ) @ #t5 )
-                        case Adv
-                        solve( !CorruptAgnt( $A ) ▶₁ #t5 )
-                          case LtkReveal
-                          solve( splitEqs(2) )
-                            case split_case_1
-                            solve( !KU( aenc(<<<~a, ~b>, $A>, sign(<<~a, ~b>, $A>, ~k)>, pk(~k.2))
-                                   ) @ #vk.1 )
-                              case Net
-                              solve( !KU( ~c ) @ #vk.4 )
-                                case Verifier2
-                                solve( !KU( ~m ) @ #vk.5 )
-                                  case Verifier1
-                                  solve( !KU( f(~c, <~a, xor(~b, ~m)>) ) @ #vk.5 )
-                                    case Net
-                                    SOLVED // trace found
-                                  qed
-                                qed
-                              qed
-                            qed
+                      solve( !KU( aenc(<<<~a, ~b>, $A>, sign(<<~a, ~b>, $A>, ~k)>, pk(~k.2))
+                             ) @ #vk.1 )
+                        case Net
+                        solve( !KU( ~c ) @ #vk.3 )
+                          case Verifier2
+                          solve( !KU( ~m ) @ #vk.4 )
+                            case Verifier1
+                            SOLVED // trace found
                           qed
                         qed
                       qed
@@ -454,31 +415,28 @@ guarded formula characterizing all counter-examples:
 simplify
 solve( VerifierState2( V, P, m, a, b, ch ) ▶₀ #l )
   case Verifier2
-  solve( Recv( $V, f(~c, <a, z>) ) ▶₁ #l )
+  solve( Recv( $V, f(~c, <a, XOR(b, ~m)>) ) ▶₁ #l )
     case Net_case_1
-    solve( splitEqs(0) )
-      case split_case_1
-      solve( !KU( aenc(<<<~a, ~b>, $P>, sign(<<~a, ~b>, $P>, ~k)>, pk(~k.1))
-             ) @ #vk.1 )
-        case c_aenc
-        solve( !KU( ~a ) @ #vk.9 )
-          case Net
-          solve( !KU( ~k.3 ) @ #vk.12 )
-            case LtkReveal
-            solve( !KU( sign(<<~a, ~b>, $P>, ~k) ) @ #vk.12 )
-              case c_sign
-              solve( !KU( ~k ) @ #vk.13 )
-                case LtkReveal
-                solve( !KU( ~c ) @ #vk.10 )
-                  case Verifier2
-                  solve( !KU( ~m ) @ #vk.11 )
-                    case Verifier1
-                    solve( !KU( ~b ) @ #vk.13 )
-                      case Net
-                      solve( !KU( pk(~k.1) ) @ #vk.13 )
-                        case AsymKey
-                        SOLVED // trace found
-                      qed
+    solve( !KU( aenc(<<<~a, ~b>, $P>, sign(<<~a, ~b>, $P>, ~k)>, pk(~k.1))
+           ) @ #vk.1 )
+      case c_aenc
+      solve( !KU( ~a ) @ #vk.9 )
+        case Net
+        solve( !KU( ~k.3 ) @ #vk.12 )
+          case LtkReveal
+          solve( !KU( sign(<<~a, ~b>, $P>, ~k) ) @ #vk.12 )
+            case c_sign
+            solve( !KU( ~k ) @ #vk.13 )
+              case LtkReveal
+              solve( !KU( ~c ) @ #vk.10 )
+                case Verifier2
+                solve( !KU( ~m ) @ #vk.11 )
+                  case Verifier1
+                  solve( !KU( ~b ) @ #vk.13 )
+                    case Net
+                    solve( !KU( pk(~k.1) ) @ #vk.13 )
+                      case AsymKey
+                      SOLVED // trace found
                     qed
                   qed
                 qed
@@ -517,35 +475,32 @@ guarded formula characterizing all counter-examples:
 simplify
 solve( VerifierState2( V, P, m, a, b, ch ) ▶₀ #l )
   case Verifier2
-  solve( Recv( $V, f(~c, <a, z>) ) ▶₁ #l )
+  solve( Recv( $V, f(~c, <a, XOR(b, ~m)>) ) ▶₁ #l )
     case Net_case_2
-    solve( splitEqs(0) )
+    solve( splitEqs(1) )
       case split_case_1
-      solve( splitEqs(1) )
-        case split_case_1
-        solve( !KU( aenc(<<<a, b>, $P>, sign(<<a, b>, $P>, ~k)>, pk(~k.1))
-               ) @ #vk.1 )
-          case c_aenc
-          solve( !KU( sign(<<a, b>, $P>, ~k) ) @ #vk.10 )
-            case Net
-            solve( !KU( ~k.3 ) @ #vk.11 )
-              case LtkReveal
-              solve( !KU( f(~c, <~a, xor(~b, ~m)>) ) @ #vk.7 )
-                case c_f
-                solve( !KU( xor(~b, ~m) ) @ #vk.14 )
-                  case c_xor
-                  solve( !KU( ~a ) @ #vk.11 )
+      solve( !KU( aenc(<<<a, b>, $P>, sign(<<a, b>, $P>, ~k)>, pk(~k.1))
+             ) @ #vk.1 )
+        case c_aenc
+        solve( !KU( sign(<<a, b>, $P>, ~k) ) @ #vk.10 )
+          case Net
+          solve( !KU( ~k.3 ) @ #vk.11 )
+            case LtkReveal
+            solve( !KU( f(~c, <~a, XOR(~b, ~m)>) ) @ #vk.7 )
+              case c_f
+              solve( !KU( XOR(~b, ~m) ) @ #vk.14 )
+                case c_XOR
+                solve( !KU( ~a ) @ #vk.11 )
+                  case Net
+                  solve( !KU( ~b ) @ #vk.13 )
                     case Net
-                    solve( !KU( ~b ) @ #vk.13 )
-                      case Net
-                      solve( !KU( ~c ) @ #vk.14 )
-                        case Verifier2
-                        solve( !KU( ~m ) @ #vk.15 )
-                          case Verifier1
-                          solve( !KU( pk(~k.1) ) @ #vk.15 )
-                            case AsymKey
-                            SOLVED // trace found
-                          qed
+                    solve( !KU( ~c ) @ #vk.14 )
+                      case Verifier2
+                      solve( !KU( ~m ) @ #vk.15 )
+                        case Verifier1
+                        solve( !KU( pk(~k.1) ) @ #vk.15 )
+                          case AsymKey
+                          SOLVED // trace found
                         qed
                       qed
                     qed
@@ -591,35 +546,32 @@ guarded formula characterizing all counter-examples:
 simplify
 solve( VerifierState2( V, P, m, a, b, ch ) ▶₀ #l )
   case Verifier2
-  solve( Recv( $V, f(~c, <a, z>) ) ▶₁ #l )
+  solve( Recv( $V, f(~c, <a, XOR(b, ~m)>) ) ▶₁ #l )
     case Net_case_1
     solve( Corrupt( $P ) @ #i )
       case LtkReveal
       solve( !Ltk( $P, k ) ▶₀ #i )
         case AsymKey
-        solve( splitEqs(0) )
-          case split_case_1
-          solve( !KU( aenc(<<<~a, ~b>, $P>, sign(<<~a, ~b>, $P>, ~k)>, pk(~k.1))
-                 ) @ #vk.1 )
-            case c_aenc
-            solve( !KU( ~a ) @ #vk.9 )
-              case Net
-              solve( !KU( ~k.3 ) @ #vk.12 )
-                case LtkReveal
-                solve( !KU( sign(<<~a, ~b>, $P>, ~k) ) @ #vk.12 )
-                  case c_sign
-                  solve( !KU( ~c ) @ #vk.9 )
-                    case Verifier2
-                    solve( !KU( ~m ) @ #vk.10 )
-                      case Verifier1
-                      solve( !KU( ~b ) @ #vk.12 )
-                        case Net
-                        solve( !KU( ~k ) @ #vk.13 )
-                          case LtkReveal
-                          solve( !KU( pk(~k.1) ) @ #vk.13 )
-                            case AsymKey
-                            SOLVED // trace found
-                          qed
+        solve( !KU( aenc(<<<~a, ~b>, $P>, sign(<<~a, ~b>, $P>, ~k)>, pk(~k.1))
+               ) @ #vk.1 )
+          case c_aenc
+          solve( !KU( ~a ) @ #vk.9 )
+            case Net
+            solve( !KU( ~k.3 ) @ #vk.12 )
+              case LtkReveal
+              solve( !KU( sign(<<~a, ~b>, $P>, ~k) ) @ #vk.12 )
+                case c_sign
+                solve( !KU( ~c ) @ #vk.9 )
+                  case Verifier2
+                  solve( !KU( ~m ) @ #vk.10 )
+                    case Verifier1
+                    solve( !KU( ~b ) @ #vk.12 )
+                      case Net
+                      solve( !KU( ~k ) @ #vk.13 )
+                        case LtkReveal
+                        solve( !KU( pk(~k.1) ) @ #vk.13 )
+                          case AsymKey
+                          SOLVED // trace found
                         qed
                       qed
                     qed
@@ -634,20 +586,7 @@ solve( VerifierState2( V, P, m, a, b, ch ) ▶₀ #l )
   qed
 qed
 
-/*
-WARNING: the following wellformedness checks failed!
-
-Formula terms:
-  lemma `complete_trace_exists' uses terms of the wrong form:
-    `f(Bound 8,pair(Bound 10,xor(Bound 9,Bound 7)))',
-    `f(Bound 8,pair(Bound 10,xor(Bound 9,Bound 7)))'
-  
-  The only allowed terms are public names and bound node and message
-  variables. If you encounter free message variables, then you might
-  have forgotten a #-prefix. Sort prefixes can only be dropped where
-  this is unambiguous. Moreover, reducible function symbols are
-  disallowed.
-*/
+/* All well-formedness checks were successful. */
 
 end
 
@@ -656,14 +595,11 @@ summary of summaries:
 
 analyzed: tread_aenc.spthy
 
-  WARNING: 1 wellformedness check failed!
-           The analysis results might be wrong!
-  
-  complete_trace_exists (exists-trace): verified (20 steps)
+  complete_trace_exists (exists-trace): verified (16 steps)
   unique_runid (all-traces): verified (20 steps)
   end_after_start (all-traces): verified (6 steps)
-  dbsec (all-traces): falsified - found trace (14 steps)
-  dbsec_on_honest_prover (all-traces): falsified - found trace (16 steps)
-  dbsec_on_corrupt_prover (all-traces): falsified - found trace (16 steps)
+  dbsec (all-traces): falsified - found trace (13 steps)
+  dbsec_on_honest_prover (all-traces): falsified - found trace (15 steps)
+  dbsec_on_corrupt_prover (all-traces): falsified - found trace (15 steps)
 
 ==============================================================================

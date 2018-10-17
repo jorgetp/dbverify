@@ -8,14 +8,14 @@ theory meadows begin
 
 // Function signature and definition of the equational theory E
 
-functions: adec/2, aenc/2, fst/1, h/2, pair/2, pk/1, sdec/2, senc/2,
-           snd/1, xor/2
+functions: XOR/2, adec/2, aenc/2, fst/1, h/2, pair/2, pk/1, sdec/2,
+           senc/2, snd/1
 equations:
+    XOR(XOR(x, y), y) = x,
     adec(aenc(x.1, pk(x.2)), x.2) = x.1,
     fst(<x.1, x.2>) = x.1,
     sdec(senc(x.1, x.2), x.2) = x.1,
-    snd(<x.1, x.2>) = x.2,
-    xor(xor(x, y), y) = x
+    snd(<x.1, x.2>) = x.2
 
 rule (modulo E) Verifier1:
    [ Fr( ~nv ) ]
@@ -41,7 +41,7 @@ rule (modulo E) Verifier2:
 rule (modulo E) Prover2:
    [ ProverState1( V, P, np ), In( nv ) ]
   --[ Action( P ) ]->
-   [ Send( P, <nv, xor(np, P)> ), ProverState2( V, P, np, nv ) ]
+   [ Send( P, <nv, XOR(np, P)> ), ProverState2( V, P, np, nv ) ]
 
   /*
   rule (modulo AC) Prover2:
@@ -51,10 +51,10 @@ rule (modulo E) Prover2:
     variants (modulo AC)
     1. P     = P.6
        np    = np.6
-       z     = xor(np.6, P.6)
+       z     = XOR(np.6, P.6)
     
     2. P     = x.6
-       np    = xor(x.7, x.6)
+       np    = XOR(x.7, x.6)
        z     = x.7
   */
 
@@ -74,10 +74,10 @@ rule (modulo E) Prover3:
 
 rule (modulo E) Verifier4:
    [
-   VerifierState3( V, nv, xor(np, P) ),
+   VerifierState3( V, nv, XOR(np, P) ),
    In( <<P, locP, np, nv>, h(k, <P, locP, np, nv>)> ), !Shk( V, P, k )
    ]
-  --[ DBSec( V, P, nv, <nv, xor(np, P)> ), End( nv ) ]->
+  --[ DBSec( V, P, nv, <nv, XOR(np, P)> ), End( nv ) ]->
    [ ]
 
   /*
@@ -91,10 +91,10 @@ rule (modulo E) Verifier4:
     variants (modulo AC)
     1. P     = P.8
        np    = np.8
-       z     = xor(np.8, P.8)
+       z     = XOR(np.8, P.8)
     
     2. P     = x.8
-       np    = xor(x.9, x.8)
+       np    = XOR(x.9, x.8)
        z     = x.9
   */
 
@@ -105,9 +105,9 @@ lemma complete_trace_exists:
                (Action( P ) @ #t2)) ∧
               (Send( V, nv ) @ #t3)) ∧
              (Action( P ) @ #t4)) ∧
-            (Recv( V, <nv, xor(np, P)> ) @ #t5)) ∧
+            (Recv( V, <nv, XOR(np, P)> ) @ #t5)) ∧
            (Action( P ) @ #t6)) ∧
-          (DBSec( V, P, nv, <nv, xor(np, P)> ) @ #t7)) ∧
+          (DBSec( V, P, nv, <nv, XOR(np, P)> ) @ #t7)) ∧
          (#t1 < #t2)) ∧
         (#t2 < #t3)) ∧
        (#t3 < #t4)) ∧
@@ -122,9 +122,9 @@ guarded formula characterizing all satisfying traces:
   (Action( P ) @ #t2) ∧
   (Send( V, nv ) @ #t3) ∧
   (Action( P ) @ #t4) ∧
-  (Recv( V, <nv, xor(np, P)> ) @ #t5) ∧
+  (Recv( V, <nv, XOR(np, P)> ) @ #t5) ∧
   (Action( P ) @ #t6) ∧
-  (DBSec( V, P, nv, <nv, xor(np, P)> ) @ #t7)
+  (DBSec( V, P, nv, <nv, XOR(np, P)> ) @ #t7)
  ∧
   (#t1 < #t2) ∧
   (#t2 < #t3) ∧
@@ -136,9 +136,9 @@ guarded formula characterizing all satisfying traces:
 simplify
 solve( VerifierState1( $B, nv ) ▶₀ #t3 )
   case Verifier1
-  solve( Send( $A, <~nv, xor(np, P)> ) ▶₀ #t5 )
+  solve( Send( $A, <~nv, XOR(np, P)> ) ▶₀ #t5 )
     case Adv_case_1
-    solve( VerifierState3( $B, ~nv, xor(np, P) ) ▶₀ #t7 )
+    solve( VerifierState3( $B, ~nv, XOR(np, P) ) ▶₀ #t7 )
       case Verifier3_case_1
       solve( !Shk( $B, $A.1, k ) ▶₂ #t7 )
         case SymKey
@@ -160,7 +160,7 @@ solve( VerifierState1( $B, nv ) ▶₀ #t3 )
                         case Net
                         solve( !KU( ~nv ) @ #vk.9 )
                           case Verifier2
-                          solve( !KU( xor(~np, $A) ) @ #vk.10 )
+                          solve( !KU( XOR(~np, $A) ) @ #vk.10 )
                             case Net
                             SOLVED // trace found
                           qed
@@ -345,15 +345,15 @@ solve( VerifierState3( V, ch, z ) ▶₀ #l )
     case SymKey
     solve( splitEqs(0) )
       case split_case_2
-      solve( !KU( h(~k, <$B.1, locP, xor(xor(~np, $A), $B.1), ~nv>) ) @ #vk.8 )
+      solve( !KU( h(~k, <$B.1, locP, XOR(XOR(~np, $A), $B.1), ~nv>) ) @ #vk.8 )
         case c_h
         solve( !KU( ~k ) @ #vk.12 )
           case ShkRevealB
-          solve( !KU( xor(xor(~np, $A), $B.1) ) @ #vk.8 )
-            case c_xor
+          solve( !KU( XOR(XOR(~np, $A), $B.1) ) @ #vk.8 )
+            case c_XOR
             solve( !KU( ~nv ) @ #vk.9 )
               case Verifier2
-              solve( !KU( xor(~np, $A) ) @ #vk.13 )
+              solve( !KU( XOR(~np, $A) ) @ #vk.13 )
                 case Net
                 SOLVED // trace found
               qed
@@ -401,7 +401,7 @@ solve( VerifierState3( V, ch, z ) ▶₀ #l )
       qed
     next
       case split_case_2
-      solve( !KU( h(~k, <$B.1, locP, xor(xor(~np, $A), $B.1), ~nv>) ) @ #vk.8 )
+      solve( !KU( h(~k, <$B.1, locP, XOR(XOR(~np, $A), $B.1), ~nv>) ) @ #vk.8 )
         case c_h
         solve( !KU( ~k ) @ #vk.12 )
           case ShkRevealA
@@ -439,11 +439,11 @@ next
             case case_2
             solve( (¬(#vr.1 < #vr.12))  ∥ (¬(#vr.12 < #vr.2)) )
               case case_1
-              solve( !KU( xor(~np, $B.1) ) @ #vk.10 )
+              solve( !KU( XOR(~np, $B.1) ) @ #vk.10 )
                 case Net
                 by contradiction /* cyclic */
               next
-                case c_xor
+                case c_XOR
                 solve( !KU( ~np ) @ #vk.8 )
                   case Net_case_1
                   by contradiction /* cyclic */
@@ -454,11 +454,11 @@ next
               qed
             next
               case case_2
-              solve( !KU( xor(~np, $B.1) ) @ #vk.10 )
+              solve( !KU( XOR(~np, $B.1) ) @ #vk.10 )
                 case Net
                 by contradiction /* cyclic */
               next
-                case c_xor
+                case c_XOR
                 solve( !KU( ~np ) @ #vk.8 )
                   case Net_case_1
                   by contradiction /* cyclic */
@@ -482,7 +482,7 @@ next
       qed
     next
       case split_case_2
-      solve( !KU( h(~k, <$B.1, locP, xor(z, $B.1), ~nv>) ) @ #vk.9 )
+      solve( !KU( h(~k, <$B.1, locP, XOR(z, $B.1), ~nv>) ) @ #vk.9 )
         case c_h
         solve( !KU( ~k ) @ #vk.11 )
           case ShkRevealA
@@ -520,11 +520,11 @@ next
             case case_2
             solve( (¬(#vr.1 < #vr.12))  ∥ (¬(#vr.12 < #vr.2)) )
               case case_1
-              solve( !KU( xor(~np, $B.1) ) @ #vk.10 )
+              solve( !KU( XOR(~np, $B.1) ) @ #vk.10 )
                 case Net
                 by contradiction /* cyclic */
               next
-                case c_xor
+                case c_XOR
                 solve( !KU( ~np ) @ #vk.8 )
                   case Net_case_1
                   by contradiction /* cyclic */
@@ -535,11 +535,11 @@ next
               qed
             next
               case case_2
-              solve( !KU( xor(~np, $B.1) ) @ #vk.10 )
+              solve( !KU( XOR(~np, $B.1) ) @ #vk.10 )
                 case Net
                 by contradiction /* cyclic */
               next
-                case c_xor
+                case c_XOR
                 solve( !KU( ~np ) @ #vk.8 )
                   case Net_case_1
                   by contradiction /* cyclic */
@@ -563,7 +563,7 @@ next
       qed
     next
       case split_case_2
-      solve( !KU( h(~k, <$B.1, locP, xor(z, $B.1), ~nv>) ) @ #vk.9 )
+      solve( !KU( h(~k, <$B.1, locP, XOR(z, $B.1), ~nv>) ) @ #vk.9 )
         case c_h
         solve( !KU( ~k ) @ #vk.11 )
           case ShkRevealA
@@ -601,11 +601,11 @@ next
             case case_2
             solve( (¬(#vr.1 < #vr.12))  ∥ (¬(#vr.12 < #vr.2)) )
               case case_1
-              solve( !KU( xor(~np, $B.1) ) @ #vk.10 )
+              solve( !KU( XOR(~np, $B.1) ) @ #vk.10 )
                 case Net
                 by contradiction /* cyclic */
               next
-                case c_xor
+                case c_XOR
                 solve( !KU( ~np ) @ #vk.8 )
                   case Net_case_1
                   by contradiction /* cyclic */
@@ -616,11 +616,11 @@ next
               qed
             next
               case case_2
-              solve( !KU( xor(~np, $B.1) ) @ #vk.10 )
+              solve( !KU( XOR(~np, $B.1) ) @ #vk.10 )
                 case Net
                 by contradiction /* cyclic */
               next
-                case c_xor
+                case c_XOR
                 solve( !KU( ~np ) @ #vk.8 )
                   case Net_case_1
                   by contradiction /* cyclic */
@@ -644,7 +644,7 @@ next
       qed
     next
       case split_case_2
-      solve( !KU( h(~k, <$B.1, locP, xor(z, $B.1), ~nv>) ) @ #vk.9 )
+      solve( !KU( h(~k, <$B.1, locP, XOR(z, $B.1), ~nv>) ) @ #vk.9 )
         case c_h
         solve( !KU( ~k ) @ #vk.11 )
           case ShkRevealA
@@ -697,15 +697,15 @@ solve( VerifierState3( V, ch, z ) ▶₀ #l )
         case AsymKey
         solve( splitEqs(0) )
           case split_case_2
-          solve( !KU( h(~k.1, <$B, locP, xor(xor(~np, $A), $B), ~nv>) ) @ #vk.8 )
+          solve( !KU( h(~k.1, <$B, locP, XOR(XOR(~np, $A), $B), ~nv>) ) @ #vk.8 )
             case c_h
             solve( !KU( ~k.1 ) @ #vk.12 )
               case ShkRevealB
-              solve( !KU( xor(xor(~np, $A), $B) ) @ #vk.8 )
-                case c_xor
+              solve( !KU( XOR(XOR(~np, $A), $B) ) @ #vk.8 )
+                case c_XOR
                 solve( !KU( ~nv ) @ #vk.9 )
                   case Verifier2
-                  solve( !KU( xor(~np, $A) ) @ #vk.13 )
+                  solve( !KU( XOR(~np, $A) ) @ #vk.13 )
                     case Net
                     SOLVED // trace found
                   qed
@@ -724,8 +724,8 @@ WARNING: the following wellformedness checks failed!
 
 Formula terms:
   lemma `complete_trace_exists' uses terms of the wrong form:
-    `pair(Bound 8,xor(Bound 7,Bound 9))',
-    `pair(Bound 8,xor(Bound 7,Bound 9))'
+    `pair(Bound 8,XOR(Bound 7,Bound 9))',
+    `pair(Bound 8,XOR(Bound 7,Bound 9))'
   
   The only allowed terms are public names and bound node and message
   variables. If you encounter free message variables, then you might

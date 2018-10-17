@@ -7,9 +7,7 @@ begin
 
 builtins : symmetric-encryption, asymmetric-encryption, signing 
 
-functions: f/2, xor/2
-
-equations: xor(xor(x,y), y) = x
+functions: f/2, XOR/2
 
 // -------------------- Protocol Rules -------------------- //
 rule Prover1:
@@ -58,10 +56,10 @@ rule Prover3:
 			In(c) ]
 	--[ Action(P),
 			End(a) ]->
-		[ Send(P, f(c, <a, xor(b,m)>) ) ]
+		[ Send(P, f(c, <a, XOR(b,m)>) ) ]
 
 rule Verifier3:			//fast phase ends
-		let resp = f(c, <a, xor(b,m)>)
+		let resp = f(c, <a, XOR(b,m)>)
 		in
 		[ VerifierState2(V, P, m, a, b, c),
 			Recv(V, resp ),
@@ -85,10 +83,10 @@ lemma complete_trace_exists:
 		//fast phase
 		Send(V, c) @ t4 &
 		Action(P) @ t5 &
-		Recv(V, f(c, <a, xor(b,m)>)) @ t6 &
+		Recv(V, f(c, <a, XOR(b,m)>)) @ t6 &
 		
 		//verification
-		DBSec(V, P, c, f(c, <a, xor(b,m)>)) @ t7 &
+		DBSec(V, P, c, f(c, <a, XOR(b,m)>)) @ t7 &
 
 		//check order	
 		t1 < t2 & t2 < t3 & t3 < t4 & t4 < t5 & t5 < t6 & t6 < t7

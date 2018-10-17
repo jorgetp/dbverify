@@ -8,8 +8,8 @@ theory bc_signature begin
 
 // Function signature and definition of the equational theory E
 
-functions: adec/2, aenc/2, f/2, fst/1, pair/2, pk/1, sdec/2, senc/2,
-           sign/2, snd/1, true/0, verify/3, xor/2
+functions: XOR/2, adec/2, aenc/2, f/2, fst/1, pair/2, pk/1, sdec/2,
+           senc/2, sign/2, snd/1, true/0, verify/3
 equations:
     adec(aenc(x.1, pk(x.2)), x.2) = x.1,
     fst(<x.1, x.2>) = x.1,
@@ -34,7 +34,7 @@ rule (modulo E) Ver1:
 rule (modulo E) Prov2:
    [ ProverState1( P, m, ck ), In( n ) ]
   --[ Action( P ) ]->
-   [ Send( P, xor(n, m) ), ProverState2( P, m, ck, n ) ]
+   [ Send( P, XOR(n, m) ), ProverState2( P, m, ck, n ) ]
 
   /* has exactly the trivial AC variant */
 
@@ -54,22 +54,22 @@ rule (modulo E) Prov3:
 
 rule (modulo E) Ver3:
    [
-   VerifierState2( V, n, comm, xor(n, sdec(comm, ck)) ),
+   VerifierState2( V, n, comm, XOR(n, sdec(comm, ck)) ),
    In( <ck, signature> ), !Pk( $P, pkP )
    ]
   --[
   Eq( verify(signature, f(n, sdec(comm, ck)), pkP), true ),
-  DBSec( V, $P, n, xor(n, sdec(comm, ck)) ), End( n )
+  DBSec( V, $P, n, XOR(n, sdec(comm, ck)) ), End( n )
   ]->
    [ ]
 
   /*
   rule (modulo AC) Ver3:
      [
-     VerifierState2( V, n, comm, xor(n, z) ), In( <ck, signature> ),
+     VerifierState2( V, n, comm, XOR(n, z) ), In( <ck, signature> ),
      !Pk( $P, pkP )
      ]
-    --[ Eq( z.1, true ), DBSec( V, $P, n, xor(n, z) ), End( n ) ]->
+    --[ Eq( z.1, true ), DBSec( V, $P, n, XOR(n, z) ), End( n ) ]->
      [ ]
     variants (modulo AC)
     1. ck    = ck.10
@@ -120,9 +120,9 @@ lemma complete_trace_exists:
               (Start( n ) @ #t2)) ∧
              (Send( V, n ) @ #t2)) ∧
             (Action( P ) @ #t3)) ∧
-           (Recv( V, xor(n, m) ) @ #t4)) ∧
+           (Recv( V, XOR(n, m) ) @ #t4)) ∧
           (Action( P ) @ #t5)) ∧
-         (DBSec( V, P, n, xor(n, m) ) @ #t6)) ∧
+         (DBSec( V, P, n, XOR(n, m) ) @ #t6)) ∧
         (#t1 < #t2)) ∧
        (#t2 < #t3)) ∧
       (#t3 < #t4)) ∧
@@ -136,16 +136,16 @@ guarded formula characterizing all satisfying traces:
   (Start( n ) @ #t2) ∧
   (Send( V, n ) @ #t2) ∧
   (Action( P ) @ #t3) ∧
-  (Recv( V, xor(n, m) ) @ #t4) ∧
+  (Recv( V, XOR(n, m) ) @ #t4) ∧
   (Action( P ) @ #t5) ∧
-  (DBSec( V, P, n, xor(n, m) ) @ #t6)
+  (DBSec( V, P, n, XOR(n, m) ) @ #t6)
  ∧
   (#t1 < #t2) ∧ (#t2 < #t3) ∧ (#t3 < #t4) ∧ (#t4 < #t5) ∧ (#t5 < #t6)"
 */
 simplify
-solve( Send( $A, xor(~n, m) ) ▶₀ #t4 )
+solve( Send( $A, XOR(~n, m) ) ▶₀ #t4 )
   case Adv_case_1
-  solve( VerifierState2( $V, ~n, comm.1, xor(~n, m) ) ▶₀ #t6 )
+  solve( VerifierState2( $V, ~n, comm.1, XOR(~n, m) ) ▶₀ #t6 )
     case Ver2_case_1
     solve( !Pk( $P, pk(x) ) ▶₂ #t6 )
       case AsymKey
@@ -169,7 +169,7 @@ solve( Send( $A, xor(~n, m) ) ▶₀ #t4 )
                         case Ver1
                         solve( !KU( ~ck ) @ #vk.4 )
                           case Net
-                          solve( !KU( xor(~n, ~m) ) @ #vk.5 )
+                          solve( !KU( XOR(~n, ~m) ) @ #vk.5 )
                             case Net
                             SOLVED // trace found
                           qed
@@ -286,7 +286,7 @@ solve( End( x ) @ #j )
   qed
 next
   case Ver3
-  solve( VerifierState2( V, x, comm, xor(x, z) ) ▶₀ #j )
+  solve( VerifierState2( V, x, comm, XOR(x, z) ) ▶₀ #j )
     case Ver2_case_1
     by contradiction /* from formulas */
   next
@@ -348,7 +348,7 @@ guarded formula characterizing all counter-examples:
      (¬(#k < #l))))"
 */
 simplify
-solve( VerifierState2( V, ch, comm, xor(ch, z) ) ▶₀ #l )
+solve( VerifierState2( V, ch, comm, XOR(ch, z) ) ▶₀ #l )
   case Ver2_case_1
   solve( !Pk( $P, pk(x) ) ▶₂ #l )
     case AsymKey
@@ -401,7 +401,7 @@ guarded formula characterizing all counter-examples:
     ((¬(#i < #j)) ∨ (¬(#j < #k)) ∨ (¬(#k < #l))))"
 */
 simplify
-solve( VerifierState2( V, ch, comm, xor(ch, z) ) ▶₀ #l )
+solve( VerifierState2( V, ch, comm, XOR(ch, z) ) ▶₀ #l )
   case Ver2_case_1
   solve( !Pk( $P, pk(x) ) ▶₂ #l )
     case AsymKey
@@ -463,11 +463,11 @@ next
             case case_2
             solve( (¬(#vr.1 < #vr.11))  ∥ (¬(#vr.11 < #vr.2)) )
               case case_1
-              solve( !KU( xor(~n, ~m) ) @ #vk.4 )
+              solve( !KU( XOR(~n, ~m) ) @ #vk.4 )
                 case Net
                 by contradiction /* cyclic */
               next
-                case c_xor
+                case c_XOR
                 solve( !KU( ~m ) @ #vk.6 )
                   case Net
                   solve( !KU( ~ck.1 ) @ #vk.7 )
@@ -478,11 +478,11 @@ next
               qed
             next
               case case_2
-              solve( !KU( xor(~n, ~m) ) @ #vk.4 )
+              solve( !KU( XOR(~n, ~m) ) @ #vk.4 )
                 case Net
                 by contradiction /* cyclic */
               next
-                case c_xor
+                case c_XOR
                 solve( !KU( ~m ) @ #vk.6 )
                   case Net
                   by contradiction /* cyclic */
@@ -535,11 +535,11 @@ next
             case case_2
             solve( (¬(#vr.1 < #vr.11))  ∥ (¬(#vr.11 < #vr.2)) )
               case case_1
-              solve( !KU( xor(~n, ~m) ) @ #vk.4 )
+              solve( !KU( XOR(~n, ~m) ) @ #vk.4 )
                 case Net
                 by contradiction /* cyclic */
               next
-                case c_xor
+                case c_XOR
                 solve( !KU( ~m ) @ #vk.6 )
                   case Net
                   solve( !KU( ~ck.1 ) @ #vk.7 )
@@ -550,11 +550,11 @@ next
               qed
             next
               case case_2
-              solve( !KU( xor(~n, ~m) ) @ #vk.4 )
+              solve( !KU( XOR(~n, ~m) ) @ #vk.4 )
                 case Net
                 by contradiction /* cyclic */
               next
-                case c_xor
+                case c_XOR
                 solve( !KU( ~m ) @ #vk.6 )
                   case Net
                   by contradiction /* cyclic */
@@ -607,11 +607,11 @@ next
             case case_2
             solve( (¬(#vr.1 < #vr.11))  ∥ (¬(#vr.11 < #vr.2)) )
               case case_1
-              solve( !KU( xor(~n, ~m) ) @ #vk.4 )
+              solve( !KU( XOR(~n, ~m) ) @ #vk.4 )
                 case Net
                 by contradiction /* cyclic */
               next
-                case c_xor
+                case c_XOR
                 solve( !KU( ~m ) @ #vk.6 )
                   case Net
                   solve( !KU( ~ck.1 ) @ #vk.7 )
@@ -622,11 +622,11 @@ next
               qed
             next
               case case_2
-              solve( !KU( xor(~n, ~m) ) @ #vk.4 )
+              solve( !KU( XOR(~n, ~m) ) @ #vk.4 )
                 case Net
                 by contradiction /* cyclic */
               next
-                case c_xor
+                case c_XOR
                 solve( !KU( ~m ) @ #vk.6 )
                   case Net
                   by contradiction /* cyclic */
@@ -675,7 +675,7 @@ guarded formula characterizing all counter-examples:
     ((¬(#a < #l)) ∨ (¬(#i < #j)) ∨ (¬(#j < #k)) ∨ (¬(#k < #l))))"
 */
 simplify
-solve( VerifierState2( V, ch, comm, xor(ch, z) ) ▶₀ #l )
+solve( VerifierState2( V, ch, comm, XOR(ch, z) ) ▶₀ #l )
   case Ver2_case_1
   solve( !Pk( $P, pk(x) ) ▶₂ #l )
     case AsymKey

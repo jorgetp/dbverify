@@ -8,8 +8,8 @@ theory swiss begin
 
 // Function signature and definition of the equational theory E
 
-functions: adec/2, aenc/2, f/2, fst/1, g/2, pair/2, pk/1, sdec/2, senc/2,
-           snd/1, xor/2
+functions: XOR/2, adec/2, aenc/2, f/2, fst/1, g/2, pair/2, pk/1, sdec/2,
+           senc/2, snd/1
 equations:
     adec(aenc(x.1, pk(x.2)), x.2) = x.1,
     fst(<x.1, x.2>) = x.1,
@@ -38,19 +38,19 @@ rule (modulo E) Verif2:
 rule (modulo E) Prover2:
    [ ProverState1( V, P, n, m, a ), In( c ), !Shk( V, P, x ) ]
   --[ Action( P ) ]->
-   [ Send( P, g(c, <a, xor(a, x)>) ), ProverState2( V, P, n, m, c ) ]
+   [ Send( P, g(c, <a, XOR(a, x)>) ), ProverState2( V, P, n, m, c ) ]
 
   /* has exactly the trivial AC variant */
 
 rule (modulo E) Verif3:
    [
    VerifState2( V, n, m, c ), !Shk( V, $P, x ),
-   Recv( V, g(c, <f(x, <'hello', m>), xor(f(x, <'hello', m>), x)>) )
+   Recv( V, g(c, <f(x, <'hello', m>), XOR(f(x, <'hello', m>), x)>) )
    ]
   -->
    [
    VerifState3( V, $P, n, m, c,
-                g(c, <f(x, <'hello', m>), xor(f(x, <'hello', m>), x)>)
+                g(c, <f(x, <'hello', m>), XOR(f(x, <'hello', m>), x)>)
    )
    ]
 
@@ -87,10 +87,10 @@ lemma complete_trace_exists:
                  (Action( P ) @ #t2)) ∧
                 (Send( V, c ) @ #t3)) ∧
                (Action( P ) @ #t4)) ∧
-              (Recv( V, g(c, <f(x, <'hello', m>), xor(f(x, <'hello', m>), x)>)
+              (Recv( V, g(c, <f(x, <'hello', m>), XOR(f(x, <'hello', m>), x)>)
                ) @ #t5)) ∧
              (Action( P ) @ #t6)) ∧
-            (DBSec( V, P, c, g(c, <f(x, <'hello', m>), xor(f(x, <'hello', m>), x)>)
+            (DBSec( V, P, c, g(c, <f(x, <'hello', m>), XOR(f(x, <'hello', m>), x)>)
              ) @ #t7)) ∧
            (Action( P ) @ #t8)) ∧
           (#t1 < #t2)) ∧
@@ -108,10 +108,10 @@ guarded formula characterizing all satisfying traces:
   (Action( P ) @ #t2) ∧
   (Send( V, c ) @ #t3) ∧
   (Action( P ) @ #t4) ∧
-  (Recv( V, g(c, <f(x, <'hello', m>), xor(f(x, <'hello', m>), x)>)
+  (Recv( V, g(c, <f(x, <'hello', m>), XOR(f(x, <'hello', m>), x)>)
    ) @ #t5) ∧
   (Action( P ) @ #t6) ∧
-  (DBSec( V, P, c, g(c, <f(x, <'hello', m>), xor(f(x, <'hello', m>), x)>)
+  (DBSec( V, P, c, g(c, <f(x, <'hello', m>), XOR(f(x, <'hello', m>), x)>)
    ) @ #t7) ∧
   (Action( P ) @ #t8)
  ∧
@@ -127,11 +127,11 @@ simplify
 solve( VerifState1( n ) ▶₀ #t3 )
   case Verif1
   solve( Send( $A,
-               g(~c, <f(x, <'hello', m.1>), xor(f(x, <'hello', m.1>), x)>)
+               g(~c, <f(x, <'hello', m.1>), XOR(f(x, <'hello', m.1>), x)>)
          ) ▶₀ #t5 )
     case Adv_case_1
     solve( VerifState3( $V, P, n.1, m.2, ~c,
-                        g(~c, <f(x, <'hello', m.1>), xor(f(x, <'hello', m.1>), x)>)
+                        g(~c, <f(x, <'hello', m.1>), XOR(f(x, <'hello', m.1>), x)>)
            ) ▶₀ #t7 )
       case Verif3_case_1
       solve( !Shk( $V, $P, x ) ▶₂ #t7 )
@@ -166,7 +166,7 @@ solve( VerifState1( n ) ▶₀ #t3 )
                                     case Verif1
                                     solve( !KU( g(~c,
                                                   <f(~k.1, <'hello', ~m.1>), 
-                                                   xor(f(~k.1, <'hello', ~m.1>), ~k.1)>)
+                                                   XOR(f(~k.1, <'hello', ~m.1>), ~k.1)>)
                                            ) @ #vk.5 )
                                       case Net
                                       SOLVED // trace found
@@ -395,14 +395,14 @@ next
             case case_1
             solve( !KU( ~m ) @ #vk.3 )
               case Net
-              solve( !KU( g(~c, <f(~k, <'hello', ~m>), xor(f(~k, <'hello', ~m>), ~k)>)
+              solve( !KU( g(~c, <f(~k, <'hello', ~m>), XOR(f(~k, <'hello', ~m>), ~k)>)
                      ) @ #vk.4 )
                 case Net
                 by contradiction /* cyclic */
               next
                 case c_g
-                solve( !KU( xor(f(~k, <'hello', ~m>), ~k) ) @ #vk.8 )
-                  case c_xor
+                solve( !KU( XOR(f(~k, <'hello', ~m>), ~k) ) @ #vk.8 )
+                  case c_XOR
                   solve( !KU( ~k ) @ #vk.9 )
                     case ShkRevealA
                     by contradiction /* from formulas */
@@ -420,7 +420,7 @@ next
             case case_2
             solve( !KU( ~m ) @ #vk.3 )
               case Net
-              solve( !KU( g(~c, <f(~k, <'hello', ~m>), xor(f(~k, <'hello', ~m>), ~k)>)
+              solve( !KU( g(~c, <f(~k, <'hello', ~m>), XOR(f(~k, <'hello', ~m>), ~k)>)
                      ) @ #vk.4 )
                 case Net
                 by contradiction /* cyclic */
@@ -437,7 +437,7 @@ next
       qed
     next
       case Verif4_case_1
-      solve( !KU( g(~c, <f(~k, <'hello', m>), xor(f(~k, <'hello', m>), ~k)>)
+      solve( !KU( g(~c, <f(~k, <'hello', m>), XOR(f(~k, <'hello', m>), ~k)>)
              ) @ #vk.6 )
         case Net
         solve( !KU( ~c ) @ #vk.3 )
@@ -446,8 +446,8 @@ next
         qed
       next
         case c_g
-        solve( !KU( xor(f(~k, <'hello', m>), ~k) ) @ #vk.16 )
-          case c_xor
+        solve( !KU( XOR(f(~k, <'hello', m>), ~k) ) @ #vk.16 )
+          case c_XOR
           solve( !KU( ~k ) @ #vk.17 )
             case ShkRevealA
             by contradiction /* from formulas */
@@ -471,7 +471,7 @@ next
       qed
     next
       case Verif4_case_2
-      solve( !KU( g(~c, <f(~k, <'hello', m>), xor(f(~k, <'hello', m>), ~k)>)
+      solve( !KU( g(~c, <f(~k, <'hello', m>), XOR(f(~k, <'hello', m>), ~k)>)
              ) @ #vk.6 )
         case Net
         solve( !KU( ~c ) @ #vk.3 )
@@ -480,8 +480,8 @@ next
         qed
       next
         case c_g
-        solve( !KU( xor(f(~k, <'hello', m>), ~k) ) @ #vk.16 )
-          case c_xor
+        solve( !KU( XOR(f(~k, <'hello', m>), ~k) ) @ #vk.16 )
+          case c_XOR
           solve( !KU( ~k ) @ #vk.17 )
             case ShkRevealA
             by contradiction /* from formulas */
@@ -505,7 +505,7 @@ next
       qed
     next
       case Verif4_case_3
-      solve( !KU( g(~c, <f(~k, <'hello', m>), xor(f(~k, <'hello', m>), ~k)>)
+      solve( !KU( g(~c, <f(~k, <'hello', m>), XOR(f(~k, <'hello', m>), ~k)>)
              ) @ #vk.6 )
         case Net
         solve( !KU( ~c ) @ #vk.3 )
@@ -514,8 +514,8 @@ next
         qed
       next
         case c_g
-        solve( !KU( xor(f(~k, <'hello', m>), ~k) ) @ #vk.16 )
-          case c_xor
+        solve( !KU( XOR(f(~k, <'hello', m>), ~k) ) @ #vk.16 )
+          case c_XOR
           solve( !KU( ~k ) @ #vk.17 )
             case ShkRevealA
             by contradiction /* from formulas */
@@ -544,7 +544,7 @@ next
         by contradiction /* from formulas */
       next
         case ShkRevealB
-        solve( !KU( g(~c, <f(~k, <'hello', m>), xor(f(~k, <'hello', m>), ~k)>)
+        solve( !KU( g(~c, <f(~k, <'hello', m>), XOR(f(~k, <'hello', m>), ~k)>)
                ) @ #vk.8 )
           case Net
           solve( !KU( ~c ) @ #vk.4 )
@@ -587,14 +587,14 @@ next
             case case_1
             solve( !KU( ~m ) @ #vk.3 )
               case Net
-              solve( !KU( g(~c, <f(~k, <'hello', ~m>), xor(f(~k, <'hello', ~m>), ~k)>)
+              solve( !KU( g(~c, <f(~k, <'hello', ~m>), XOR(f(~k, <'hello', ~m>), ~k)>)
                      ) @ #vk.4 )
                 case Net
                 by contradiction /* cyclic */
               next
                 case c_g
-                solve( !KU( xor(f(~k, <'hello', ~m>), ~k) ) @ #vk.8 )
-                  case c_xor
+                solve( !KU( XOR(f(~k, <'hello', ~m>), ~k) ) @ #vk.8 )
+                  case c_XOR
                   solve( !KU( ~k ) @ #vk.9 )
                     case ShkRevealA
                     by contradiction /* from formulas */
@@ -612,7 +612,7 @@ next
             case case_2
             solve( !KU( ~m ) @ #vk.3 )
               case Net
-              solve( !KU( g(~c, <f(~k, <'hello', ~m>), xor(f(~k, <'hello', ~m>), ~k)>)
+              solve( !KU( g(~c, <f(~k, <'hello', ~m>), XOR(f(~k, <'hello', ~m>), ~k)>)
                      ) @ #vk.4 )
                 case Net
                 by contradiction /* cyclic */
@@ -629,7 +629,7 @@ next
       qed
     next
       case Verif4_case_1
-      solve( !KU( g(~c, <f(~k, <'hello', m>), xor(f(~k, <'hello', m>), ~k)>)
+      solve( !KU( g(~c, <f(~k, <'hello', m>), XOR(f(~k, <'hello', m>), ~k)>)
              ) @ #vk.6 )
         case Net
         solve( !KU( ~c ) @ #vk.3 )
@@ -638,8 +638,8 @@ next
         qed
       next
         case c_g
-        solve( !KU( xor(f(~k, <'hello', m>), ~k) ) @ #vk.16 )
-          case c_xor
+        solve( !KU( XOR(f(~k, <'hello', m>), ~k) ) @ #vk.16 )
+          case c_XOR
           solve( !KU( ~k ) @ #vk.17 )
             case ShkRevealA
             by contradiction /* from formulas */
@@ -663,7 +663,7 @@ next
       qed
     next
       case Verif4_case_2
-      solve( !KU( g(~c, <f(~k, <'hello', m>), xor(f(~k, <'hello', m>), ~k)>)
+      solve( !KU( g(~c, <f(~k, <'hello', m>), XOR(f(~k, <'hello', m>), ~k)>)
              ) @ #vk.6 )
         case Net
         solve( !KU( ~c ) @ #vk.3 )
@@ -672,8 +672,8 @@ next
         qed
       next
         case c_g
-        solve( !KU( xor(f(~k, <'hello', m>), ~k) ) @ #vk.16 )
-          case c_xor
+        solve( !KU( XOR(f(~k, <'hello', m>), ~k) ) @ #vk.16 )
+          case c_XOR
           solve( !KU( ~k ) @ #vk.17 )
             case ShkRevealA
             by contradiction /* from formulas */
@@ -697,7 +697,7 @@ next
       qed
     next
       case Verif4_case_3
-      solve( !KU( g(~c, <f(~k, <'hello', m>), xor(f(~k, <'hello', m>), ~k)>)
+      solve( !KU( g(~c, <f(~k, <'hello', m>), XOR(f(~k, <'hello', m>), ~k)>)
              ) @ #vk.6 )
         case Net
         solve( !KU( ~c ) @ #vk.3 )
@@ -706,8 +706,8 @@ next
         qed
       next
         case c_g
-        solve( !KU( xor(f(~k, <'hello', m>), ~k) ) @ #vk.16 )
-          case c_xor
+        solve( !KU( XOR(f(~k, <'hello', m>), ~k) ) @ #vk.16 )
+          case c_XOR
           solve( !KU( ~k ) @ #vk.17 )
             case ShkRevealA
             by contradiction /* from formulas */
@@ -736,7 +736,7 @@ next
         by contradiction /* from formulas */
       next
         case ShkRevealB
-        solve( !KU( g(~c, <f(~k, <'hello', m>), xor(f(~k, <'hello', m>), ~k)>)
+        solve( !KU( g(~c, <f(~k, <'hello', m>), XOR(f(~k, <'hello', m>), ~k)>)
                ) @ #vk.8 )
           case Net
           solve( !KU( ~c ) @ #vk.4 )
@@ -779,14 +779,14 @@ next
             case case_1
             solve( !KU( ~m ) @ #vk.3 )
               case Net
-              solve( !KU( g(~c, <f(~k, <'hello', ~m>), xor(f(~k, <'hello', ~m>), ~k)>)
+              solve( !KU( g(~c, <f(~k, <'hello', ~m>), XOR(f(~k, <'hello', ~m>), ~k)>)
                      ) @ #vk.4 )
                 case Net
                 by contradiction /* cyclic */
               next
                 case c_g
-                solve( !KU( xor(f(~k, <'hello', ~m>), ~k) ) @ #vk.8 )
-                  case c_xor
+                solve( !KU( XOR(f(~k, <'hello', ~m>), ~k) ) @ #vk.8 )
+                  case c_XOR
                   solve( !KU( ~k ) @ #vk.9 )
                     case ShkRevealA
                     by contradiction /* from formulas */
@@ -804,7 +804,7 @@ next
             case case_2
             solve( !KU( ~m ) @ #vk.3 )
               case Net
-              solve( !KU( g(~c, <f(~k, <'hello', ~m>), xor(f(~k, <'hello', ~m>), ~k)>)
+              solve( !KU( g(~c, <f(~k, <'hello', ~m>), XOR(f(~k, <'hello', ~m>), ~k)>)
                      ) @ #vk.4 )
                 case Net
                 by contradiction /* cyclic */
@@ -821,7 +821,7 @@ next
       qed
     next
       case Verif4_case_1
-      solve( !KU( g(~c, <f(~k, <'hello', m>), xor(f(~k, <'hello', m>), ~k)>)
+      solve( !KU( g(~c, <f(~k, <'hello', m>), XOR(f(~k, <'hello', m>), ~k)>)
              ) @ #vk.6 )
         case Net
         solve( !KU( ~c ) @ #vk.3 )
@@ -830,8 +830,8 @@ next
         qed
       next
         case c_g
-        solve( !KU( xor(f(~k, <'hello', m>), ~k) ) @ #vk.16 )
-          case c_xor
+        solve( !KU( XOR(f(~k, <'hello', m>), ~k) ) @ #vk.16 )
+          case c_XOR
           solve( !KU( ~k ) @ #vk.17 )
             case ShkRevealA
             by contradiction /* from formulas */
@@ -855,7 +855,7 @@ next
       qed
     next
       case Verif4_case_2
-      solve( !KU( g(~c, <f(~k, <'hello', m>), xor(f(~k, <'hello', m>), ~k)>)
+      solve( !KU( g(~c, <f(~k, <'hello', m>), XOR(f(~k, <'hello', m>), ~k)>)
              ) @ #vk.6 )
         case Net
         solve( !KU( ~c ) @ #vk.3 )
@@ -864,8 +864,8 @@ next
         qed
       next
         case c_g
-        solve( !KU( xor(f(~k, <'hello', m>), ~k) ) @ #vk.16 )
-          case c_xor
+        solve( !KU( XOR(f(~k, <'hello', m>), ~k) ) @ #vk.16 )
+          case c_XOR
           solve( !KU( ~k ) @ #vk.17 )
             case ShkRevealA
             by contradiction /* from formulas */
@@ -889,7 +889,7 @@ next
       qed
     next
       case Verif4_case_3
-      solve( !KU( g(~c, <f(~k, <'hello', m>), xor(f(~k, <'hello', m>), ~k)>)
+      solve( !KU( g(~c, <f(~k, <'hello', m>), XOR(f(~k, <'hello', m>), ~k)>)
              ) @ #vk.6 )
         case Net
         solve( !KU( ~c ) @ #vk.3 )
@@ -898,8 +898,8 @@ next
         qed
       next
         case c_g
-        solve( !KU( xor(f(~k, <'hello', m>), ~k) ) @ #vk.16 )
-          case c_xor
+        solve( !KU( XOR(f(~k, <'hello', m>), ~k) ) @ #vk.16 )
+          case c_XOR
           solve( !KU( ~k ) @ #vk.17 )
             case ShkRevealA
             by contradiction /* from formulas */
@@ -928,7 +928,7 @@ next
         by contradiction /* from formulas */
       next
         case ShkRevealB
-        solve( !KU( g(~c, <f(~k, <'hello', m>), xor(f(~k, <'hello', m>), ~k)>)
+        solve( !KU( g(~c, <f(~k, <'hello', m>), XOR(f(~k, <'hello', m>), ~k)>)
                ) @ #vk.8 )
           case Net
           solve( !KU( ~c ) @ #vk.4 )
@@ -1009,14 +1009,14 @@ next
             case case_1
             solve( !KU( ~m ) @ #vk.3 )
               case Net
-              solve( !KU( g(~c, <f(~k, <'hello', ~m>), xor(f(~k, <'hello', ~m>), ~k)>)
+              solve( !KU( g(~c, <f(~k, <'hello', ~m>), XOR(f(~k, <'hello', ~m>), ~k)>)
                      ) @ #vk.4 )
                 case Net
                 by contradiction /* cyclic */
               next
                 case c_g
-                solve( !KU( xor(f(~k, <'hello', ~m>), ~k) ) @ #vk.8 )
-                  case c_xor
+                solve( !KU( XOR(f(~k, <'hello', ~m>), ~k) ) @ #vk.8 )
+                  case c_XOR
                   solve( !KU( ~k ) @ #vk.9 )
                     case ShkRevealA
                     by contradiction /* from formulas */
@@ -1031,7 +1031,7 @@ next
             case case_2
             solve( !KU( ~m ) @ #vk.3 )
               case Net
-              solve( !KU( g(~c, <f(~k, <'hello', ~m>), xor(f(~k, <'hello', ~m>), ~k)>)
+              solve( !KU( g(~c, <f(~k, <'hello', ~m>), XOR(f(~k, <'hello', ~m>), ~k)>)
                      ) @ #vk.4 )
                 case Net
                 by contradiction /* cyclic */
@@ -1048,7 +1048,7 @@ next
       qed
     next
       case Verif4_case_1
-      solve( !KU( g(~c, <f(~k, <'hello', m>), xor(f(~k, <'hello', m>), ~k)>)
+      solve( !KU( g(~c, <f(~k, <'hello', m>), XOR(f(~k, <'hello', m>), ~k)>)
              ) @ #vk.6 )
         case Net
         solve( !KU( ~c ) @ #vk.3 )
@@ -1057,8 +1057,8 @@ next
         qed
       next
         case c_g
-        solve( !KU( xor(f(~k, <'hello', m>), ~k) ) @ #vk.16 )
-          case c_xor
+        solve( !KU( XOR(f(~k, <'hello', m>), ~k) ) @ #vk.16 )
+          case c_XOR
           solve( !KU( ~k ) @ #vk.17 )
             case ShkRevealA
             by contradiction /* from formulas */
@@ -1070,7 +1070,7 @@ next
       qed
     next
       case Verif4_case_2
-      solve( !KU( g(~c, <f(~k, <'hello', m>), xor(f(~k, <'hello', m>), ~k)>)
+      solve( !KU( g(~c, <f(~k, <'hello', m>), XOR(f(~k, <'hello', m>), ~k)>)
              ) @ #vk.6 )
         case Net
         solve( !KU( ~c ) @ #vk.3 )
@@ -1079,8 +1079,8 @@ next
         qed
       next
         case c_g
-        solve( !KU( xor(f(~k, <'hello', m>), ~k) ) @ #vk.16 )
-          case c_xor
+        solve( !KU( XOR(f(~k, <'hello', m>), ~k) ) @ #vk.16 )
+          case c_XOR
           solve( !KU( ~k ) @ #vk.17 )
             case ShkRevealA
             by contradiction /* from formulas */
@@ -1092,7 +1092,7 @@ next
       qed
     next
       case Verif4_case_3
-      solve( !KU( g(~c, <f(~k, <'hello', m>), xor(f(~k, <'hello', m>), ~k)>)
+      solve( !KU( g(~c, <f(~k, <'hello', m>), XOR(f(~k, <'hello', m>), ~k)>)
              ) @ #vk.6 )
         case Net
         solve( !KU( ~c ) @ #vk.3 )
@@ -1101,8 +1101,8 @@ next
         qed
       next
         case c_g
-        solve( !KU( xor(f(~k, <'hello', m>), ~k) ) @ #vk.16 )
-          case c_xor
+        solve( !KU( XOR(f(~k, <'hello', m>), ~k) ) @ #vk.16 )
+          case c_XOR
           solve( !KU( ~k ) @ #vk.17 )
             case ShkRevealA
             by contradiction /* from formulas */
@@ -1149,14 +1149,14 @@ next
             case case_1
             solve( !KU( ~m ) @ #vk.3 )
               case Net
-              solve( !KU( g(~c, <f(~k, <'hello', ~m>), xor(f(~k, <'hello', ~m>), ~k)>)
+              solve( !KU( g(~c, <f(~k, <'hello', ~m>), XOR(f(~k, <'hello', ~m>), ~k)>)
                      ) @ #vk.4 )
                 case Net
                 by contradiction /* cyclic */
               next
                 case c_g
-                solve( !KU( xor(f(~k, <'hello', ~m>), ~k) ) @ #vk.8 )
-                  case c_xor
+                solve( !KU( XOR(f(~k, <'hello', ~m>), ~k) ) @ #vk.8 )
+                  case c_XOR
                   solve( !KU( ~k ) @ #vk.9 )
                     case ShkRevealA
                     by contradiction /* from formulas */
@@ -1171,7 +1171,7 @@ next
             case case_2
             solve( !KU( ~m ) @ #vk.3 )
               case Net
-              solve( !KU( g(~c, <f(~k, <'hello', ~m>), xor(f(~k, <'hello', ~m>), ~k)>)
+              solve( !KU( g(~c, <f(~k, <'hello', ~m>), XOR(f(~k, <'hello', ~m>), ~k)>)
                      ) @ #vk.4 )
                 case Net
                 by contradiction /* cyclic */
@@ -1188,7 +1188,7 @@ next
       qed
     next
       case Verif4_case_1
-      solve( !KU( g(~c, <f(~k, <'hello', m>), xor(f(~k, <'hello', m>), ~k)>)
+      solve( !KU( g(~c, <f(~k, <'hello', m>), XOR(f(~k, <'hello', m>), ~k)>)
              ) @ #vk.6 )
         case Net
         solve( !KU( ~c ) @ #vk.3 )
@@ -1197,8 +1197,8 @@ next
         qed
       next
         case c_g
-        solve( !KU( xor(f(~k, <'hello', m>), ~k) ) @ #vk.16 )
-          case c_xor
+        solve( !KU( XOR(f(~k, <'hello', m>), ~k) ) @ #vk.16 )
+          case c_XOR
           solve( !KU( ~k ) @ #vk.17 )
             case ShkRevealA
             by contradiction /* from formulas */
@@ -1210,7 +1210,7 @@ next
       qed
     next
       case Verif4_case_2
-      solve( !KU( g(~c, <f(~k, <'hello', m>), xor(f(~k, <'hello', m>), ~k)>)
+      solve( !KU( g(~c, <f(~k, <'hello', m>), XOR(f(~k, <'hello', m>), ~k)>)
              ) @ #vk.6 )
         case Net
         solve( !KU( ~c ) @ #vk.3 )
@@ -1219,8 +1219,8 @@ next
         qed
       next
         case c_g
-        solve( !KU( xor(f(~k, <'hello', m>), ~k) ) @ #vk.16 )
-          case c_xor
+        solve( !KU( XOR(f(~k, <'hello', m>), ~k) ) @ #vk.16 )
+          case c_XOR
           solve( !KU( ~k ) @ #vk.17 )
             case ShkRevealA
             by contradiction /* from formulas */
@@ -1232,7 +1232,7 @@ next
       qed
     next
       case Verif4_case_3
-      solve( !KU( g(~c, <f(~k, <'hello', m>), xor(f(~k, <'hello', m>), ~k)>)
+      solve( !KU( g(~c, <f(~k, <'hello', m>), XOR(f(~k, <'hello', m>), ~k)>)
              ) @ #vk.6 )
         case Net
         solve( !KU( ~c ) @ #vk.3 )
@@ -1241,8 +1241,8 @@ next
         qed
       next
         case c_g
-        solve( !KU( xor(f(~k, <'hello', m>), ~k) ) @ #vk.16 )
-          case c_xor
+        solve( !KU( XOR(f(~k, <'hello', m>), ~k) ) @ #vk.16 )
+          case c_XOR
           solve( !KU( ~k ) @ #vk.17 )
             case ShkRevealA
             by contradiction /* from formulas */
@@ -1289,14 +1289,14 @@ next
             case case_1
             solve( !KU( ~m ) @ #vk.3 )
               case Net
-              solve( !KU( g(~c, <f(~k, <'hello', ~m>), xor(f(~k, <'hello', ~m>), ~k)>)
+              solve( !KU( g(~c, <f(~k, <'hello', ~m>), XOR(f(~k, <'hello', ~m>), ~k)>)
                      ) @ #vk.4 )
                 case Net
                 by contradiction /* cyclic */
               next
                 case c_g
-                solve( !KU( xor(f(~k, <'hello', ~m>), ~k) ) @ #vk.8 )
-                  case c_xor
+                solve( !KU( XOR(f(~k, <'hello', ~m>), ~k) ) @ #vk.8 )
+                  case c_XOR
                   solve( !KU( ~k ) @ #vk.9 )
                     case ShkRevealA
                     by contradiction /* from formulas */
@@ -1311,7 +1311,7 @@ next
             case case_2
             solve( !KU( ~m ) @ #vk.3 )
               case Net
-              solve( !KU( g(~c, <f(~k, <'hello', ~m>), xor(f(~k, <'hello', ~m>), ~k)>)
+              solve( !KU( g(~c, <f(~k, <'hello', ~m>), XOR(f(~k, <'hello', ~m>), ~k)>)
                      ) @ #vk.4 )
                 case Net
                 by contradiction /* cyclic */
@@ -1328,7 +1328,7 @@ next
       qed
     next
       case Verif4_case_1
-      solve( !KU( g(~c, <f(~k, <'hello', m>), xor(f(~k, <'hello', m>), ~k)>)
+      solve( !KU( g(~c, <f(~k, <'hello', m>), XOR(f(~k, <'hello', m>), ~k)>)
              ) @ #vk.6 )
         case Net
         solve( !KU( ~c ) @ #vk.3 )
@@ -1337,8 +1337,8 @@ next
         qed
       next
         case c_g
-        solve( !KU( xor(f(~k, <'hello', m>), ~k) ) @ #vk.16 )
-          case c_xor
+        solve( !KU( XOR(f(~k, <'hello', m>), ~k) ) @ #vk.16 )
+          case c_XOR
           solve( !KU( ~k ) @ #vk.17 )
             case ShkRevealA
             by contradiction /* from formulas */
@@ -1350,7 +1350,7 @@ next
       qed
     next
       case Verif4_case_2
-      solve( !KU( g(~c, <f(~k, <'hello', m>), xor(f(~k, <'hello', m>), ~k)>)
+      solve( !KU( g(~c, <f(~k, <'hello', m>), XOR(f(~k, <'hello', m>), ~k)>)
              ) @ #vk.6 )
         case Net
         solve( !KU( ~c ) @ #vk.3 )
@@ -1359,8 +1359,8 @@ next
         qed
       next
         case c_g
-        solve( !KU( xor(f(~k, <'hello', m>), ~k) ) @ #vk.16 )
-          case c_xor
+        solve( !KU( XOR(f(~k, <'hello', m>), ~k) ) @ #vk.16 )
+          case c_XOR
           solve( !KU( ~k ) @ #vk.17 )
             case ShkRevealA
             by contradiction /* from formulas */
@@ -1372,7 +1372,7 @@ next
       qed
     next
       case Verif4_case_3
-      solve( !KU( g(~c, <f(~k, <'hello', m>), xor(f(~k, <'hello', m>), ~k)>)
+      solve( !KU( g(~c, <f(~k, <'hello', m>), XOR(f(~k, <'hello', m>), ~k)>)
              ) @ #vk.6 )
         case Net
         solve( !KU( ~c ) @ #vk.3 )
@@ -1381,8 +1381,8 @@ next
         qed
       next
         case c_g
-        solve( !KU( xor(f(~k, <'hello', m>), ~k) ) @ #vk.16 )
-          case c_xor
+        solve( !KU( XOR(f(~k, <'hello', m>), ~k) ) @ #vk.16 )
+          case c_XOR
           solve( !KU( ~k ) @ #vk.17 )
             case ShkRevealA
             by contradiction /* from formulas */
@@ -1507,7 +1507,7 @@ next
                 solve( !KU( ~m ) @ #vk.3 )
                   case Net
                   solve( !KU( g(~c,
-                                <f(~k.1, <'hello', ~m>), xor(f(~k.1, <'hello', ~m>), ~k.1)>)
+                                <f(~k.1, <'hello', ~m>), XOR(f(~k.1, <'hello', ~m>), ~k.1)>)
                          ) @ #vk.4 )
                     case Net
                     by contradiction /* cyclic */
@@ -1524,7 +1524,7 @@ next
                 solve( !KU( ~m ) @ #vk.3 )
                   case Net
                   solve( !KU( g(~c,
-                                <f(~k.1, <'hello', ~m>), xor(f(~k.1, <'hello', ~m>), ~k.1)>)
+                                <f(~k.1, <'hello', ~m>), XOR(f(~k.1, <'hello', ~m>), ~k.1)>)
                          ) @ #vk.4 )
                     case Net
                     by contradiction /* cyclic */
@@ -1544,7 +1544,7 @@ next
           solve( (¬(#vr.1 < #vr.14))  ∥ (¬(#vr.14 < #vr.3)) )
             case case_1
             solve( !KU( g(~c,
-                          <f(~k.1, <'hello', m>), xor(f(~k.1, <'hello', m>), ~k.1)>)
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
                    ) @ #vk.7 )
               case Net
               solve( !KU( ~c ) @ #vk.3 )
@@ -1561,7 +1561,7 @@ next
           next
             case case_2
             solve( !KU( g(~c,
-                          <f(~k.1, <'hello', m>), xor(f(~k.1, <'hello', m>), ~k.1)>)
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
                    ) @ #vk.7 )
               case Net
               solve( !KU( ~c ) @ #vk.3 )
@@ -1581,7 +1581,7 @@ next
           solve( (¬(#vr.1 < #vr.14))  ∥ (¬(#vr.14 < #vr.3)) )
             case case_1
             solve( !KU( g(~c,
-                          <f(~k.1, <'hello', m>), xor(f(~k.1, <'hello', m>), ~k.1)>)
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
                    ) @ #vk.7 )
               case Net
               solve( !KU( ~c ) @ #vk.3 )
@@ -1598,7 +1598,7 @@ next
           next
             case case_2
             solve( !KU( g(~c,
-                          <f(~k.1, <'hello', m>), xor(f(~k.1, <'hello', m>), ~k.1)>)
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
                    ) @ #vk.7 )
               case Net
               solve( !KU( ~c ) @ #vk.3 )
@@ -1618,7 +1618,7 @@ next
           solve( (¬(#vr.1 < #vr.14))  ∥ (¬(#vr.14 < #vr.3)) )
             case case_1
             solve( !KU( g(~c,
-                          <f(~k.1, <'hello', m>), xor(f(~k.1, <'hello', m>), ~k.1)>)
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
                    ) @ #vk.7 )
               case Net
               solve( !KU( ~c ) @ #vk.3 )
@@ -1635,7 +1635,7 @@ next
           next
             case case_2
             solve( !KU( g(~c,
-                          <f(~k.1, <'hello', m>), xor(f(~k.1, <'hello', m>), ~k.1)>)
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
                    ) @ #vk.7 )
               case Net
               solve( !KU( ~c ) @ #vk.3 )
@@ -1658,7 +1658,7 @@ next
           next
             case ShkRevealB
             solve( !KU( g(~c,
-                          <f(~k.1, <'hello', m>), xor(f(~k.1, <'hello', m>), ~k.1)>)
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
                    ) @ #vk.8 )
               case Net
               solve( !KU( ~c ) @ #vk.4 )
@@ -1702,7 +1702,7 @@ next
                 solve( !KU( ~m ) @ #vk.3 )
                   case Net
                   solve( !KU( g(~c,
-                                <f(~k.1, <'hello', ~m>), xor(f(~k.1, <'hello', ~m>), ~k.1)>)
+                                <f(~k.1, <'hello', ~m>), XOR(f(~k.1, <'hello', ~m>), ~k.1)>)
                          ) @ #vk.4 )
                     case Net
                     by contradiction /* cyclic */
@@ -1719,7 +1719,7 @@ next
                 solve( !KU( ~m ) @ #vk.3 )
                   case Net
                   solve( !KU( g(~c,
-                                <f(~k.1, <'hello', ~m>), xor(f(~k.1, <'hello', ~m>), ~k.1)>)
+                                <f(~k.1, <'hello', ~m>), XOR(f(~k.1, <'hello', ~m>), ~k.1)>)
                          ) @ #vk.4 )
                     case Net
                     by contradiction /* cyclic */
@@ -1739,7 +1739,7 @@ next
           solve( (¬(#vr.1 < #vr.14))  ∥ (¬(#vr.14 < #vr.3)) )
             case case_1
             solve( !KU( g(~c,
-                          <f(~k.1, <'hello', m>), xor(f(~k.1, <'hello', m>), ~k.1)>)
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
                    ) @ #vk.7 )
               case Net
               solve( !KU( ~c ) @ #vk.3 )
@@ -1756,7 +1756,7 @@ next
           next
             case case_2
             solve( !KU( g(~c,
-                          <f(~k.1, <'hello', m>), xor(f(~k.1, <'hello', m>), ~k.1)>)
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
                    ) @ #vk.7 )
               case Net
               solve( !KU( ~c ) @ #vk.3 )
@@ -1776,7 +1776,7 @@ next
           solve( (¬(#vr.1 < #vr.14))  ∥ (¬(#vr.14 < #vr.3)) )
             case case_1
             solve( !KU( g(~c,
-                          <f(~k.1, <'hello', m>), xor(f(~k.1, <'hello', m>), ~k.1)>)
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
                    ) @ #vk.7 )
               case Net
               solve( !KU( ~c ) @ #vk.3 )
@@ -1793,7 +1793,7 @@ next
           next
             case case_2
             solve( !KU( g(~c,
-                          <f(~k.1, <'hello', m>), xor(f(~k.1, <'hello', m>), ~k.1)>)
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
                    ) @ #vk.7 )
               case Net
               solve( !KU( ~c ) @ #vk.3 )
@@ -1813,7 +1813,7 @@ next
           solve( (¬(#vr.1 < #vr.14))  ∥ (¬(#vr.14 < #vr.3)) )
             case case_1
             solve( !KU( g(~c,
-                          <f(~k.1, <'hello', m>), xor(f(~k.1, <'hello', m>), ~k.1)>)
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
                    ) @ #vk.7 )
               case Net
               solve( !KU( ~c ) @ #vk.3 )
@@ -1830,7 +1830,7 @@ next
           next
             case case_2
             solve( !KU( g(~c,
-                          <f(~k.1, <'hello', m>), xor(f(~k.1, <'hello', m>), ~k.1)>)
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
                    ) @ #vk.7 )
               case Net
               solve( !KU( ~c ) @ #vk.3 )
@@ -1853,7 +1853,7 @@ next
           next
             case ShkRevealB
             solve( !KU( g(~c,
-                          <f(~k.1, <'hello', m>), xor(f(~k.1, <'hello', m>), ~k.1)>)
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
                    ) @ #vk.8 )
               case Net
               solve( !KU( ~c ) @ #vk.4 )
@@ -1897,7 +1897,7 @@ next
                 solve( !KU( ~m ) @ #vk.3 )
                   case Net
                   solve( !KU( g(~c,
-                                <f(~k.1, <'hello', ~m>), xor(f(~k.1, <'hello', ~m>), ~k.1)>)
+                                <f(~k.1, <'hello', ~m>), XOR(f(~k.1, <'hello', ~m>), ~k.1)>)
                          ) @ #vk.4 )
                     case Net
                     by contradiction /* cyclic */
@@ -1914,7 +1914,7 @@ next
                 solve( !KU( ~m ) @ #vk.3 )
                   case Net
                   solve( !KU( g(~c,
-                                <f(~k.1, <'hello', ~m>), xor(f(~k.1, <'hello', ~m>), ~k.1)>)
+                                <f(~k.1, <'hello', ~m>), XOR(f(~k.1, <'hello', ~m>), ~k.1)>)
                          ) @ #vk.4 )
                     case Net
                     by contradiction /* cyclic */
@@ -1934,7 +1934,7 @@ next
           solve( (¬(#vr.1 < #vr.14))  ∥ (¬(#vr.14 < #vr.3)) )
             case case_1
             solve( !KU( g(~c,
-                          <f(~k.1, <'hello', m>), xor(f(~k.1, <'hello', m>), ~k.1)>)
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
                    ) @ #vk.7 )
               case Net
               solve( !KU( ~c ) @ #vk.3 )
@@ -1951,7 +1951,7 @@ next
           next
             case case_2
             solve( !KU( g(~c,
-                          <f(~k.1, <'hello', m>), xor(f(~k.1, <'hello', m>), ~k.1)>)
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
                    ) @ #vk.7 )
               case Net
               solve( !KU( ~c ) @ #vk.3 )
@@ -1971,7 +1971,7 @@ next
           solve( (¬(#vr.1 < #vr.14))  ∥ (¬(#vr.14 < #vr.3)) )
             case case_1
             solve( !KU( g(~c,
-                          <f(~k.1, <'hello', m>), xor(f(~k.1, <'hello', m>), ~k.1)>)
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
                    ) @ #vk.7 )
               case Net
               solve( !KU( ~c ) @ #vk.3 )
@@ -1988,7 +1988,7 @@ next
           next
             case case_2
             solve( !KU( g(~c,
-                          <f(~k.1, <'hello', m>), xor(f(~k.1, <'hello', m>), ~k.1)>)
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
                    ) @ #vk.7 )
               case Net
               solve( !KU( ~c ) @ #vk.3 )
@@ -2008,7 +2008,7 @@ next
           solve( (¬(#vr.1 < #vr.14))  ∥ (¬(#vr.14 < #vr.3)) )
             case case_1
             solve( !KU( g(~c,
-                          <f(~k.1, <'hello', m>), xor(f(~k.1, <'hello', m>), ~k.1)>)
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
                    ) @ #vk.7 )
               case Net
               solve( !KU( ~c ) @ #vk.3 )
@@ -2025,7 +2025,7 @@ next
           next
             case case_2
             solve( !KU( g(~c,
-                          <f(~k.1, <'hello', m>), xor(f(~k.1, <'hello', m>), ~k.1)>)
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
                    ) @ #vk.7 )
               case Net
               solve( !KU( ~c ) @ #vk.3 )
@@ -2048,7 +2048,7 @@ next
           next
             case ShkRevealB
             solve( !KU( g(~c,
-                          <f(~k.1, <'hello', m>), xor(f(~k.1, <'hello', m>), ~k.1)>)
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
                    ) @ #vk.8 )
               case Net
               solve( !KU( ~c ) @ #vk.4 )
@@ -2098,7 +2098,7 @@ next
                 solve( !KU( ~m ) @ #vk.3 )
                   case Net
                   solve( !KU( g(~c,
-                                <f(~k.1, <'hello', ~m>), xor(f(~k.1, <'hello', ~m>), ~k.1)>)
+                                <f(~k.1, <'hello', ~m>), XOR(f(~k.1, <'hello', ~m>), ~k.1)>)
                          ) @ #vk.4 )
                     case Net
                     by contradiction /* cyclic */
@@ -2115,7 +2115,7 @@ next
                 solve( !KU( ~m ) @ #vk.3 )
                   case Net
                   solve( !KU( g(~c,
-                                <f(~k.1, <'hello', ~m>), xor(f(~k.1, <'hello', ~m>), ~k.1)>)
+                                <f(~k.1, <'hello', ~m>), XOR(f(~k.1, <'hello', ~m>), ~k.1)>)
                          ) @ #vk.4 )
                     case Net
                     by contradiction /* cyclic */
@@ -2135,7 +2135,7 @@ next
           solve( (¬(#vr.1 < #vr.14))  ∥ (¬(#vr.14 < #vr.3)) )
             case case_1
             solve( !KU( g(~c,
-                          <f(~k.1, <'hello', m>), xor(f(~k.1, <'hello', m>), ~k.1)>)
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
                    ) @ #vk.7 )
               case Net
               solve( !KU( ~c ) @ #vk.3 )
@@ -2152,7 +2152,7 @@ next
           next
             case case_2
             solve( !KU( g(~c,
-                          <f(~k.1, <'hello', m>), xor(f(~k.1, <'hello', m>), ~k.1)>)
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
                    ) @ #vk.7 )
               case Net
               solve( !KU( ~c ) @ #vk.3 )
@@ -2172,7 +2172,7 @@ next
           solve( (¬(#vr.1 < #vr.14))  ∥ (¬(#vr.14 < #vr.3)) )
             case case_1
             solve( !KU( g(~c,
-                          <f(~k.1, <'hello', m>), xor(f(~k.1, <'hello', m>), ~k.1)>)
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
                    ) @ #vk.7 )
               case Net
               solve( !KU( ~c ) @ #vk.3 )
@@ -2189,7 +2189,7 @@ next
           next
             case case_2
             solve( !KU( g(~c,
-                          <f(~k.1, <'hello', m>), xor(f(~k.1, <'hello', m>), ~k.1)>)
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
                    ) @ #vk.7 )
               case Net
               solve( !KU( ~c ) @ #vk.3 )
@@ -2209,7 +2209,7 @@ next
           solve( (¬(#vr.1 < #vr.14))  ∥ (¬(#vr.14 < #vr.3)) )
             case case_1
             solve( !KU( g(~c,
-                          <f(~k.1, <'hello', m>), xor(f(~k.1, <'hello', m>), ~k.1)>)
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
                    ) @ #vk.7 )
               case Net
               solve( !KU( ~c ) @ #vk.3 )
@@ -2226,7 +2226,7 @@ next
           next
             case case_2
             solve( !KU( g(~c,
-                          <f(~k.1, <'hello', m>), xor(f(~k.1, <'hello', m>), ~k.1)>)
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
                    ) @ #vk.7 )
               case Net
               solve( !KU( ~c ) @ #vk.3 )
@@ -2249,7 +2249,7 @@ next
           next
             case ShkRevealB
             solve( !KU( g(~c,
-                          <f(~k.1, <'hello', m>), xor(f(~k.1, <'hello', m>), ~k.1)>)
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
                    ) @ #vk.8 )
               case Net
               solve( !KU( ~c ) @ #vk.4 )
@@ -2293,7 +2293,7 @@ next
                 solve( !KU( ~m ) @ #vk.3 )
                   case Net
                   solve( !KU( g(~c,
-                                <f(~k.1, <'hello', ~m>), xor(f(~k.1, <'hello', ~m>), ~k.1)>)
+                                <f(~k.1, <'hello', ~m>), XOR(f(~k.1, <'hello', ~m>), ~k.1)>)
                          ) @ #vk.4 )
                     case Net
                     by contradiction /* cyclic */
@@ -2310,7 +2310,7 @@ next
                 solve( !KU( ~m ) @ #vk.3 )
                   case Net
                   solve( !KU( g(~c,
-                                <f(~k.1, <'hello', ~m>), xor(f(~k.1, <'hello', ~m>), ~k.1)>)
+                                <f(~k.1, <'hello', ~m>), XOR(f(~k.1, <'hello', ~m>), ~k.1)>)
                          ) @ #vk.4 )
                     case Net
                     by contradiction /* cyclic */
@@ -2330,7 +2330,7 @@ next
           solve( (¬(#vr.1 < #vr.14))  ∥ (¬(#vr.14 < #vr.3)) )
             case case_1
             solve( !KU( g(~c,
-                          <f(~k.1, <'hello', m>), xor(f(~k.1, <'hello', m>), ~k.1)>)
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
                    ) @ #vk.7 )
               case Net
               solve( !KU( ~c ) @ #vk.3 )
@@ -2347,7 +2347,7 @@ next
           next
             case case_2
             solve( !KU( g(~c,
-                          <f(~k.1, <'hello', m>), xor(f(~k.1, <'hello', m>), ~k.1)>)
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
                    ) @ #vk.7 )
               case Net
               solve( !KU( ~c ) @ #vk.3 )
@@ -2367,7 +2367,7 @@ next
           solve( (¬(#vr.1 < #vr.14))  ∥ (¬(#vr.14 < #vr.3)) )
             case case_1
             solve( !KU( g(~c,
-                          <f(~k.1, <'hello', m>), xor(f(~k.1, <'hello', m>), ~k.1)>)
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
                    ) @ #vk.7 )
               case Net
               solve( !KU( ~c ) @ #vk.3 )
@@ -2384,7 +2384,7 @@ next
           next
             case case_2
             solve( !KU( g(~c,
-                          <f(~k.1, <'hello', m>), xor(f(~k.1, <'hello', m>), ~k.1)>)
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
                    ) @ #vk.7 )
               case Net
               solve( !KU( ~c ) @ #vk.3 )
@@ -2404,7 +2404,7 @@ next
           solve( (¬(#vr.1 < #vr.14))  ∥ (¬(#vr.14 < #vr.3)) )
             case case_1
             solve( !KU( g(~c,
-                          <f(~k.1, <'hello', m>), xor(f(~k.1, <'hello', m>), ~k.1)>)
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
                    ) @ #vk.7 )
               case Net
               solve( !KU( ~c ) @ #vk.3 )
@@ -2421,7 +2421,7 @@ next
           next
             case case_2
             solve( !KU( g(~c,
-                          <f(~k.1, <'hello', m>), xor(f(~k.1, <'hello', m>), ~k.1)>)
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
                    ) @ #vk.7 )
               case Net
               solve( !KU( ~c ) @ #vk.3 )
@@ -2444,7 +2444,7 @@ next
           next
             case ShkRevealB
             solve( !KU( g(~c,
-                          <f(~k.1, <'hello', m>), xor(f(~k.1, <'hello', m>), ~k.1)>)
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
                    ) @ #vk.8 )
               case Net
               solve( !KU( ~c ) @ #vk.4 )
@@ -2488,7 +2488,7 @@ next
                 solve( !KU( ~m ) @ #vk.3 )
                   case Net
                   solve( !KU( g(~c,
-                                <f(~k.1, <'hello', ~m>), xor(f(~k.1, <'hello', ~m>), ~k.1)>)
+                                <f(~k.1, <'hello', ~m>), XOR(f(~k.1, <'hello', ~m>), ~k.1)>)
                          ) @ #vk.4 )
                     case Net
                     by contradiction /* cyclic */
@@ -2505,7 +2505,7 @@ next
                 solve( !KU( ~m ) @ #vk.3 )
                   case Net
                   solve( !KU( g(~c,
-                                <f(~k.1, <'hello', ~m>), xor(f(~k.1, <'hello', ~m>), ~k.1)>)
+                                <f(~k.1, <'hello', ~m>), XOR(f(~k.1, <'hello', ~m>), ~k.1)>)
                          ) @ #vk.4 )
                     case Net
                     by contradiction /* cyclic */
@@ -2525,7 +2525,7 @@ next
           solve( (¬(#vr.1 < #vr.14))  ∥ (¬(#vr.14 < #vr.3)) )
             case case_1
             solve( !KU( g(~c,
-                          <f(~k.1, <'hello', m>), xor(f(~k.1, <'hello', m>), ~k.1)>)
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
                    ) @ #vk.7 )
               case Net
               solve( !KU( ~c ) @ #vk.3 )
@@ -2542,7 +2542,7 @@ next
           next
             case case_2
             solve( !KU( g(~c,
-                          <f(~k.1, <'hello', m>), xor(f(~k.1, <'hello', m>), ~k.1)>)
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
                    ) @ #vk.7 )
               case Net
               solve( !KU( ~c ) @ #vk.3 )
@@ -2562,7 +2562,7 @@ next
           solve( (¬(#vr.1 < #vr.14))  ∥ (¬(#vr.14 < #vr.3)) )
             case case_1
             solve( !KU( g(~c,
-                          <f(~k.1, <'hello', m>), xor(f(~k.1, <'hello', m>), ~k.1)>)
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
                    ) @ #vk.7 )
               case Net
               solve( !KU( ~c ) @ #vk.3 )
@@ -2579,7 +2579,7 @@ next
           next
             case case_2
             solve( !KU( g(~c,
-                          <f(~k.1, <'hello', m>), xor(f(~k.1, <'hello', m>), ~k.1)>)
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
                    ) @ #vk.7 )
               case Net
               solve( !KU( ~c ) @ #vk.3 )
@@ -2599,7 +2599,7 @@ next
           solve( (¬(#vr.1 < #vr.14))  ∥ (¬(#vr.14 < #vr.3)) )
             case case_1
             solve( !KU( g(~c,
-                          <f(~k.1, <'hello', m>), xor(f(~k.1, <'hello', m>), ~k.1)>)
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
                    ) @ #vk.7 )
               case Net
               solve( !KU( ~c ) @ #vk.3 )
@@ -2616,7 +2616,7 @@ next
           next
             case case_2
             solve( !KU( g(~c,
-                          <f(~k.1, <'hello', m>), xor(f(~k.1, <'hello', m>), ~k.1)>)
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
                    ) @ #vk.7 )
               case Net
               solve( !KU( ~c ) @ #vk.3 )
@@ -2639,7 +2639,7 @@ next
           next
             case ShkRevealB
             solve( !KU( g(~c,
-                          <f(~k.1, <'hello', m>), xor(f(~k.1, <'hello', m>), ~k.1)>)
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
                    ) @ #vk.8 )
               case Net
               solve( !KU( ~c ) @ #vk.4 )
@@ -2689,7 +2689,7 @@ next
                 solve( !KU( ~m ) @ #vk.3 )
                   case Net
                   solve( !KU( g(~c,
-                                <f(~k.1, <'hello', ~m>), xor(f(~k.1, <'hello', ~m>), ~k.1)>)
+                                <f(~k.1, <'hello', ~m>), XOR(f(~k.1, <'hello', ~m>), ~k.1)>)
                          ) @ #vk.4 )
                     case Net
                     by contradiction /* cyclic */
@@ -2706,7 +2706,7 @@ next
                 solve( !KU( ~m ) @ #vk.3 )
                   case Net
                   solve( !KU( g(~c,
-                                <f(~k.1, <'hello', ~m>), xor(f(~k.1, <'hello', ~m>), ~k.1)>)
+                                <f(~k.1, <'hello', ~m>), XOR(f(~k.1, <'hello', ~m>), ~k.1)>)
                          ) @ #vk.4 )
                     case Net
                     by contradiction /* cyclic */
@@ -2726,7 +2726,7 @@ next
           solve( (¬(#vr.1 < #vr.14))  ∥ (¬(#vr.14 < #vr.3)) )
             case case_1
             solve( !KU( g(~c,
-                          <f(~k.1, <'hello', m>), xor(f(~k.1, <'hello', m>), ~k.1)>)
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
                    ) @ #vk.7 )
               case Net
               solve( !KU( ~c ) @ #vk.3 )
@@ -2743,7 +2743,7 @@ next
           next
             case case_2
             solve( !KU( g(~c,
-                          <f(~k.1, <'hello', m>), xor(f(~k.1, <'hello', m>), ~k.1)>)
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
                    ) @ #vk.7 )
               case Net
               solve( !KU( ~c ) @ #vk.3 )
@@ -2763,7 +2763,7 @@ next
           solve( (¬(#vr.1 < #vr.14))  ∥ (¬(#vr.14 < #vr.3)) )
             case case_1
             solve( !KU( g(~c,
-                          <f(~k.1, <'hello', m>), xor(f(~k.1, <'hello', m>), ~k.1)>)
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
                    ) @ #vk.7 )
               case Net
               solve( !KU( ~c ) @ #vk.3 )
@@ -2780,7 +2780,7 @@ next
           next
             case case_2
             solve( !KU( g(~c,
-                          <f(~k.1, <'hello', m>), xor(f(~k.1, <'hello', m>), ~k.1)>)
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
                    ) @ #vk.7 )
               case Net
               solve( !KU( ~c ) @ #vk.3 )
@@ -2800,7 +2800,7 @@ next
           solve( (¬(#vr.1 < #vr.14))  ∥ (¬(#vr.14 < #vr.3)) )
             case case_1
             solve( !KU( g(~c,
-                          <f(~k.1, <'hello', m>), xor(f(~k.1, <'hello', m>), ~k.1)>)
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
                    ) @ #vk.7 )
               case Net
               solve( !KU( ~c ) @ #vk.3 )
@@ -2817,7 +2817,7 @@ next
           next
             case case_2
             solve( !KU( g(~c,
-                          <f(~k.1, <'hello', m>), xor(f(~k.1, <'hello', m>), ~k.1)>)
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
                    ) @ #vk.7 )
               case Net
               solve( !KU( ~c ) @ #vk.3 )
@@ -2840,7 +2840,7 @@ next
           next
             case ShkRevealB
             solve( !KU( g(~c,
-                          <f(~k.1, <'hello', m>), xor(f(~k.1, <'hello', m>), ~k.1)>)
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
                    ) @ #vk.8 )
               case Net
               solve( !KU( ~c ) @ #vk.4 )
@@ -2884,7 +2884,7 @@ next
                 solve( !KU( ~m ) @ #vk.3 )
                   case Net
                   solve( !KU( g(~c,
-                                <f(~k.1, <'hello', ~m>), xor(f(~k.1, <'hello', ~m>), ~k.1)>)
+                                <f(~k.1, <'hello', ~m>), XOR(f(~k.1, <'hello', ~m>), ~k.1)>)
                          ) @ #vk.4 )
                     case Net
                     by contradiction /* cyclic */
@@ -2901,7 +2901,7 @@ next
                 solve( !KU( ~m ) @ #vk.3 )
                   case Net
                   solve( !KU( g(~c,
-                                <f(~k.1, <'hello', ~m>), xor(f(~k.1, <'hello', ~m>), ~k.1)>)
+                                <f(~k.1, <'hello', ~m>), XOR(f(~k.1, <'hello', ~m>), ~k.1)>)
                          ) @ #vk.4 )
                     case Net
                     by contradiction /* cyclic */
@@ -2921,7 +2921,7 @@ next
           solve( (¬(#vr.1 < #vr.14))  ∥ (¬(#vr.14 < #vr.3)) )
             case case_1
             solve( !KU( g(~c,
-                          <f(~k.1, <'hello', m>), xor(f(~k.1, <'hello', m>), ~k.1)>)
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
                    ) @ #vk.7 )
               case Net
               solve( !KU( ~c ) @ #vk.3 )
@@ -2938,7 +2938,7 @@ next
           next
             case case_2
             solve( !KU( g(~c,
-                          <f(~k.1, <'hello', m>), xor(f(~k.1, <'hello', m>), ~k.1)>)
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
                    ) @ #vk.7 )
               case Net
               solve( !KU( ~c ) @ #vk.3 )
@@ -2958,7 +2958,7 @@ next
           solve( (¬(#vr.1 < #vr.14))  ∥ (¬(#vr.14 < #vr.3)) )
             case case_1
             solve( !KU( g(~c,
-                          <f(~k.1, <'hello', m>), xor(f(~k.1, <'hello', m>), ~k.1)>)
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
                    ) @ #vk.7 )
               case Net
               solve( !KU( ~c ) @ #vk.3 )
@@ -2975,7 +2975,7 @@ next
           next
             case case_2
             solve( !KU( g(~c,
-                          <f(~k.1, <'hello', m>), xor(f(~k.1, <'hello', m>), ~k.1)>)
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
                    ) @ #vk.7 )
               case Net
               solve( !KU( ~c ) @ #vk.3 )
@@ -2995,7 +2995,7 @@ next
           solve( (¬(#vr.1 < #vr.14))  ∥ (¬(#vr.14 < #vr.3)) )
             case case_1
             solve( !KU( g(~c,
-                          <f(~k.1, <'hello', m>), xor(f(~k.1, <'hello', m>), ~k.1)>)
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
                    ) @ #vk.7 )
               case Net
               solve( !KU( ~c ) @ #vk.3 )
@@ -3012,7 +3012,7 @@ next
           next
             case case_2
             solve( !KU( g(~c,
-                          <f(~k.1, <'hello', m>), xor(f(~k.1, <'hello', m>), ~k.1)>)
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
                    ) @ #vk.7 )
               case Net
               solve( !KU( ~c ) @ #vk.3 )
@@ -3035,7 +3035,7 @@ next
           next
             case ShkRevealB
             solve( !KU( g(~c,
-                          <f(~k.1, <'hello', m>), xor(f(~k.1, <'hello', m>), ~k.1)>)
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
                    ) @ #vk.8 )
               case Net
               solve( !KU( ~c ) @ #vk.4 )
@@ -3079,7 +3079,7 @@ next
                 solve( !KU( ~m ) @ #vk.3 )
                   case Net
                   solve( !KU( g(~c,
-                                <f(~k.1, <'hello', ~m>), xor(f(~k.1, <'hello', ~m>), ~k.1)>)
+                                <f(~k.1, <'hello', ~m>), XOR(f(~k.1, <'hello', ~m>), ~k.1)>)
                          ) @ #vk.4 )
                     case Net
                     by contradiction /* cyclic */
@@ -3096,7 +3096,7 @@ next
                 solve( !KU( ~m ) @ #vk.3 )
                   case Net
                   solve( !KU( g(~c,
-                                <f(~k.1, <'hello', ~m>), xor(f(~k.1, <'hello', ~m>), ~k.1)>)
+                                <f(~k.1, <'hello', ~m>), XOR(f(~k.1, <'hello', ~m>), ~k.1)>)
                          ) @ #vk.4 )
                     case Net
                     by contradiction /* cyclic */
@@ -3116,7 +3116,7 @@ next
           solve( (¬(#vr.1 < #vr.14))  ∥ (¬(#vr.14 < #vr.3)) )
             case case_1
             solve( !KU( g(~c,
-                          <f(~k.1, <'hello', m>), xor(f(~k.1, <'hello', m>), ~k.1)>)
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
                    ) @ #vk.7 )
               case Net
               solve( !KU( ~c ) @ #vk.3 )
@@ -3133,7 +3133,7 @@ next
           next
             case case_2
             solve( !KU( g(~c,
-                          <f(~k.1, <'hello', m>), xor(f(~k.1, <'hello', m>), ~k.1)>)
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
                    ) @ #vk.7 )
               case Net
               solve( !KU( ~c ) @ #vk.3 )
@@ -3153,7 +3153,7 @@ next
           solve( (¬(#vr.1 < #vr.14))  ∥ (¬(#vr.14 < #vr.3)) )
             case case_1
             solve( !KU( g(~c,
-                          <f(~k.1, <'hello', m>), xor(f(~k.1, <'hello', m>), ~k.1)>)
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
                    ) @ #vk.7 )
               case Net
               solve( !KU( ~c ) @ #vk.3 )
@@ -3170,7 +3170,7 @@ next
           next
             case case_2
             solve( !KU( g(~c,
-                          <f(~k.1, <'hello', m>), xor(f(~k.1, <'hello', m>), ~k.1)>)
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
                    ) @ #vk.7 )
               case Net
               solve( !KU( ~c ) @ #vk.3 )
@@ -3190,7 +3190,7 @@ next
           solve( (¬(#vr.1 < #vr.14))  ∥ (¬(#vr.14 < #vr.3)) )
             case case_1
             solve( !KU( g(~c,
-                          <f(~k.1, <'hello', m>), xor(f(~k.1, <'hello', m>), ~k.1)>)
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
                    ) @ #vk.7 )
               case Net
               solve( !KU( ~c ) @ #vk.3 )
@@ -3207,7 +3207,7 @@ next
           next
             case case_2
             solve( !KU( g(~c,
-                          <f(~k.1, <'hello', m>), xor(f(~k.1, <'hello', m>), ~k.1)>)
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
                    ) @ #vk.7 )
               case Net
               solve( !KU( ~c ) @ #vk.3 )
@@ -3230,7 +3230,7 @@ next
           next
             case ShkRevealB
             solve( !KU( g(~c,
-                          <f(~k.1, <'hello', m>), xor(f(~k.1, <'hello', m>), ~k.1)>)
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
                    ) @ #vk.8 )
               case Net
               solve( !KU( ~c ) @ #vk.4 )
