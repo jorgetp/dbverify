@@ -1,17 +1,29 @@
 import os
 
 def list_to_table_entry(items):
-	return "<tr>"+"\n".join(["<td>" + item + "</td>" for item in items])+"</tr>"
+	html_code = "<tr>\n"
+	for item in items:
+		style = ""
+		if "falsified" in item:
+			style = " style=\"color:red;\""
+		elif "verified" in item:
+			style = " style=\"color:green;\""
+		
+		html_code += "\t<td"+style+">" + item + "</td>\n"
+	
+	html_code += "</tr>\n"
+	return html_code
 
 def list_to_table_head(items):
-	html_code = "<thead><tr>"
+	html_code = "<thead>\n<tr>\n"
 	i = 1
 	for item in items:
 		if item == "Protocol":
-			html_code += "<th>"+ item + "</th>\n"
+			html_code += "\t<th>"+ item + "</th>\n"
 		else:
-			html_code += "<th data-priority=\""+ str(i) +"\">"+ item + "</th>\n"
+			html_code += "\t<th data-priority=\""+ str(i) +"\">"+ item + "</th>\n"
 			i += 1
+	html_code += "</tr>\n</thead>\n"
 	return html_code
 
 def create_html_code():
@@ -68,35 +80,27 @@ def create_html_code():
 
 	# create HTML code
 
-	head = "<head>\
-					<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n\
-					<link rel=\"stylesheet\" href=\"https://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.css\">\n\
-					<script src=\"https://code.jquery.com/jquery-1.11.3.min.js\"></script>\n\
-					<script src=\"https://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.js\"></script>\n\
-					<style>\n\
-						table {\n\
-	    				border-collapse: collapse;\n\
-	    				width: 100%;\n\
-						}\
-						td, th {\n\
-	    				border: 1px solid #dddddd;\n\
-	    				text-align: left;\n\
-	    				padding: 8px;\n\
-						}\n\
-						tr:nth-child(even) {\n\
-	    				background-color: #dddddd;\n\
-						}\n\
-					</style>\n\
-					</head>\n"
+	head 	= "<head>\n"
+	head +=	"<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n"
+	head += "<link rel=\"stylesheet\" href=\"https://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.css\">\n"
+	head += "<script src=\"https://code.jquery.com/jquery-1.11.3.min.js\"></script>\n"
+	head += "<script src=\"https://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.js\"></script>\n"
+	head += "<style>\n"
+	head += "	td, th {\n"
+	head += "  	border: 1px solid #dddddd;\n"
+	head += "  	text-align: left\n"
+	head += "	}\n"
+	head += "	tr:nth-child(even) {\n"
+	head += "  	background-color: #dddddd;\n"
+	head += "	}\n"
+	head += "</style>\n</head>\n"
 
-	html = 	"<!DOCTYPE html>\n<html>\n"+ head +"</head>\n<body>\n\
-					<h2>Verification results: " + str(proto_count) + " protocol(s) analyzed</h2>\n\
-					<table data-role=\"table\" data-mode=\"columntoggle\" class=\"ui-responsive\">\n"
-
+	html 	= "<!DOCTYPE html>\n<html>\n"+ head +"<body>\n"
+	html += "<h2>Verification results: " + str(proto_count) + " protocol(s) analyzed</h2>\n\n"
+	html += "<table data-role=\"table\" data-mode=\"columntoggle\" class=\"ui-responsive\">\n"
 	html += list_to_table_head(lemmas)
-
+	
 	html += "<tbody>\n"
-
 	for results in global_results:
 
 		results_list = []
