@@ -1,8 +1,18 @@
 import os
 
-def list_to_table_line(items, tag):
-	return "\n".join(["<"+tag+">" + item + "</" + tag + ">" for item in items])
+def list_to_table_entry(items):
+	return "<tr>"+"\n".join(["<td>" + item + "</td>" for item in items])+"</tr>"
 
+def list_to_table_head(items):
+	html_code = "<thead><tr>"
+	i = 1
+	for item in items:
+		if item == "Protocol":
+			html_code += "<th>"+ item + "</th>\n"
+		else:
+			html_code += "<th data-priority=\""+ str(i) +"\">"+ item + "</th>\n"
+			i += 1
+	return html_code
 
 def create_html_code():
 
@@ -58,24 +68,34 @@ def create_html_code():
 
 	# create HTML code
 
-	html = 	"<!DOCTYPE html><html><head><style>\
-						table {\
-	    				border-collapse: collapse;\
-	    				width: 100%;\
+	head = "<head>\
+					<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n\
+					<link rel=\"stylesheet\" href=\"https://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.css\">\n\
+					<script src=\"https://code.jquery.com/jquery-1.11.3.min.js\"></script>\n\
+					<script src=\"https://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.js\"></script>\n\
+					<style>\n\
+						table {\n\
+	    				border-collapse: collapse;\n\
+	    				width: 100%;\n\
 						}\
-						td, th {\
-	    				border: 1px solid #dddddd;\
-	    				text-align: left;\
-	    				padding: 8px;\
-						}\
-						tr:nth-child(even) {\
-	    				background-color: #dddddd;\
-						}\
-					</style></head><body>\
-					<h2>Verification results: " + str(proto_count) + " protocol(s) analyzed</h2>\
-					<table align=\"left\">\n"
+						td, th {\n\
+	    				border: 1px solid #dddddd;\n\
+	    				text-align: left;\n\
+	    				padding: 8px;\n\
+						}\n\
+						tr:nth-child(even) {\n\
+	    				background-color: #dddddd;\n\
+						}\n\
+					</style>\n\
+					</head>\n"
 
-	html += "<tr>" + list_to_table_line(lemmas, 'th')+"</tr>\n"
+	html = 	"<!DOCTYPE html>\n<html>\n"+ head +"</head>\n<body>\n\
+					<h2>Verification results: " + str(proto_count) + " protocol(s) analyzed</h2>\n\
+					<table data-role=\"table\" data-mode=\"columntoggle\" class=\"ui-responsive\">\n"
+
+	html += list_to_table_head(lemmas)
+
+	html += "<tbody>\n"
 
 	for results in global_results:
 
@@ -86,9 +106,9 @@ def create_html_code():
 			except:
 				results_list.append('')
 		
-		html += "<tr>" + list_to_table_line(results_list, 'td')+"</tr>\n"
+		html += list_to_table_entry(results_list)
 
-	html += "</table></body></html>"
+	html += "</tbody>\n</table>\n</body>\n</html>"
 	print 'Done.'
 	return html
 
