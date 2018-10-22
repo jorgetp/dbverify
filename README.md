@@ -68,7 +68,7 @@ Here a few hints:
 
 ## On exclusive-OR operations
 
-Here's what we recommend to deal with exclusive-OR operations (and indeed the approach we took):
+Here's what we recommend you do to deal with exclusive-OR operations (and indeed the approach we took):
 
 1. Define a function for modeling exclusive-OR, let's call it ```XOR```. Do not define any equational theory for it.
 
@@ -80,7 +80,7 @@ Here's what we recommend to deal with exclusive-OR operations (and indeed the ap
 
 5. The distance bounding protocol is **not secure** and thus an attack exists.
 
-Alternatively, if you have a Tamarin version 1.4.0 or later (see releases [here](https://github.com/tamarin-prover/tamarin-prover/releases)), you can use the built-in ```xor``` as to handle exclusive-OR with its equational theory. Be aware that this induces a substantial delay in the verification. We **did not**use such built-in to model the protocols of this repository.
+Alternatively, if you have a Tamarin version 1.4.0 or later (see releases [here](https://github.com/tamarin-prover/tamarin-prover/releases)), you can use the built-in ```xor``` as to handle exclusive-OR with its equational theory. Be aware that this induces a substantial delay in the verification. We **did not** use such built-in to model the protocols of this repository.
 
 ## Contact
 
