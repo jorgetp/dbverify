@@ -12,6 +12,8 @@ For further details see our **IEEE S\&P'18** paper [Distance-Bounding Protocols:
   * ```collect.py```: a Python script to collect the results of the verification
   * ```results.html```: the ouput of the Python script
 
+For the sake of presentation, we recommend you use 2-space width tabs in your editor.
+
 ## How to DBVerify
 Execute the ```Makefile``` which does the following:
 
