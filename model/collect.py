@@ -1,8 +1,17 @@
 import os
 
+def get_mscs_location(protocol):
+	return "https://github.com/jorgetp/dbverify/blob/master/msc/" + protocol + ".pdf"
+
+def protocol_name(results):
+	return results.get('Protocol')
+
 def list_to_table_entry(items):
 	html_code = "<tr>\n"
-	for item in items:
+	
+	html_code += "\t<td><a href=\""+ get_mscs_location(items[0])+"\">"+items[0]+"</a></td>\n"
+
+	for item in items[1:]:
 		style = ""
 		if "falsified" in item:
 			style = " style=\"color:red;\""
@@ -77,6 +86,8 @@ def create_html_code():
 	if 'WARNING' in lemmas:
 		index = lemmas.index('WARNING')
 		lemmas = lemmas[:index] + lemmas[index+1:] + ['WARNING']
+
+	global_results.sort(key=protocol_name)
 
 	# create HTML code
 
