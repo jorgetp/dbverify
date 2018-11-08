@@ -100,14 +100,14 @@ rule (modulo E) Verifier4:
 
 lemma complete_trace_exists:
   exists-trace
-  "∃ V P nv np #t1 #t2 #t3 #t4 #t5 #t6 #t7.
+  "∃ V P nv np npXORP #t1 #t2 #t3 #t4 #t5 #t6 #t7.
     (((((((((((((Start( nv ) @ #t1) ∧ (Start( np ) @ #t2)) ∧
                (Action( P ) @ #t2)) ∧
               (Send( V, nv ) @ #t3)) ∧
              (Action( P ) @ #t4)) ∧
-            (Recv( V, <nv, XOR(np, P)> ) @ #t5)) ∧
+            (Recv( V, <nv, npXORP> ) @ #t5)) ∧
            (Action( P ) @ #t6)) ∧
-          (DBSec( V, P, nv, <nv, XOR(np, P)> ) @ #t7)) ∧
+          (DBSec( V, P, nv, <nv, npXORP> ) @ #t7)) ∧
          (#t1 < #t2)) ∧
         (#t2 < #t3)) ∧
        (#t3 < #t4)) ∧
@@ -116,15 +116,15 @@ lemma complete_trace_exists:
     (#t6 < #t7)"
 /*
 guarded formula characterizing all satisfying traces:
-"∃ V P nv np #t1 #t2 #t3 #t4 #t5 #t6 #t7.
+"∃ V P nv np npXORP #t1 #t2 #t3 #t4 #t5 #t6 #t7.
   (Start( nv ) @ #t1) ∧
   (Start( np ) @ #t2) ∧
   (Action( P ) @ #t2) ∧
   (Send( V, nv ) @ #t3) ∧
   (Action( P ) @ #t4) ∧
-  (Recv( V, <nv, XOR(np, P)> ) @ #t5) ∧
+  (Recv( V, <nv, npXORP> ) @ #t5) ∧
   (Action( P ) @ #t6) ∧
-  (DBSec( V, P, nv, <nv, XOR(np, P)> ) @ #t7)
+  (DBSec( V, P, nv, <nv, npXORP> ) @ #t7)
  ∧
   (#t1 < #t2) ∧
   (#t2 < #t3) ∧
@@ -136,31 +136,31 @@ guarded formula characterizing all satisfying traces:
 simplify
 solve( VerifierState1( $B, nv ) ▶₀ #t3 )
   case Verifier1
-  solve( Send( $A, <~nv, XOR(np, P)> ) ▶₀ #t5 )
+  solve( Send( $A, <~nv, npXORP> ) ▶₀ #t5 )
     case Adv_case_1
-    solve( VerifierState3( $B, ~nv, XOR(np, P) ) ▶₀ #t7 )
+    solve( VerifierState3( $B, ~nv, npXORP ) ▶₀ #t7 )
       case Verifier3_case_1
-      solve( !Shk( $B, $A.1, k ) ▶₂ #t7 )
+      solve( !Shk( $B, P, k ) ▶₂ #t7 )
         case SymKey
         solve( Start( ~nv ) @ #t1 )
           case Verifier1
-          solve( Start( ~np ) @ #t2 )
+          solve( Start( np.2 ) @ #t2 )
             case Prover1
-            solve( Action( $A ) @ #t2 )
+            solve( Action( $B.1 ) @ #t2 )
               case Prover1
-              solve( Action( $A ) @ #t4 )
-                case Adv
-                solve( !CorruptAgnt( $A ) ▶₁ #t4 )
-                  case LtkReveal
-                  solve( Action( $A ) @ #t6 )
-                    case Prover1
-                    solve( !KU( ~np ) @ #vk.6 )
+              solve( Action( $P ) @ #t4 )
+                case Prover1
+                solve( Action( $P ) @ #t6 )
+                  case Prover1
+                  solve( splitEqs(2) )
+                    case split_case_1
+                    solve( !KU( ~np.2 ) @ #vk.6 )
                       case Net_case_1
-                      solve( !KU( h(~k, <$A, locP, ~np, ~nv>) ) @ #vk.9 )
+                      solve( !KU( h(~k, <$P, locP, ~np.2, ~nv>) ) @ #vk.9 )
                         case Net
                         solve( !KU( ~nv ) @ #vk.9 )
                           case Verifier2
-                          solve( !KU( XOR(~np, $A) ) @ #vk.10 )
+                          solve( !KU( XOR(~np.2, $P) ) @ #vk.10 )
                             case Net
                             SOLVED // trace found
                           qed
@@ -719,20 +719,7 @@ solve( VerifierState3( V, ch, z ) ▶₀ #l )
   qed
 qed
 
-/*
-WARNING: the following wellformedness checks failed!
-
-Formula terms:
-  lemma `complete_trace_exists' uses terms of the wrong form:
-    `pair(Bound 8,XOR(Bound 7,Bound 9))',
-    `pair(Bound 8,XOR(Bound 7,Bound 9))'
-  
-  The only allowed terms are public names and bound node and message
-  variables. If you encounter free message variables, then you might
-  have forgotten a #-prefix. Sort prefixes can only be dropped where
-  this is unambiguous. Moreover, reducible function symbols are
-  disallowed.
-*/
+/* All well-formedness checks were successful. */
 
 end
 
@@ -741,9 +728,6 @@ summary of summaries:
 
 analyzed: meadows.spthy
 
-  WARNING: 1 wellformedness check failed!
-           The analysis results might be wrong!
-  
   complete_trace_exists (exists-trace): verified (16 steps)
   unique_runid (all-traces): verified (12 steps)
   end_after_start (all-traces): verified (9 steps)

@@ -74,7 +74,7 @@ rule Verifier4:
 lemma complete_trace_exists:
 	exists-trace
 	"
-	Ex V P nv np #t1 #t2 #t3 #t4 #t5 #t6 #t7.
+	Ex V P nv np npXORP #t1 #t2 #t3 #t4 #t5 #t6 #t7.
 		
 		//initial phase
 		Start(nv) @ t1 &
@@ -84,11 +84,11 @@ lemma complete_trace_exists:
 		//fast phase
 		Send(V, nv) @ t3 &
 		Action(P) @ t4 &
-		Recv(V, <nv, XOR(np, P)>) @ t5 &
+		Recv(V, <nv, npXORP>) @ t5 &
 
 		//verification phase
 		Action(P) @ t6 &	
-		DBSec(V, P, nv, <nv, XOR(np, P)>) @ t7 &
+		DBSec(V, P, nv, <nv, npXORP>) @ t7 &
 
 		//check order
 		t1 < t2 & t2 < t3 & t3 < t4 & t4 < t5 & t5 < t6 & t6 < t7
