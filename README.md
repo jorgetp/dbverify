@@ -56,15 +56,18 @@ Once you have coded your protocol, say into ```my_protocol.spthy```, add the lin
 
 ## Read the results
 
-Each lemma in ```generic``` has a column in the table depicted in ```results.html```. To identify the type of attack(s), run Tamarin in interactive mode 
+To identify the type of attack(s), if any, against a protocol, say ```my_protocol.spthy```, here are 2 alternatives:
+
+1. Run Tamarin in interactive mode 
 ```
 tamarin-prover interactive my_protocol.spthy
 ```
-and inspect the trace that invalidates ```dbsec```.
+and inspect the trace that invalidates ```dbsec```. Be aware that Tamarin gives you just one attack trace, so with this approach you might miss valid attacks.
 
-Here a few hints:
-* If lemma ```dbsec_on_honest_prover``` fails then there is a **mafia fraud**.
-* If lemma ```dbsec_on_corrupt_prover``` fails then there is a **distance fraud**, or a **distance hijacking**, or both.
+2. Each lemma in ```generic``` has a column in the table depicted in ```results.html```. So, locate the entry for ```my_protocol.spthy``` and follow the (independent) observations:
+* If lemma ```dbsec``` holds then there's **no** attack.
+* If lemma ```dbsec_on_honest_prover``` fails then there is a *mafia fraud*.
+* If lemma ```dbsec_on_compromised_prover``` fails then there is a *distance fraud*, or a *distance hijacking*, or both.
 
 ## On exclusive-OR operations
 
@@ -80,7 +83,7 @@ Here's what we recommend you do to deal with exclusive-OR operations (and indeed
 
 5. The distance bounding protocol is **not secure** and thus an attack exists.
 
-Alternatively, if you have a Tamarin version 1.4.0 or later (see releases [here](https://github.com/tamarin-prover/tamarin-prover/releases)), you can use the built-in ```xor``` as to handle exclusive-OR with its equational theory. Be aware that this induces a substantial delay in the verification. We **did not** use such built-in to model the protocols of this repository.
+Alternatively, if you have a Tamarin version 1.4.0 or later (see [releases](https://github.com/tamarin-prover/tamarin-prover/releases)), you can use the built-in ```xor``` as to handle exclusive-OR with its equational theory. Be aware that this induces a substantial delay in the verification. We **did not** use such built-in to model the protocols of this repository.
 
 ## Contact
 
