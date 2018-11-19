@@ -56,18 +56,18 @@ Once you have coded your protocol, say into ```my_protocol.spthy```, add the lin
 
 ## Read the results
 
-To identify the type of attack(s), if any, against a protocol, say ```my_protocol.spthy```, here are 2 alternatives:
+To identify the type of attack(s) against a protocol, say ```my_protocol.spthy```, see next 2 alternatives:
 
-1. Run Tamarin in interactive mode 
+* Run Tamarin in interactive mode 
   ```
   tamarin-prover interactive my_protocol.spthy
   ```
   and inspect the trace that invalidates ```dbsec```. Be aware that Tamarin gives you just one attack trace, so with this approach you might miss valid attacks.
 
-2. Each lemma in ```generic``` has a column in the table depicted in ```results.html```. So, locate the entry for ```my_protocol.spthy``` and follow the (independent) observations:
+* Each lemma in ```generic``` has a column in the table depicted in ```results.html```. So, locate the entry for ```my_protocol.spthy``` and follow the (independent) observations:
   * If lemma ```dbsec``` holds then there's **no** attack.
-  * If lemma ```dbsec_on_honest_prover``` fails then there is a *mafia fraud*.
-  * If lemma ```dbsec_on_compromised_prover``` fails then there is a *distance fraud*, or a *distance hijacking*, or both.
+  * If lemma ```dbsec_on_honest_prover``` fails then there is a **mafia fraud**.
+  * If lemma ```dbsec_on_compromised_prover``` fails then there is a **distance fraud**, or a **distance hijacking**, or both.
 
 ## On exclusive-OR operations
 
