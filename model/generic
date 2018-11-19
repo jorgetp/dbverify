@@ -68,7 +68,7 @@ lemma no_claim_before_fastphase:
 // For each trace with a DBSec claim, it is the case
 // that either the verifier is compromised, or the prover is not and he
 // was active during the fast phase, or the prover is compromised and
-// then there was a compromised agent active during the fast phase.
+// then there was a compromised prover active during the fast phase
 lemma dbsec:
 	"
 	All V P chal resp #l. 
@@ -110,7 +110,7 @@ lemma dbsec_on_honest_prover:
 
 // dbsec provided that prover is compromised
 // *	If this lemma fails then there's a distance fraud,
-//		or a distance hijacking, or both.
+//		or a distance hijacking, or both
 lemma dbsec_on_compromised_prover:
 	"
 	All V P chal resp #l. 

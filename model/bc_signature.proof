@@ -143,34 +143,34 @@ guarded formula characterizing all satisfying traces:
   (#t1 < #t2) ∧ (#t2 < #t3) ∧ (#t3 < #t4) ∧ (#t4 < #t5) ∧ (#t5 < #t6)"
 */
 simplify
-solve( Send( $A, XOR(~n, m) ) ▶₀ #t4 )
-  case Adv_case_1
+solve( Send( $X, XOR(~n, m) ) ▶₀ #t4 )
+  case DBAdv_case_1
   solve( VerifierState2( $V, ~n, comm.1, XOR(~n, m) ) ▶₀ #t6 )
     case Ver2_case_1
     solve( !Pk( $P, pk(x) ) ▶₂ #t6 )
-      case AsymKey
+      case LtkGen
       solve( Start( ~m ) @ #t1 )
         case Prov1
         solve( Action( $P ) @ #t1 )
           case Prov1
           solve( Start( ~n ) @ #t2 )
             case Ver1
-            solve( Action( $A ) @ #t3 )
-              case Adv
-              solve( !CorruptAgnt( $A ) ▶₁ #t3 )
+            solve( Action( $P ) @ #t3 )
+              case DBAdv
+              solve( !KeyComp( $P ) ▶₁ #t3 )
                 case LtkReveal
-                solve( Action( $A ) @ #t5 )
+                solve( Action( $P ) @ #t5 )
                   case Prov1
                   solve( !KU( sign(f(~n, ~m), ~k) ) @ #vk.3 )
-                    case Net
+                    case DBNet
                     solve( !KU( senc(~m, ck.1) ) @ #vk.1 )
-                      case Net
+                      case DBNet
                       solve( !KU( ~n ) @ #vk.5 )
                         case Ver1
                         solve( !KU( ~ck ) @ #vk.4 )
-                          case Net
+                          case DBNet
                           solve( !KU( XOR(~n, ~m) ) @ #vk.5 )
-                            case Net
+                            case DBNet
                             SOLVED // trace found
                           qed
                         qed
@@ -187,44 +187,42 @@ solve( Send( $A, XOR(~n, m) ) ▶₀ #t4 )
   qed
 qed
 
-rule (modulo E) AsymKey:
+rule (modulo E) LtkGen:
    [ Fr( ~k ) ]
-  --[ Once( $A ) ]->
-   [ !Ltk( $A, ~k ), !Pk( $A, pk(~k) ), Out( pk(~k) ) ]
+  --[ Once( $X ) ]->
+   [ !Ltk( $X, ~k ), !Pk( $X, pk(~k) ), Out( pk(~k) ) ]
 
   /* has exactly the trivial AC variant */
 
-rule (modulo E) SymKey:
-   [ Fr( ~k ) ] --[ Once( <$A, $B> ) ]-> [ !Shk( $A, $B, ~k ) ]
+rule (modulo E) ShkGen:
+   [ Fr( ~k ) ] --[ Once( <$X, $Y> ) ]-> [ !Shk( $X, $Y, ~k ) ]
 
   /* has exactly the trivial AC variant */
 
 rule (modulo E) LtkReveal:
-   [ !Ltk( $A, k ) ] --[ Corrupt( $A ) ]-> [ !CorruptAgnt( $A ), Out( k ) ]
+   [ !Ltk( $X, k ) ] --[ !KeyComp( $X ) ]-> [ Out( k ), !KeyComp( $X ) ]
 
   /* has exactly the trivial AC variant */
 
-rule (modulo E) ShkRevealA:
-   [ !Shk( $A, $B, k ) ]
-  --[ Corrupt( $A ) ]->
-   [ !CorruptAgnt( $A ), Out( k ) ]
+rule (modulo E) ShkRevealX:
+   [ !Shk( $X, $Y, k ) ] --[ !KeyComp( $X ) ]-> [ Out( k ), !KeyComp( $X ) ]
 
   /* has exactly the trivial AC variant */
 
-rule (modulo E) ShkRevealB:
-   [ !Shk( $A, $B, k ) ]
-  --[ Corrupt( $B ) ]->
-   [ !CorruptAgnt( $B ), Out( k ) ]
+rule (modulo E) ShkRevealY:
+   [ !Shk( $X, $Y, k ) ] --[ !KeyComp( $Y ) ]-> [ Out( k ), !KeyComp( $Y ) ]
 
   /* has exactly the trivial AC variant */
 
-rule (modulo E) Adv:
-   [ In( m ), !CorruptAgnt( $A ) ] --[ Action( $A ) ]-> [ Send( $A, m ) ]
+rule (modulo E) DBAdv:
+   [ In( m ), !KeyComp( $X ) ] --[ Action( $X ) ]-> [ Send( $X, m ) ]
 
   /* has exactly the trivial AC variant */
 
-rule (modulo E) Net:
-   [ Send( $A, m ) ] --[ Recv( $B, m ) ]-> [ Recv( $B, m ), Out( m ) ]
+rule (modulo E) DBNet:
+   [ Send( $X, m ) ]
+  --[ Action( $Y ), Recv( $Y, m ) ]->
+   [ Recv( $Y, m ), Out( m ) ]
 
   /* has exactly the trivial AC variant */
 
@@ -305,53 +303,81 @@ restriction once:
   "∀ x #i #j. ((Once( x ) @ #i) ∧ (Once( x ) @ #j)) ⇒ (#i = #j)"
   // safety formula
 
-lemma dbsec:
+lemma no_claim_before_fastphase:
   all-traces
-  "∀ V P ch rp #l.
-    (DBSec( V, P, ch, rp ) @ #l) ⇒
-    (((∃ #i. (Corrupt( V ) @ #i) ∧ (#i < #l)) ∨
-      (∃ #i #j #k.
-        (((((Send( V, ch ) @ #i) ∧ (Action( P ) @ #j)) ∧ (Recv( V, rp ) @ #k)) ∧
-          (#i < #j)) ∧
-         (#j < #k)) ∧
-        (#k < #l))) ∨
-     (∃ A #a #p #i #j #k.
-       (((((((((Corrupt( A ) @ #a) ∧ (#a < #l)) ∧ (Corrupt( P ) @ #p)) ∧
-             (#p < #l)) ∧
-            (Send( V, ch ) @ #i)) ∧
-           (Action( A ) @ #j)) ∧
-          (Recv( V, rp ) @ #k)) ∧
-         (#i < #j)) ∧
-        (#j < #k)) ∧
-       (#k < #l)))"
+  "∀ V P chal resp #l.
+    (DBSec( V, P, chal, resp ) @ #l) ⇒
+    ((∃ #i #j.
+       (((Send( V, chal ) @ #i) ∧ (Recv( V, resp ) @ #j)) ∧ (#i < #l)) ∧
+       (#j < #l)) ∨
+     (∃ #j. !KeyComp( V ) @ #j))"
 /*
 guarded formula characterizing all counter-examples:
-"∃ V P ch rp #l.
-  (DBSec( V, P, ch, rp ) @ #l)
+"∃ V P chal resp #l.
+  (DBSec( V, P, chal, resp ) @ #l)
  ∧
-  (∀ #i. (Corrupt( V ) @ #i) ⇒ ¬(#i < #l)) ∧
-  (∀ #i #j #k.
-    (Send( V, ch ) @ #i) ∧ (Action( P ) @ #j) ∧ (Recv( V, rp ) @ #k)
+  (∀ #i #j.
+    (Send( V, chal ) @ #i) ∧ (Recv( V, resp ) @ #j)
    ⇒
-    ((¬(#i < #j)) ∨ (¬(#j < #k)) ∨ (¬(#k < #l)))) ∧
-  (∀ A #a #p #i #j #k.
-    (Corrupt( A ) @ #a) ∧
-    (Corrupt( P ) @ #p) ∧
-    (Send( V, ch ) @ #i) ∧
-    (Action( A ) @ #j) ∧
-    (Recv( V, rp ) @ #k)
-   ⇒
-    ((¬(#a < #l)) ∨
-     (¬(#p < #l)) ∨
-     (¬(#i < #j)) ∨
-     (¬(#j < #k)) ∨
-     (¬(#k < #l))))"
+    ((¬(#i < #l)) ∨ (¬(#j < #l)))) ∧
+  (∀ #j. (!KeyComp( V ) @ #j) ⇒ ⊥)"
 */
 simplify
-solve( VerifierState2( V, ch, comm, XOR(ch, z) ) ▶₀ #l )
+solve( VerifierState2( V, chal, comm, XOR(chal, z) ) ▶₀ #l )
+  case Ver2_case_1
+  by contradiction /* from formulas */
+next
+  case Ver2_case_2
+  by contradiction /* from formulas */
+next
+  case Ver2_case_3
+  by contradiction /* from formulas */
+next
+  case Ver2_case_4
+  by contradiction /* from formulas */
+qed
+
+lemma dbsec:
+  all-traces
+  "∀ V P chal resp #l.
+    (DBSec( V, P, chal, resp ) @ #l) ⇒
+    (((∃ #i #j #k.
+        ((((Send( V, chal ) @ #i) ∧ (Action( P ) @ #j)) ∧
+          (Recv( V, resp ) @ #k)) ∧
+         (#i < #j)) ∧
+        (#j < #k)) ∨
+      (∃ P2 #p #p2 #i #j #k.
+        ((((((!KeyComp( P ) @ #p) ∧ (!KeyComp( P2 ) @ #p2)) ∧
+            (Send( V, chal ) @ #i)) ∧
+           (Action( P2 ) @ #j)) ∧
+          (Recv( V, resp ) @ #k)) ∧
+         (#i < #j)) ∧
+        (#j < #k))) ∨
+     (∃ #j. !KeyComp( V ) @ #j))"
+/*
+guarded formula characterizing all counter-examples:
+"∃ V P chal resp #l.
+  (DBSec( V, P, chal, resp ) @ #l)
+ ∧
+  (∀ #i #j #k.
+    (Send( V, chal ) @ #i) ∧ (Action( P ) @ #j) ∧ (Recv( V, resp ) @ #k)
+   ⇒
+    ((¬(#i < #j)) ∨ (¬(#j < #k)))) ∧
+  (∀ P2 #p #p2 #i #j #k.
+    (!KeyComp( P ) @ #p) ∧
+    (!KeyComp( P2 ) @ #p2) ∧
+    (Send( V, chal ) @ #i) ∧
+    (Action( P2 ) @ #j) ∧
+    (Recv( V, resp ) @ #k)
+   ⇒
+    ((¬(#i < #j)) ∨ (¬(#j < #k)))) ∧
+  (∀ #j. (!KeyComp( V ) @ #j) ⇒ ⊥)"
+*/
+simplify
+solve( VerifierState2( V, chal, comm, XOR(chal, z) ) ▶₀ #l )
   case Ver2_case_1
   solve( !Pk( $P, pk(x) ) ▶₂ #l )
-    case AsymKey
+    case LtkGen
     solve( !KU( sign(f(~n, ~m), ~k) ) @ #vk.2 )
       case c_sign
       solve( !KU( ~k ) @ #vk.6 )
@@ -359,11 +385,11 @@ solve( VerifierState2( V, ch, comm, XOR(ch, z) ) ▶₀ #l )
         solve( !KU( f(~n, ~m) ) @ #vk.6 )
           case c_f
           solve( !KU( ~m ) @ #vk.7 )
-            case Net
+            case DBNet
             solve( !KU( ~ck.1 ) @ #vk.8 )
-              case Net
+              case DBNet
               solve( !KU( senc(~m, ck) ) @ #vk.7 )
-                case Net
+                case DBNet
                 solve( !KU( ~n ) @ #vk.7 )
                   case Ver1
                   SOLVED // trace found
@@ -379,34 +405,33 @@ qed
 
 lemma dbsec_on_honest_prover:
   all-traces
-  "∀ V P ch rp #l.
-    (DBSec( V, P, ch, rp ) @ #l) ⇒
-    (((∃ #i. (Corrupt( V ) @ #i) ∧ (#i < #l)) ∨
-      (∃ #i. (Corrupt( P ) @ #i) ∧ (#i < #l))) ∨
-     (∃ #i #j #k.
-       (((((Send( V, ch ) @ #i) ∧ (Action( P ) @ #j)) ∧ (Recv( V, rp ) @ #k)) ∧
-         (#i < #j)) ∧
-        (#j < #k)) ∧
-       (#k < #l)))"
+  "∀ V P chal resp #l.
+    ((DBSec( V, P, chal, resp ) @ #l) ∧ (¬(∃ #j. !KeyComp( P ) @ #j))) ⇒
+    ((∃ #i #j #k.
+       ((((Send( V, chal ) @ #i) ∧ (Action( P ) @ #j)) ∧
+         (Recv( V, resp ) @ #k)) ∧
+        (#i < #j)) ∧
+       (#j < #k)) ∨
+     (∃ #j. !KeyComp( V ) @ #j))"
 /*
 guarded formula characterizing all counter-examples:
-"∃ V P ch rp #l.
-  (DBSec( V, P, ch, rp ) @ #l)
+"∃ V P chal resp #l.
+  (DBSec( V, P, chal, resp ) @ #l)
  ∧
-  (∀ #i. (Corrupt( V ) @ #i) ⇒ ¬(#i < #l)) ∧
-  (∀ #i. (Corrupt( P ) @ #i) ⇒ ¬(#i < #l)) ∧
+  (∀ #j. (!KeyComp( P ) @ #j) ⇒ ⊥) ∧
   (∀ #i #j #k.
-    (Send( V, ch ) @ #i) ∧ (Action( P ) @ #j) ∧ (Recv( V, rp ) @ #k)
+    (Send( V, chal ) @ #i) ∧ (Action( P ) @ #j) ∧ (Recv( V, resp ) @ #k)
    ⇒
-    ((¬(#i < #j)) ∨ (¬(#j < #k)) ∨ (¬(#k < #l))))"
+    ((¬(#i < #j)) ∨ (¬(#j < #k)))) ∧
+  (∀ #j. (!KeyComp( V ) @ #j) ⇒ ⊥)"
 */
 simplify
-solve( VerifierState2( V, ch, comm, XOR(ch, z) ) ▶₀ #l )
+solve( VerifierState2( V, chal, comm, XOR(chal, z) ) ▶₀ #l )
   case Ver2_case_1
   solve( !Pk( $P, pk(x) ) ▶₂ #l )
-    case AsymKey
+    case LtkGen
     solve( !KU( sign(f(~n, ~m), ~k) ) @ #vk.2 )
-      case Net
+      case DBNet
       solve( (¬(#vr.1 < #vr.7))  ∥ (¬(#vr.7 < #vr.2)) )
         case case_1
         solve( !KU( ~n ) @ #vk.4 )
@@ -431,7 +456,7 @@ solve( VerifierState2( V, ch, comm, XOR(ch, z) ) ▶₀ #l )
 next
   case Ver2_case_2
   solve( !Pk( $P, pk(x) ) ▶₂ #l )
-    case AsymKey
+    case LtkGen
     solve( splitEqs(0) )
       case split_case_1
       solve( !KU( sign(f(~n, sdec(comm, ck)), ~k) ) @ #vk.2 )
@@ -444,7 +469,7 @@ next
     next
       case split_case_2
       solve( !KU( sign(f(~n, z), ~k) ) @ #vk.2 )
-        case Net
+        case DBNet
         solve( (¬(#vr.1 < #vr.8))  ∥ (¬(#vr.8 < #vr.2)) )
           case case_1
           solve( !KU( ~n ) @ #vk.5 )
@@ -464,14 +489,14 @@ next
             solve( (¬(#vr.1 < #vr.11))  ∥ (¬(#vr.11 < #vr.2)) )
               case case_1
               solve( !KU( XOR(~n, ~m) ) @ #vk.4 )
-                case Net
+                case DBNet
                 by contradiction /* cyclic */
               next
                 case c_XOR
                 solve( !KU( ~m ) @ #vk.6 )
-                  case Net
+                  case DBNet
                   solve( !KU( ~ck.1 ) @ #vk.7 )
-                    case Net
+                    case DBNet
                     by contradiction /* cyclic */
                   qed
                 qed
@@ -479,12 +504,12 @@ next
             next
               case case_2
               solve( !KU( XOR(~n, ~m) ) @ #vk.4 )
-                case Net
+                case DBNet
                 by contradiction /* cyclic */
               next
                 case c_XOR
                 solve( !KU( ~m ) @ #vk.6 )
-                  case Net
+                  case DBNet
                   by contradiction /* cyclic */
                 qed
               qed
@@ -503,7 +528,7 @@ next
 next
   case Ver2_case_3
   solve( !Pk( $P, pk(x) ) ▶₂ #l )
-    case AsymKey
+    case LtkGen
     solve( splitEqs(0) )
       case split_case_1
       solve( !KU( sign(f(~n, sdec(comm, ck)), ~k) ) @ #vk.2 )
@@ -516,7 +541,7 @@ next
     next
       case split_case_2
       solve( !KU( sign(f(~n, z), ~k) ) @ #vk.2 )
-        case Net
+        case DBNet
         solve( (¬(#vr.1 < #vr.8))  ∥ (¬(#vr.8 < #vr.2)) )
           case case_1
           solve( !KU( ~n ) @ #vk.5 )
@@ -536,14 +561,14 @@ next
             solve( (¬(#vr.1 < #vr.11))  ∥ (¬(#vr.11 < #vr.2)) )
               case case_1
               solve( !KU( XOR(~n, ~m) ) @ #vk.4 )
-                case Net
+                case DBNet
                 by contradiction /* cyclic */
               next
                 case c_XOR
                 solve( !KU( ~m ) @ #vk.6 )
-                  case Net
+                  case DBNet
                   solve( !KU( ~ck.1 ) @ #vk.7 )
-                    case Net
+                    case DBNet
                     by contradiction /* cyclic */
                   qed
                 qed
@@ -551,12 +576,12 @@ next
             next
               case case_2
               solve( !KU( XOR(~n, ~m) ) @ #vk.4 )
-                case Net
+                case DBNet
                 by contradiction /* cyclic */
               next
                 case c_XOR
                 solve( !KU( ~m ) @ #vk.6 )
-                  case Net
+                  case DBNet
                   by contradiction /* cyclic */
                 qed
               qed
@@ -575,7 +600,7 @@ next
 next
   case Ver2_case_4
   solve( !Pk( $P, pk(x) ) ▶₂ #l )
-    case AsymKey
+    case LtkGen
     solve( splitEqs(0) )
       case split_case_1
       solve( !KU( sign(f(~n, sdec(comm, ck)), ~k) ) @ #vk.2 )
@@ -588,7 +613,7 @@ next
     next
       case split_case_2
       solve( !KU( sign(f(~n, z), ~k) ) @ #vk.2 )
-        case Net
+        case DBNet
         solve( (¬(#vr.1 < #vr.8))  ∥ (¬(#vr.8 < #vr.2)) )
           case case_1
           solve( !KU( ~n ) @ #vk.5 )
@@ -608,14 +633,14 @@ next
             solve( (¬(#vr.1 < #vr.11))  ∥ (¬(#vr.11 < #vr.2)) )
               case case_1
               solve( !KU( XOR(~n, ~m) ) @ #vk.4 )
-                case Net
+                case DBNet
                 by contradiction /* cyclic */
               next
                 case c_XOR
                 solve( !KU( ~m ) @ #vk.6 )
-                  case Net
+                  case DBNet
                   solve( !KU( ~ck.1 ) @ #vk.7 )
-                    case Net
+                    case DBNet
                     by contradiction /* cyclic */
                   qed
                 qed
@@ -623,12 +648,12 @@ next
             next
               case case_2
               solve( !KU( XOR(~n, ~m) ) @ #vk.4 )
-                case Net
+                case DBNet
                 by contradiction /* cyclic */
               next
                 case c_XOR
                 solve( !KU( ~m ) @ #vk.6 )
-                  case Net
+                  case DBNet
                   by contradiction /* cyclic */
                 qed
               qed
@@ -646,53 +671,51 @@ next
   qed
 qed
 
-lemma dbsec_on_corrupt_prover:
+lemma dbsec_on_compromised_prover:
   all-traces
-  "∀ V P ch rp #l.
-    (DBSec( V, P, ch, rp ) @ #l) ⇒
-    (((∃ #i. (Corrupt( V ) @ #i) ∧ (#i < #l)) ∨
-      (¬(∃ #i. (Corrupt( P ) @ #i) ∧ (#i < #l)))) ∨
-     (∃ A #a #i #j #k.
-       (((((((Corrupt( A ) @ #a) ∧ (#a < #l)) ∧ (Send( V, ch ) @ #i)) ∧
-           (Action( A ) @ #j)) ∧
-          (Recv( V, rp ) @ #k)) ∧
-         (#i < #j)) ∧
-        (#j < #k)) ∧
-       (#k < #l)))"
+  "∀ V P chal resp #l.
+    ((DBSec( V, P, chal, resp ) @ #l) ∧ (∃ #j. !KeyComp( P ) @ #j)) ⇒
+    ((∃ P2 #p2 #i #j #k.
+       (((((!KeyComp( P2 ) @ #p2) ∧ (Send( V, chal ) @ #i)) ∧
+          (Action( P2 ) @ #j)) ∧
+         (Recv( V, resp ) @ #k)) ∧
+        (#i < #j)) ∧
+       (#j < #k)) ∨
+     (∃ #j. !KeyComp( V ) @ #j))"
 /*
 guarded formula characterizing all counter-examples:
-"∃ V P ch rp #l.
-  (DBSec( V, P, ch, rp ) @ #l)
+"∃ V P chal resp #l.
+  (DBSec( V, P, chal, resp ) @ #l)
  ∧
-  (∀ #i. (Corrupt( V ) @ #i) ⇒ ¬(#i < #l)) ∧
-  (∃ #i. (Corrupt( P ) @ #i) ∧ #i < #l) ∧
-  (∀ A #a #i #j #k.
-    (Corrupt( A ) @ #a) ∧
-    (Send( V, ch ) @ #i) ∧
-    (Action( A ) @ #j) ∧
-    (Recv( V, rp ) @ #k)
+  (∃ #j. (!KeyComp( P ) @ #j)) ∧
+  (∀ P2 #p2 #i #j #k.
+    (!KeyComp( P2 ) @ #p2) ∧
+    (Send( V, chal ) @ #i) ∧
+    (Action( P2 ) @ #j) ∧
+    (Recv( V, resp ) @ #k)
    ⇒
-    ((¬(#a < #l)) ∨ (¬(#i < #j)) ∨ (¬(#j < #k)) ∨ (¬(#k < #l))))"
+    ((¬(#i < #j)) ∨ (¬(#j < #k)))) ∧
+  (∀ #j. (!KeyComp( V ) @ #j) ⇒ ⊥)"
 */
 simplify
-solve( VerifierState2( V, ch, comm, XOR(ch, z) ) ▶₀ #l )
+solve( VerifierState2( V, chal, comm, XOR(chal, z) ) ▶₀ #l )
   case Ver2_case_1
   solve( !Pk( $P, pk(x) ) ▶₂ #l )
-    case AsymKey
-    solve( Corrupt( $P ) @ #i )
+    case LtkGen
+    solve( !KeyComp( $P ) @ #j )
       case LtkReveal
-      solve( !Ltk( $P, k ) ▶₀ #i )
-        case AsymKey
+      solve( !Ltk( $P, k ) ▶₀ #j )
+        case LtkGen
         solve( !KU( sign(f(~n, ~m), ~k) ) @ #vk.2 )
           case c_sign
           solve( !KU( f(~n, ~m) ) @ #vk.5 )
             case c_f
             solve( !KU( ~m ) @ #vk.7 )
-              case Net
+              case DBNet
               solve( !KU( ~ck.1 ) @ #vk.8 )
-                case Net
+                case DBNet
                 solve( !KU( senc(~m, ck) ) @ #vk.6 )
-                  case Net
+                  case DBNet
                   solve( !KU( ~n ) @ #vk.6 )
                     case Ver1
                     solve( !KU( ~k ) @ #vk.7 )
@@ -722,8 +745,9 @@ analyzed: bc_signature.spthy
   complete_trace_exists (exists-trace): verified (16 steps)
   unique_runid (all-traces): verified (12 steps)
   end_after_start (all-traces): verified (9 steps)
+  no_claim_before_fastphase (all-traces): verified (6 steps)
   dbsec (all-traces): falsified - found trace (11 steps)
   dbsec_on_honest_prover (all-traces): verified (83 steps)
-  dbsec_on_corrupt_prover (all-traces): falsified - found trace (13 steps)
+  dbsec_on_compromised_prover (all-traces): falsified - found trace (13 steps)
 
 ==============================================================================
