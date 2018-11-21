@@ -1,0 +1,3280 @@
+maude tool: 'maude'
+ checking version: 2.7.1. OK.
+ checking installation: OK.
+SAPIC tool: 'sapic'
+Checking availablity ... OK.
+
+theory swiss begin
+
+// Function signature and definition of the equational theory E
+
+functions: XOR/2, adec/2, aenc/2, f/2, fst/1, g/2, pair/2, pk/1, sdec/2,
+           senc/2, snd/1
+equations:
+    adec(aenc(x.1, pk(x.2)), x.2) = x.1,
+    fst(<x.1, x.2>) = x.1,
+    sdec(senc(x.1, x.2), x.2) = x.1,
+    snd(<x.1, x.2>) = x.2
+
+rule (modulo E) Verif1:
+   [ Fr( ~n ) ] --[ Start( ~n ) ]-> [ VerifState1( ~n ), Out( ~n ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Prover1:
+   [ In( n ), Fr( ~m ) ]
+  --[ Start( ~m ), Action( $P ) ]->
+   [ Send( $P, ~m ), ProverState1( $P, n, ~m ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Verif2:
+   [ VerifState1( n ), In( m ), Fr( ~c ) ]
+  --[ Test( n, m, ~c, '1' ), Send( $V, ~c ) ]->
+   [ VerifState2( $V, n, m, ~c ), Out( ~c ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Prover2:
+   [ ProverState1( P, n, m ), In( c ), !Shk( $V, P, x ) ]
+  --[ Test( n, m, c, '2' ), Action( P ) ]->
+   [
+   Send( P, g(c, <f(x, <'hello', m>), XOR(f(x, <'hello', m>), x)>) ),
+   ProverState2( $V, P, n, m, c )
+   ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Verif3:
+   [
+   VerifState2( V, n, m, c ), !Shk( V, $P, x ),
+   Recv( V, g(c, <f(x, <'hello', m>), XOR(f(x, <'hello', m>), x)>) )
+   ]
+  --[ Test( n, m, c, '3' ) ]->
+   [
+   VerifState3( V, $P, n, m, c,
+                g(c, <f(x, <'hello', m>), XOR(f(x, <'hello', m>), x)>)
+   )
+   ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Prover3:
+   [ ProverState2( V, P, n, m, c ), !Shk( V, P, x ) ]
+  --[ Test( n, m, c, '4' ), Action( P ) ]->
+   [ Send( P, <f(x, <c, P, n, m>), c> ), ProverState3( V, P, n, m, c ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Verif4:
+   [
+   VerifState3( V, P, n, m, c, resp ), In( <f(x, <c, P, n, m>), c> ),
+   !Shk( V, P, x )
+   ]
+  --[ Test( n, m, c, '5' ), DBSec( V, P, c, resp ), End( n ) ]->
+   [ Out( f(x, m) ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Prover4:
+   [ ProverState3( V, P, n, m, c ), !Shk( V, P, x ), In( f(x, m) ) ]
+  --[ Test( n, m, c, '6' ), Action( P ), End( m ) ]->
+   [ ]
+
+  /* has exactly the trivial AC variant */
+
+lemma complete_trace_exists:
+  exists-trace
+  "∃ n m c #t1 #t2 #t3 #t4 #t5 #t6.
+    ((((((((((Test( n, m, c, '1' ) @ #t1) ∧ (Test( n, m, c, '2' ) @ #t2)) ∧
+            (Test( n, m, c, '3' ) @ #t3)) ∧
+           (Test( n, m, c, '4' ) @ #t4)) ∧
+          (Test( n, m, c, '5' ) @ #t5)) ∧
+         (Test( n, m, c, '6' ) @ #t6)) ∧
+        (#t1 < #t2)) ∧
+       (#t2 < #t3)) ∧
+      (#t3 < #t4)) ∧
+     (#t4 < #t5)) ∧
+    (#t5 < #t6)"
+/*
+guarded formula characterizing all satisfying traces:
+"∃ n m c #t1 #t2 #t3 #t4 #t5 #t6.
+  (Test( n, m, c, '1' ) @ #t1) ∧
+  (Test( n, m, c, '2' ) @ #t2) ∧
+  (Test( n, m, c, '3' ) @ #t3) ∧
+  (Test( n, m, c, '4' ) @ #t4) ∧
+  (Test( n, m, c, '5' ) @ #t5) ∧
+  (Test( n, m, c, '6' ) @ #t6)
+ ∧
+  (#t1 < #t2) ∧ (#t2 < #t3) ∧ (#t3 < #t4) ∧ (#t4 < #t5) ∧ (#t5 < #t6)"
+*/
+simplify
+solve( Test( n, m, c, '1' ) @ #t1 )
+  case Verif2
+  solve( VerifState1( n ) ▶₀ #t1 )
+    case Verif1
+    solve( Test( ~n, m, ~c, '2' ) @ #t2 )
+      case Prover2
+      solve( ProverState1( P, ~n, m ) ▶₀ #t2 )
+        case Prover1
+        solve( !Shk( $V.1, $P, x ) ▶₂ #t2 )
+          case ShkGen
+          solve( Test( ~n, ~m, ~c, '3' ) @ #t3 )
+            case Verif3
+            solve( VerifState2( V.2, ~n, ~m, ~c ) ▶₀ #t3 )
+              case Verif2
+              solve( !Shk( $V, $P.1, x ) ▶₁ #t3 )
+                case ShkGen
+                solve( Recv( $V,
+                             g(~c, <f(~k.1, <'hello', ~m>), XOR(f(~k.1, <'hello', ~m>), ~k.1)>)
+                       ) ▶₂ #t3 )
+                  case DBNet_case_1
+                  solve( Test( ~n, ~m, ~c, '4' ) @ #t4 )
+                    case Prover3
+                    solve( ProverState2( V.1, P.1, ~n, ~m, ~c ) ▶₀ #t4 )
+                      case Prover2
+                      solve( !Shk( $V, $P, x ) ▶₁ #t4 )
+                        case ShkGen
+                        solve( Test( ~n, ~m, ~c, '5' ) @ #t5 )
+                          case Verif4
+                          solve( VerifState3( V.1, P.1, ~n, ~m, ~c, resp ) ▶₀ #t5 )
+                            case Verif3
+                            solve( !Shk( $V, $P, x ) ▶₂ #t5 )
+                              case ShkGen
+                              solve( Test( ~n, ~m, ~c, '6' ) @ #t6 )
+                                case Prover4
+                                solve( ProverState3( V.1, P.1, ~n, ~m, ~c ) ▶₀ #t6 )
+                                  case Prover3
+                                  solve( !Shk( $V, $P, x ) ▶₁ #t6 )
+                                    case ShkGen
+                                    solve( !KU( ~m ) @ #vk )
+                                      case DBNet
+                                      solve( !KU( f(~k, <~c, $P, ~n, ~m>) ) @ #vk.4 )
+                                        case DBNet
+                                        solve( !KU( ~c ) @ #vk.2 )
+                                          case Verif2
+                                          solve( !KU( ~n ) @ #vk.4 )
+                                            case Verif1
+                                            solve( !KU( f(~k, ~m) ) @ #vk.5 )
+                                              case Verif4_case_1
+                                              SOLVED // trace found
+                                            qed
+                                          qed
+                                        qed
+                                      qed
+                                    qed
+                                  qed
+                                qed
+                              qed
+                            qed
+                          qed
+                        qed
+                      qed
+                    qed
+                  qed
+                qed
+              qed
+            qed
+          qed
+        qed
+      qed
+    qed
+  qed
+qed
+
+rule (modulo E) LtkGen:
+   [ Fr( ~k ) ]
+  --[ Once( $X ) ]->
+   [ !Ltk( $X, ~k ), !Pk( $X, pk(~k) ), Out( pk(~k) ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) ShkGen:
+   [ Fr( ~k ) ] --[ Once( <$X, $Y> ) ]-> [ !Shk( $X, $Y, ~k ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) LtkReveal:
+   [ !Ltk( $X, k ) ] --[ !KeyComp( $X ) ]-> [ Out( k ), !KeyComp( $X ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) ShkRevealX:
+   [ !Shk( $X, $Y, k ) ] --[ !KeyComp( $X ) ]-> [ Out( k ), !KeyComp( $X ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) ShkRevealY:
+   [ !Shk( $X, $Y, k ) ] --[ !KeyComp( $Y ) ]-> [ Out( k ), !KeyComp( $Y ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) DBAdv:
+   [ In( m ), !KeyComp( $X ) ] --[ Action( $X ) ]-> [ Send( $X, m ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) DBNet:
+   [ Send( $X, m ) ]
+  --[ Action( $Y ), Recv( $Y, m ) ]->
+   [ Recv( $Y, m ), Out( m ) ]
+
+  /* has exactly the trivial AC variant */
+
+lemma unique_runid:
+  all-traces
+  "∀ x #i #j. ((Start( x ) @ #i) ∧ (Start( x ) @ #j)) ⇒ (#i = #j)"
+/*
+guarded formula characterizing all counter-examples:
+"∃ x #i #j. (Start( x ) @ #i) ∧ (Start( x ) @ #j) ∧ ¬(#i = #j)"
+*/
+simplify
+solve( (#i < #j)  ∥ (#j < #i) )
+  case case_1
+  solve( Start( x ) @ #i )
+    case Prover1
+    solve( Start( ~m ) @ #j )
+      case Prover1
+      by contradiction /* cyclic */
+    qed
+  next
+    case Verif1
+    solve( Start( ~n ) @ #j )
+      case Verif1
+      by contradiction /* cyclic */
+    qed
+  qed
+next
+  case case_2
+  solve( Start( x ) @ #i )
+    case Prover1
+    solve( Start( ~m ) @ #j )
+      case Prover1
+      by contradiction /* cyclic */
+    qed
+  next
+    case Verif1
+    solve( Start( ~n ) @ #j )
+      case Verif1
+      by contradiction /* cyclic */
+    qed
+  qed
+qed
+
+lemma end_after_start:
+  all-traces
+  "∀ x #j.
+    (End( x ) @ #j) ⇒ (∃ #i. (Start( x ) @ #i) ∧ ((#i = #j) ∨ (#i < #j)))"
+/*
+guarded formula characterizing all counter-examples:
+"∃ x #j.
+  (End( x ) @ #j) ∧ ∀ #i. (Start( x ) @ #i) ⇒ (¬(#i = #j)) ∧ (¬(#i < #j))"
+*/
+simplify
+solve( End( x ) @ #j )
+  case Prover4
+  solve( ProverState3( V, P, n, x, c ) ▶₀ #j )
+    case Prover3
+    by contradiction /* from formulas */
+  qed
+next
+  case Verif4
+  solve( VerifState3( V, P, x, m, c, resp ) ▶₀ #j )
+    case Verif3_case_1
+    by contradiction /* from formulas */
+  next
+    case Verif3_case_2
+    by contradiction /* from formulas */
+  next
+    case Verif3_case_3
+    by contradiction /* from formulas */
+  next
+    case Verif3_case_4
+    by contradiction /* from formulas */
+  qed
+qed
+
+restriction once:
+  "∀ x #i #j. ((Once( x ) @ #i) ∧ (Once( x ) @ #j)) ⇒ (#i = #j)"
+  // safety formula
+
+lemma no_claim_before_fastphase:
+  all-traces
+  "∀ V P chal resp #l.
+    (DBSec( V, P, chal, resp ) @ #l) ⇒
+    ((∃ #i #j.
+       (((Send( V, chal ) @ #i) ∧ (Recv( V, resp ) @ #j)) ∧ (#i < #l)) ∧
+       (#j < #l)) ∨
+     (∃ #j. !KeyComp( V ) @ #j))"
+/*
+guarded formula characterizing all counter-examples:
+"∃ V P chal resp #l.
+  (DBSec( V, P, chal, resp ) @ #l)
+ ∧
+  (∀ #i #j.
+    (Send( V, chal ) @ #i) ∧ (Recv( V, resp ) @ #j)
+   ⇒
+    ((¬(#i < #l)) ∨ (¬(#j < #l)))) ∧
+  (∀ #j. (!KeyComp( V ) @ #j) ⇒ ⊥)"
+*/
+simplify
+solve( VerifState3( V, P, n, m, chal, resp ) ▶₀ #l )
+  case Verif3_case_1
+  by contradiction /* from formulas */
+next
+  case Verif3_case_2
+  by contradiction /* from formulas */
+next
+  case Verif3_case_3
+  by contradiction /* from formulas */
+next
+  case Verif3_case_4
+  by contradiction /* from formulas */
+qed
+
+lemma dbsec:
+  all-traces
+  "∀ V P chal resp #l.
+    (DBSec( V, P, chal, resp ) @ #l) ⇒
+    (((∃ #i #j #k.
+        ((((Send( V, chal ) @ #i) ∧ (Action( P ) @ #j)) ∧
+          (Recv( V, resp ) @ #k)) ∧
+         (#i < #j)) ∧
+        (#j < #k)) ∨
+      (∃ P2 #p #p2 #i #j #k.
+        ((((((!KeyComp( P ) @ #p) ∧ (!KeyComp( P2 ) @ #p2)) ∧
+            (Send( V, chal ) @ #i)) ∧
+           (Action( P2 ) @ #j)) ∧
+          (Recv( V, resp ) @ #k)) ∧
+         (#i < #j)) ∧
+        (#j < #k))) ∨
+     (∃ #j. !KeyComp( V ) @ #j))"
+/*
+guarded formula characterizing all counter-examples:
+"∃ V P chal resp #l.
+  (DBSec( V, P, chal, resp ) @ #l)
+ ∧
+  (∀ #i #j #k.
+    (Send( V, chal ) @ #i) ∧ (Action( P ) @ #j) ∧ (Recv( V, resp ) @ #k)
+   ⇒
+    ((¬(#i < #j)) ∨ (¬(#j < #k)))) ∧
+  (∀ P2 #p #p2 #i #j #k.
+    (!KeyComp( P ) @ #p) ∧
+    (!KeyComp( P2 ) @ #p2) ∧
+    (Send( V, chal ) @ #i) ∧
+    (Action( P2 ) @ #j) ∧
+    (Recv( V, resp ) @ #k)
+   ⇒
+    ((¬(#i < #j)) ∨ (¬(#j < #k)))) ∧
+  (∀ #j. (!KeyComp( V ) @ #j) ⇒ ⊥)"
+*/
+simplify
+solve( VerifState3( V, P, n, m, chal, resp ) ▶₀ #l )
+  case Verif3_case_1
+  solve( !Shk( $V, $P, x ) ▶₂ #l )
+    case ShkGen
+    solve( !KU( ~m ) @ #vk.3 )
+      case DBNet
+      solve( !KU( ~c ) @ #vk.3 )
+        case Verif2
+        by contradiction /* cyclic */
+      qed
+    qed
+  qed
+next
+  case Verif3_case_2
+  solve( !Shk( $V, $P, x ) ▶₂ #l )
+    case ShkGen
+    solve( !KU( f(~k, <~c, $P, ~n, m>) ) @ #vk.1 )
+      case DBNet
+      solve( (¬(#vr.1 < #vr.9))  ∥ (¬(#vr.9 < #vr.3)) )
+        case case_1
+        solve( !KU( ~c ) @ #vk.2 )
+          case Verif2
+          by contradiction /* cyclic */
+        qed
+      next
+        case case_2
+        solve( (¬(#vr.1 < #vr.11))  ∥ (¬(#vr.11 < #vr.3)) )
+          case case_1
+          solve( !KU( ~c ) @ #vk.2 )
+            case Verif2
+            by contradiction /* cyclic */
+          qed
+        next
+          case case_2
+          solve( (¬(#vr.1 < #vr.12))  ∥ (¬(#vr.12 < #vr.3)) )
+            case case_1
+            solve( !KU( ~m ) @ #vk.3 )
+              case DBNet
+              solve( !KU( g(~c, <f(~k, <'hello', ~m>), XOR(f(~k, <'hello', ~m>), ~k)>)
+                     ) @ #vk.4 )
+                case DBNet
+                by contradiction /* cyclic */
+              next
+                case c_g
+                solve( !KU( XOR(f(~k, <'hello', ~m>), ~k) ) @ #vk.8 )
+                  case c_XOR
+                  solve( !KU( ~k ) @ #vk.9 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    solve( !KU( ~c ) @ #vk.7 )
+                      case Verif2
+                      by contradiction /* cyclic */
+                    qed
+                  qed
+                qed
+              qed
+            qed
+          next
+            case case_2
+            solve( !KU( ~m ) @ #vk.3 )
+              case DBNet
+              solve( !KU( g(~c, <f(~k, <'hello', ~m>), XOR(f(~k, <'hello', ~m>), ~k)>)
+                     ) @ #vk.4 )
+                case DBNet
+                by contradiction /* cyclic */
+              next
+                case c_g
+                solve( !KU( ~c ) @ #vk.4 )
+                  case Verif2
+                  by contradiction /* cyclic */
+                qed
+              qed
+            qed
+          qed
+        qed
+      qed
+    next
+      case Verif4_case_1
+      solve( !KU( g(~c, <f(~k, <'hello', m>), XOR(f(~k, <'hello', m>), ~k)>)
+             ) @ #vk.6 )
+        case DBNet
+        solve( !KU( ~c ) @ #vk.3 )
+          case Verif2
+          by contradiction /* cyclic */
+        qed
+      next
+        case c_g
+        solve( !KU( XOR(f(~k, <'hello', m>), ~k) ) @ #vk.16 )
+          case c_XOR
+          solve( !KU( ~k ) @ #vk.17 )
+            case ShkRevealX
+            by contradiction /* from formulas */
+          next
+            case ShkRevealY
+            solve( (¬(#vr.1 < #vr.13))  ∥ (¬(#vr.13 < #vr.3)) )
+              case case_1
+              solve( !KU( ~c ) @ #vk.6 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case case_2
+              solve( !KU( ~c ) @ #vk.6 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          qed
+        qed
+      qed
+    next
+      case Verif4_case_2
+      solve( !KU( g(~c, <f(~k, <'hello', m>), XOR(f(~k, <'hello', m>), ~k)>)
+             ) @ #vk.6 )
+        case DBNet
+        solve( !KU( ~c ) @ #vk.3 )
+          case Verif2
+          by contradiction /* cyclic */
+        qed
+      next
+        case c_g
+        solve( !KU( XOR(f(~k, <'hello', m>), ~k) ) @ #vk.16 )
+          case c_XOR
+          solve( !KU( ~k ) @ #vk.17 )
+            case ShkRevealX
+            by contradiction /* from formulas */
+          next
+            case ShkRevealY
+            solve( (¬(#vr.1 < #vr.13))  ∥ (¬(#vr.13 < #vr.3)) )
+              case case_1
+              solve( !KU( ~c ) @ #vk.6 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case case_2
+              solve( !KU( ~c ) @ #vk.6 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          qed
+        qed
+      qed
+    next
+      case Verif4_case_3
+      solve( !KU( g(~c, <f(~k, <'hello', m>), XOR(f(~k, <'hello', m>), ~k)>)
+             ) @ #vk.6 )
+        case DBNet
+        solve( !KU( ~c ) @ #vk.3 )
+          case Verif2
+          by contradiction /* cyclic */
+        qed
+      next
+        case c_g
+        solve( !KU( XOR(f(~k, <'hello', m>), ~k) ) @ #vk.16 )
+          case c_XOR
+          solve( !KU( ~k ) @ #vk.17 )
+            case ShkRevealX
+            by contradiction /* from formulas */
+          next
+            case ShkRevealY
+            solve( (¬(#vr.1 < #vr.13))  ∥ (¬(#vr.13 < #vr.3)) )
+              case case_1
+              solve( !KU( ~c ) @ #vk.6 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case case_2
+              solve( !KU( ~c ) @ #vk.6 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          qed
+        qed
+      qed
+    next
+      case c_f
+      solve( !KU( ~k ) @ #vk.7 )
+        case ShkRevealX
+        by contradiction /* from formulas */
+      next
+        case ShkRevealY
+        solve( !KU( g(~c, <f(~k, <'hello', m>), XOR(f(~k, <'hello', m>), ~k)>)
+               ) @ #vk.8 )
+          case DBNet
+          solve( !KU( ~c ) @ #vk.4 )
+            case Verif2
+            by contradiction /* cyclic */
+          qed
+        next
+          case c_g
+          solve( !KU( ~c ) @ #vk.4 )
+            case Verif2
+            by contradiction /* cyclic */
+          qed
+        qed
+      qed
+    qed
+  qed
+next
+  case Verif3_case_3
+  solve( !Shk( $V, $P, x ) ▶₂ #l )
+    case ShkGen
+    solve( !KU( f(~k, <~c, $P, ~n, m>) ) @ #vk.1 )
+      case DBNet
+      solve( (¬(#vr.1 < #vr.9))  ∥ (¬(#vr.9 < #vr.3)) )
+        case case_1
+        solve( !KU( ~c ) @ #vk.2 )
+          case Verif2
+          by contradiction /* cyclic */
+        qed
+      next
+        case case_2
+        solve( (¬(#vr.1 < #vr.11))  ∥ (¬(#vr.11 < #vr.3)) )
+          case case_1
+          solve( !KU( ~c ) @ #vk.2 )
+            case Verif2
+            by contradiction /* cyclic */
+          qed
+        next
+          case case_2
+          solve( (¬(#vr.1 < #vr.12))  ∥ (¬(#vr.12 < #vr.3)) )
+            case case_1
+            solve( !KU( ~m ) @ #vk.3 )
+              case DBNet
+              solve( !KU( g(~c, <f(~k, <'hello', ~m>), XOR(f(~k, <'hello', ~m>), ~k)>)
+                     ) @ #vk.4 )
+                case DBNet
+                by contradiction /* cyclic */
+              next
+                case c_g
+                solve( !KU( XOR(f(~k, <'hello', ~m>), ~k) ) @ #vk.8 )
+                  case c_XOR
+                  solve( !KU( ~k ) @ #vk.9 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    solve( !KU( ~c ) @ #vk.7 )
+                      case Verif2
+                      by contradiction /* cyclic */
+                    qed
+                  qed
+                qed
+              qed
+            qed
+          next
+            case case_2
+            solve( !KU( ~m ) @ #vk.3 )
+              case DBNet
+              solve( !KU( g(~c, <f(~k, <'hello', ~m>), XOR(f(~k, <'hello', ~m>), ~k)>)
+                     ) @ #vk.4 )
+                case DBNet
+                by contradiction /* cyclic */
+              next
+                case c_g
+                solve( !KU( ~c ) @ #vk.4 )
+                  case Verif2
+                  by contradiction /* cyclic */
+                qed
+              qed
+            qed
+          qed
+        qed
+      qed
+    next
+      case Verif4_case_1
+      solve( !KU( g(~c, <f(~k, <'hello', m>), XOR(f(~k, <'hello', m>), ~k)>)
+             ) @ #vk.6 )
+        case DBNet
+        solve( !KU( ~c ) @ #vk.3 )
+          case Verif2
+          by contradiction /* cyclic */
+        qed
+      next
+        case c_g
+        solve( !KU( XOR(f(~k, <'hello', m>), ~k) ) @ #vk.16 )
+          case c_XOR
+          solve( !KU( ~k ) @ #vk.17 )
+            case ShkRevealX
+            by contradiction /* from formulas */
+          next
+            case ShkRevealY
+            solve( (¬(#vr.1 < #vr.13))  ∥ (¬(#vr.13 < #vr.3)) )
+              case case_1
+              solve( !KU( ~c ) @ #vk.6 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case case_2
+              solve( !KU( ~c ) @ #vk.6 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          qed
+        qed
+      qed
+    next
+      case Verif4_case_2
+      solve( !KU( g(~c, <f(~k, <'hello', m>), XOR(f(~k, <'hello', m>), ~k)>)
+             ) @ #vk.6 )
+        case DBNet
+        solve( !KU( ~c ) @ #vk.3 )
+          case Verif2
+          by contradiction /* cyclic */
+        qed
+      next
+        case c_g
+        solve( !KU( XOR(f(~k, <'hello', m>), ~k) ) @ #vk.16 )
+          case c_XOR
+          solve( !KU( ~k ) @ #vk.17 )
+            case ShkRevealX
+            by contradiction /* from formulas */
+          next
+            case ShkRevealY
+            solve( (¬(#vr.1 < #vr.13))  ∥ (¬(#vr.13 < #vr.3)) )
+              case case_1
+              solve( !KU( ~c ) @ #vk.6 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case case_2
+              solve( !KU( ~c ) @ #vk.6 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          qed
+        qed
+      qed
+    next
+      case Verif4_case_3
+      solve( !KU( g(~c, <f(~k, <'hello', m>), XOR(f(~k, <'hello', m>), ~k)>)
+             ) @ #vk.6 )
+        case DBNet
+        solve( !KU( ~c ) @ #vk.3 )
+          case Verif2
+          by contradiction /* cyclic */
+        qed
+      next
+        case c_g
+        solve( !KU( XOR(f(~k, <'hello', m>), ~k) ) @ #vk.16 )
+          case c_XOR
+          solve( !KU( ~k ) @ #vk.17 )
+            case ShkRevealX
+            by contradiction /* from formulas */
+          next
+            case ShkRevealY
+            solve( (¬(#vr.1 < #vr.13))  ∥ (¬(#vr.13 < #vr.3)) )
+              case case_1
+              solve( !KU( ~c ) @ #vk.6 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case case_2
+              solve( !KU( ~c ) @ #vk.6 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          qed
+        qed
+      qed
+    next
+      case c_f
+      solve( !KU( ~k ) @ #vk.7 )
+        case ShkRevealX
+        by contradiction /* from formulas */
+      next
+        case ShkRevealY
+        solve( !KU( g(~c, <f(~k, <'hello', m>), XOR(f(~k, <'hello', m>), ~k)>)
+               ) @ #vk.8 )
+          case DBNet
+          solve( !KU( ~c ) @ #vk.4 )
+            case Verif2
+            by contradiction /* cyclic */
+          qed
+        next
+          case c_g
+          solve( !KU( ~c ) @ #vk.4 )
+            case Verif2
+            by contradiction /* cyclic */
+          qed
+        qed
+      qed
+    qed
+  qed
+next
+  case Verif3_case_4
+  solve( !Shk( $V, $P, x ) ▶₂ #l )
+    case ShkGen
+    solve( !KU( f(~k, <~c, $P, ~n, m>) ) @ #vk.1 )
+      case DBNet
+      solve( (¬(#vr.1 < #vr.9))  ∥ (¬(#vr.9 < #vr.3)) )
+        case case_1
+        solve( !KU( ~c ) @ #vk.2 )
+          case Verif2
+          by contradiction /* cyclic */
+        qed
+      next
+        case case_2
+        solve( (¬(#vr.1 < #vr.11))  ∥ (¬(#vr.11 < #vr.3)) )
+          case case_1
+          solve( !KU( ~c ) @ #vk.2 )
+            case Verif2
+            by contradiction /* cyclic */
+          qed
+        next
+          case case_2
+          solve( (¬(#vr.1 < #vr.12))  ∥ (¬(#vr.12 < #vr.3)) )
+            case case_1
+            solve( !KU( ~m ) @ #vk.3 )
+              case DBNet
+              solve( !KU( g(~c, <f(~k, <'hello', ~m>), XOR(f(~k, <'hello', ~m>), ~k)>)
+                     ) @ #vk.4 )
+                case DBNet
+                by contradiction /* cyclic */
+              next
+                case c_g
+                solve( !KU( XOR(f(~k, <'hello', ~m>), ~k) ) @ #vk.8 )
+                  case c_XOR
+                  solve( !KU( ~k ) @ #vk.9 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    solve( !KU( ~c ) @ #vk.7 )
+                      case Verif2
+                      by contradiction /* cyclic */
+                    qed
+                  qed
+                qed
+              qed
+            qed
+          next
+            case case_2
+            solve( !KU( ~m ) @ #vk.3 )
+              case DBNet
+              solve( !KU( g(~c, <f(~k, <'hello', ~m>), XOR(f(~k, <'hello', ~m>), ~k)>)
+                     ) @ #vk.4 )
+                case DBNet
+                by contradiction /* cyclic */
+              next
+                case c_g
+                solve( !KU( ~c ) @ #vk.4 )
+                  case Verif2
+                  by contradiction /* cyclic */
+                qed
+              qed
+            qed
+          qed
+        qed
+      qed
+    next
+      case Verif4_case_1
+      solve( !KU( g(~c, <f(~k, <'hello', m>), XOR(f(~k, <'hello', m>), ~k)>)
+             ) @ #vk.6 )
+        case DBNet
+        solve( !KU( ~c ) @ #vk.3 )
+          case Verif2
+          by contradiction /* cyclic */
+        qed
+      next
+        case c_g
+        solve( !KU( XOR(f(~k, <'hello', m>), ~k) ) @ #vk.16 )
+          case c_XOR
+          solve( !KU( ~k ) @ #vk.17 )
+            case ShkRevealX
+            by contradiction /* from formulas */
+          next
+            case ShkRevealY
+            solve( (¬(#vr.1 < #vr.13))  ∥ (¬(#vr.13 < #vr.3)) )
+              case case_1
+              solve( !KU( ~c ) @ #vk.6 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case case_2
+              solve( !KU( ~c ) @ #vk.6 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          qed
+        qed
+      qed
+    next
+      case Verif4_case_2
+      solve( !KU( g(~c, <f(~k, <'hello', m>), XOR(f(~k, <'hello', m>), ~k)>)
+             ) @ #vk.6 )
+        case DBNet
+        solve( !KU( ~c ) @ #vk.3 )
+          case Verif2
+          by contradiction /* cyclic */
+        qed
+      next
+        case c_g
+        solve( !KU( XOR(f(~k, <'hello', m>), ~k) ) @ #vk.16 )
+          case c_XOR
+          solve( !KU( ~k ) @ #vk.17 )
+            case ShkRevealX
+            by contradiction /* from formulas */
+          next
+            case ShkRevealY
+            solve( (¬(#vr.1 < #vr.13))  ∥ (¬(#vr.13 < #vr.3)) )
+              case case_1
+              solve( !KU( ~c ) @ #vk.6 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case case_2
+              solve( !KU( ~c ) @ #vk.6 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          qed
+        qed
+      qed
+    next
+      case Verif4_case_3
+      solve( !KU( g(~c, <f(~k, <'hello', m>), XOR(f(~k, <'hello', m>), ~k)>)
+             ) @ #vk.6 )
+        case DBNet
+        solve( !KU( ~c ) @ #vk.3 )
+          case Verif2
+          by contradiction /* cyclic */
+        qed
+      next
+        case c_g
+        solve( !KU( XOR(f(~k, <'hello', m>), ~k) ) @ #vk.16 )
+          case c_XOR
+          solve( !KU( ~k ) @ #vk.17 )
+            case ShkRevealX
+            by contradiction /* from formulas */
+          next
+            case ShkRevealY
+            solve( (¬(#vr.1 < #vr.13))  ∥ (¬(#vr.13 < #vr.3)) )
+              case case_1
+              solve( !KU( ~c ) @ #vk.6 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case case_2
+              solve( !KU( ~c ) @ #vk.6 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          qed
+        qed
+      qed
+    next
+      case c_f
+      solve( !KU( ~k ) @ #vk.7 )
+        case ShkRevealX
+        by contradiction /* from formulas */
+      next
+        case ShkRevealY
+        solve( !KU( g(~c, <f(~k, <'hello', m>), XOR(f(~k, <'hello', m>), ~k)>)
+               ) @ #vk.8 )
+          case DBNet
+          solve( !KU( ~c ) @ #vk.4 )
+            case Verif2
+            by contradiction /* cyclic */
+          qed
+        next
+          case c_g
+          solve( !KU( ~c ) @ #vk.4 )
+            case Verif2
+            by contradiction /* cyclic */
+          qed
+        qed
+      qed
+    qed
+  qed
+qed
+
+lemma dbsec_on_honest_prover:
+  all-traces
+  "∀ V P chal resp #l.
+    ((DBSec( V, P, chal, resp ) @ #l) ∧ (¬(∃ #j. !KeyComp( P ) @ #j))) ⇒
+    ((∃ #i #j #k.
+       ((((Send( V, chal ) @ #i) ∧ (Action( P ) @ #j)) ∧
+         (Recv( V, resp ) @ #k)) ∧
+        (#i < #j)) ∧
+       (#j < #k)) ∨
+     (∃ #j. !KeyComp( V ) @ #j))"
+/*
+guarded formula characterizing all counter-examples:
+"∃ V P chal resp #l.
+  (DBSec( V, P, chal, resp ) @ #l)
+ ∧
+  (∀ #j. (!KeyComp( P ) @ #j) ⇒ ⊥) ∧
+  (∀ #i #j #k.
+    (Send( V, chal ) @ #i) ∧ (Action( P ) @ #j) ∧ (Recv( V, resp ) @ #k)
+   ⇒
+    ((¬(#i < #j)) ∨ (¬(#j < #k)))) ∧
+  (∀ #j. (!KeyComp( V ) @ #j) ⇒ ⊥)"
+*/
+simplify
+solve( VerifState3( V, P, n, m, chal, resp ) ▶₀ #l )
+  case Verif3_case_1
+  solve( !Shk( $V, $P, x ) ▶₂ #l )
+    case ShkGen
+    solve( !KU( ~m ) @ #vk.3 )
+      case DBNet
+      solve( !KU( ~c ) @ #vk.3 )
+        case Verif2
+        by contradiction /* cyclic */
+      qed
+    qed
+  qed
+next
+  case Verif3_case_2
+  solve( !Shk( $V, $P, x ) ▶₂ #l )
+    case ShkGen
+    solve( !KU( f(~k, <~c, $P, ~n, m>) ) @ #vk.1 )
+      case DBNet
+      solve( (¬(#vr.1 < #vr.9))  ∥ (¬(#vr.9 < #vr.3)) )
+        case case_1
+        solve( !KU( ~c ) @ #vk.2 )
+          case Verif2
+          by contradiction /* cyclic */
+        qed
+      next
+        case case_2
+        solve( (¬(#vr.1 < #vr.11))  ∥ (¬(#vr.11 < #vr.3)) )
+          case case_1
+          solve( !KU( ~c ) @ #vk.2 )
+            case Verif2
+            by contradiction /* cyclic */
+          qed
+        next
+          case case_2
+          solve( (¬(#vr.1 < #vr.12))  ∥ (¬(#vr.12 < #vr.3)) )
+            case case_1
+            solve( !KU( ~m ) @ #vk.3 )
+              case DBNet
+              solve( !KU( g(~c, <f(~k, <'hello', ~m>), XOR(f(~k, <'hello', ~m>), ~k)>)
+                     ) @ #vk.4 )
+                case DBNet
+                by contradiction /* cyclic */
+              next
+                case c_g
+                solve( !KU( XOR(f(~k, <'hello', ~m>), ~k) ) @ #vk.8 )
+                  case c_XOR
+                  solve( !KU( ~k ) @ #vk.9 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              qed
+            qed
+          next
+            case case_2
+            solve( !KU( ~m ) @ #vk.3 )
+              case DBNet
+              solve( !KU( g(~c, <f(~k, <'hello', ~m>), XOR(f(~k, <'hello', ~m>), ~k)>)
+                     ) @ #vk.4 )
+                case DBNet
+                by contradiction /* cyclic */
+              next
+                case c_g
+                solve( !KU( ~c ) @ #vk.4 )
+                  case Verif2
+                  by contradiction /* cyclic */
+                qed
+              qed
+            qed
+          qed
+        qed
+      qed
+    next
+      case Verif4_case_1
+      solve( !KU( g(~c, <f(~k, <'hello', m>), XOR(f(~k, <'hello', m>), ~k)>)
+             ) @ #vk.6 )
+        case DBNet
+        solve( !KU( ~c ) @ #vk.3 )
+          case Verif2
+          by contradiction /* cyclic */
+        qed
+      next
+        case c_g
+        solve( !KU( XOR(f(~k, <'hello', m>), ~k) ) @ #vk.16 )
+          case c_XOR
+          solve( !KU( ~k ) @ #vk.17 )
+            case ShkRevealX
+            by contradiction /* from formulas */
+          next
+            case ShkRevealY
+            by contradiction /* from formulas */
+          qed
+        qed
+      qed
+    next
+      case Verif4_case_2
+      solve( !KU( g(~c, <f(~k, <'hello', m>), XOR(f(~k, <'hello', m>), ~k)>)
+             ) @ #vk.6 )
+        case DBNet
+        solve( !KU( ~c ) @ #vk.3 )
+          case Verif2
+          by contradiction /* cyclic */
+        qed
+      next
+        case c_g
+        solve( !KU( XOR(f(~k, <'hello', m>), ~k) ) @ #vk.16 )
+          case c_XOR
+          solve( !KU( ~k ) @ #vk.17 )
+            case ShkRevealX
+            by contradiction /* from formulas */
+          next
+            case ShkRevealY
+            by contradiction /* from formulas */
+          qed
+        qed
+      qed
+    next
+      case Verif4_case_3
+      solve( !KU( g(~c, <f(~k, <'hello', m>), XOR(f(~k, <'hello', m>), ~k)>)
+             ) @ #vk.6 )
+        case DBNet
+        solve( !KU( ~c ) @ #vk.3 )
+          case Verif2
+          by contradiction /* cyclic */
+        qed
+      next
+        case c_g
+        solve( !KU( XOR(f(~k, <'hello', m>), ~k) ) @ #vk.16 )
+          case c_XOR
+          solve( !KU( ~k ) @ #vk.17 )
+            case ShkRevealX
+            by contradiction /* from formulas */
+          next
+            case ShkRevealY
+            by contradiction /* from formulas */
+          qed
+        qed
+      qed
+    next
+      case c_f
+      solve( !KU( ~k ) @ #vk.7 )
+        case ShkRevealX
+        by contradiction /* from formulas */
+      next
+        case ShkRevealY
+        by contradiction /* from formulas */
+      qed
+    qed
+  qed
+next
+  case Verif3_case_3
+  solve( !Shk( $V, $P, x ) ▶₂ #l )
+    case ShkGen
+    solve( !KU( f(~k, <~c, $P, ~n, m>) ) @ #vk.1 )
+      case DBNet
+      solve( (¬(#vr.1 < #vr.9))  ∥ (¬(#vr.9 < #vr.3)) )
+        case case_1
+        solve( !KU( ~c ) @ #vk.2 )
+          case Verif2
+          by contradiction /* cyclic */
+        qed
+      next
+        case case_2
+        solve( (¬(#vr.1 < #vr.11))  ∥ (¬(#vr.11 < #vr.3)) )
+          case case_1
+          solve( !KU( ~c ) @ #vk.2 )
+            case Verif2
+            by contradiction /* cyclic */
+          qed
+        next
+          case case_2
+          solve( (¬(#vr.1 < #vr.12))  ∥ (¬(#vr.12 < #vr.3)) )
+            case case_1
+            solve( !KU( ~m ) @ #vk.3 )
+              case DBNet
+              solve( !KU( g(~c, <f(~k, <'hello', ~m>), XOR(f(~k, <'hello', ~m>), ~k)>)
+                     ) @ #vk.4 )
+                case DBNet
+                by contradiction /* cyclic */
+              next
+                case c_g
+                solve( !KU( XOR(f(~k, <'hello', ~m>), ~k) ) @ #vk.8 )
+                  case c_XOR
+                  solve( !KU( ~k ) @ #vk.9 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              qed
+            qed
+          next
+            case case_2
+            solve( !KU( ~m ) @ #vk.3 )
+              case DBNet
+              solve( !KU( g(~c, <f(~k, <'hello', ~m>), XOR(f(~k, <'hello', ~m>), ~k)>)
+                     ) @ #vk.4 )
+                case DBNet
+                by contradiction /* cyclic */
+              next
+                case c_g
+                solve( !KU( ~c ) @ #vk.4 )
+                  case Verif2
+                  by contradiction /* cyclic */
+                qed
+              qed
+            qed
+          qed
+        qed
+      qed
+    next
+      case Verif4_case_1
+      solve( !KU( g(~c, <f(~k, <'hello', m>), XOR(f(~k, <'hello', m>), ~k)>)
+             ) @ #vk.6 )
+        case DBNet
+        solve( !KU( ~c ) @ #vk.3 )
+          case Verif2
+          by contradiction /* cyclic */
+        qed
+      next
+        case c_g
+        solve( !KU( XOR(f(~k, <'hello', m>), ~k) ) @ #vk.16 )
+          case c_XOR
+          solve( !KU( ~k ) @ #vk.17 )
+            case ShkRevealX
+            by contradiction /* from formulas */
+          next
+            case ShkRevealY
+            by contradiction /* from formulas */
+          qed
+        qed
+      qed
+    next
+      case Verif4_case_2
+      solve( !KU( g(~c, <f(~k, <'hello', m>), XOR(f(~k, <'hello', m>), ~k)>)
+             ) @ #vk.6 )
+        case DBNet
+        solve( !KU( ~c ) @ #vk.3 )
+          case Verif2
+          by contradiction /* cyclic */
+        qed
+      next
+        case c_g
+        solve( !KU( XOR(f(~k, <'hello', m>), ~k) ) @ #vk.16 )
+          case c_XOR
+          solve( !KU( ~k ) @ #vk.17 )
+            case ShkRevealX
+            by contradiction /* from formulas */
+          next
+            case ShkRevealY
+            by contradiction /* from formulas */
+          qed
+        qed
+      qed
+    next
+      case Verif4_case_3
+      solve( !KU( g(~c, <f(~k, <'hello', m>), XOR(f(~k, <'hello', m>), ~k)>)
+             ) @ #vk.6 )
+        case DBNet
+        solve( !KU( ~c ) @ #vk.3 )
+          case Verif2
+          by contradiction /* cyclic */
+        qed
+      next
+        case c_g
+        solve( !KU( XOR(f(~k, <'hello', m>), ~k) ) @ #vk.16 )
+          case c_XOR
+          solve( !KU( ~k ) @ #vk.17 )
+            case ShkRevealX
+            by contradiction /* from formulas */
+          next
+            case ShkRevealY
+            by contradiction /* from formulas */
+          qed
+        qed
+      qed
+    next
+      case c_f
+      solve( !KU( ~k ) @ #vk.7 )
+        case ShkRevealX
+        by contradiction /* from formulas */
+      next
+        case ShkRevealY
+        by contradiction /* from formulas */
+      qed
+    qed
+  qed
+next
+  case Verif3_case_4
+  solve( !Shk( $V, $P, x ) ▶₂ #l )
+    case ShkGen
+    solve( !KU( f(~k, <~c, $P, ~n, m>) ) @ #vk.1 )
+      case DBNet
+      solve( (¬(#vr.1 < #vr.9))  ∥ (¬(#vr.9 < #vr.3)) )
+        case case_1
+        solve( !KU( ~c ) @ #vk.2 )
+          case Verif2
+          by contradiction /* cyclic */
+        qed
+      next
+        case case_2
+        solve( (¬(#vr.1 < #vr.11))  ∥ (¬(#vr.11 < #vr.3)) )
+          case case_1
+          solve( !KU( ~c ) @ #vk.2 )
+            case Verif2
+            by contradiction /* cyclic */
+          qed
+        next
+          case case_2
+          solve( (¬(#vr.1 < #vr.12))  ∥ (¬(#vr.12 < #vr.3)) )
+            case case_1
+            solve( !KU( ~m ) @ #vk.3 )
+              case DBNet
+              solve( !KU( g(~c, <f(~k, <'hello', ~m>), XOR(f(~k, <'hello', ~m>), ~k)>)
+                     ) @ #vk.4 )
+                case DBNet
+                by contradiction /* cyclic */
+              next
+                case c_g
+                solve( !KU( XOR(f(~k, <'hello', ~m>), ~k) ) @ #vk.8 )
+                  case c_XOR
+                  solve( !KU( ~k ) @ #vk.9 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              qed
+            qed
+          next
+            case case_2
+            solve( !KU( ~m ) @ #vk.3 )
+              case DBNet
+              solve( !KU( g(~c, <f(~k, <'hello', ~m>), XOR(f(~k, <'hello', ~m>), ~k)>)
+                     ) @ #vk.4 )
+                case DBNet
+                by contradiction /* cyclic */
+              next
+                case c_g
+                solve( !KU( ~c ) @ #vk.4 )
+                  case Verif2
+                  by contradiction /* cyclic */
+                qed
+              qed
+            qed
+          qed
+        qed
+      qed
+    next
+      case Verif4_case_1
+      solve( !KU( g(~c, <f(~k, <'hello', m>), XOR(f(~k, <'hello', m>), ~k)>)
+             ) @ #vk.6 )
+        case DBNet
+        solve( !KU( ~c ) @ #vk.3 )
+          case Verif2
+          by contradiction /* cyclic */
+        qed
+      next
+        case c_g
+        solve( !KU( XOR(f(~k, <'hello', m>), ~k) ) @ #vk.16 )
+          case c_XOR
+          solve( !KU( ~k ) @ #vk.17 )
+            case ShkRevealX
+            by contradiction /* from formulas */
+          next
+            case ShkRevealY
+            by contradiction /* from formulas */
+          qed
+        qed
+      qed
+    next
+      case Verif4_case_2
+      solve( !KU( g(~c, <f(~k, <'hello', m>), XOR(f(~k, <'hello', m>), ~k)>)
+             ) @ #vk.6 )
+        case DBNet
+        solve( !KU( ~c ) @ #vk.3 )
+          case Verif2
+          by contradiction /* cyclic */
+        qed
+      next
+        case c_g
+        solve( !KU( XOR(f(~k, <'hello', m>), ~k) ) @ #vk.16 )
+          case c_XOR
+          solve( !KU( ~k ) @ #vk.17 )
+            case ShkRevealX
+            by contradiction /* from formulas */
+          next
+            case ShkRevealY
+            by contradiction /* from formulas */
+          qed
+        qed
+      qed
+    next
+      case Verif4_case_3
+      solve( !KU( g(~c, <f(~k, <'hello', m>), XOR(f(~k, <'hello', m>), ~k)>)
+             ) @ #vk.6 )
+        case DBNet
+        solve( !KU( ~c ) @ #vk.3 )
+          case Verif2
+          by contradiction /* cyclic */
+        qed
+      next
+        case c_g
+        solve( !KU( XOR(f(~k, <'hello', m>), ~k) ) @ #vk.16 )
+          case c_XOR
+          solve( !KU( ~k ) @ #vk.17 )
+            case ShkRevealX
+            by contradiction /* from formulas */
+          next
+            case ShkRevealY
+            by contradiction /* from formulas */
+          qed
+        qed
+      qed
+    next
+      case c_f
+      solve( !KU( ~k ) @ #vk.7 )
+        case ShkRevealX
+        by contradiction /* from formulas */
+      next
+        case ShkRevealY
+        by contradiction /* from formulas */
+      qed
+    qed
+  qed
+qed
+
+lemma dbsec_on_compromised_prover:
+  all-traces
+  "∀ V P chal resp #l.
+    ((DBSec( V, P, chal, resp ) @ #l) ∧ (∃ #j. !KeyComp( P ) @ #j)) ⇒
+    ((∃ P2 #p2 #i #j #k.
+       (((((!KeyComp( P2 ) @ #p2) ∧ (Send( V, chal ) @ #i)) ∧
+          (Action( P2 ) @ #j)) ∧
+         (Recv( V, resp ) @ #k)) ∧
+        (#i < #j)) ∧
+       (#j < #k)) ∨
+     (∃ #j. !KeyComp( V ) @ #j))"
+/*
+guarded formula characterizing all counter-examples:
+"∃ V P chal resp #l.
+  (DBSec( V, P, chal, resp ) @ #l)
+ ∧
+  (∃ #j. (!KeyComp( P ) @ #j)) ∧
+  (∀ P2 #p2 #i #j #k.
+    (!KeyComp( P2 ) @ #p2) ∧
+    (Send( V, chal ) @ #i) ∧
+    (Action( P2 ) @ #j) ∧
+    (Recv( V, resp ) @ #k)
+   ⇒
+    ((¬(#i < #j)) ∨ (¬(#j < #k)))) ∧
+  (∀ #j. (!KeyComp( V ) @ #j) ⇒ ⊥)"
+*/
+simplify
+solve( VerifState3( V, P, n, m, chal, resp ) ▶₀ #l )
+  case Verif3_case_1
+  solve( !Shk( $V, $P, x ) ▶₂ #l )
+    case ShkGen
+    solve( !KeyComp( $P ) @ #j )
+      case LtkReveal
+      solve( !Ltk( $P, k ) ▶₀ #j )
+        case LtkGen
+        solve( !KU( ~m ) @ #vk.3 )
+          case DBNet
+          solve( !KU( ~c ) @ #vk.3 )
+            case Verif2
+            by contradiction /* cyclic */
+          qed
+        qed
+      qed
+    next
+      case ShkRevealX
+      solve( !Shk( $P, $Y, k ) ▶₀ #j )
+        case ShkGen
+        solve( !KU( ~m ) @ #vk.3 )
+          case DBNet
+          solve( !KU( ~c ) @ #vk.3 )
+            case Verif2
+            by contradiction /* cyclic */
+          qed
+        qed
+      qed
+    next
+      case ShkRevealY
+      solve( !Shk( $X, $P, k ) ▶₀ #j )
+        case ShkGen
+        solve( !KU( ~m ) @ #vk.3 )
+          case DBNet
+          solve( !KU( ~c ) @ #vk.3 )
+            case Verif2
+            by contradiction /* cyclic */
+          qed
+        qed
+      qed
+    qed
+  qed
+next
+  case Verif3_case_2
+  solve( !Shk( $V, $P, x ) ▶₂ #l )
+    case ShkGen
+    solve( !KeyComp( $P ) @ #j )
+      case LtkReveal
+      solve( !Ltk( $P, k ) ▶₀ #j )
+        case LtkGen
+        solve( !KU( f(~k.1, <~c, $P, ~n, m>) ) @ #vk.1 )
+          case DBNet
+          solve( (¬(#vr.1 < #vr.10))  ∥ (¬(#vr.10 < #vr.3)) )
+            case case_1
+            solve( !KU( ~c ) @ #vk.2 )
+              case Verif2
+              by contradiction /* cyclic */
+            qed
+          next
+            case case_2
+            solve( (¬(#vr.1 < #vr.12))  ∥ (¬(#vr.12 < #vr.3)) )
+              case case_1
+              solve( !KU( ~c ) @ #vk.2 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case case_2
+              solve( (¬(#vr.1 < #vr.13))  ∥ (¬(#vr.13 < #vr.3)) )
+                case case_1
+                solve( !KU( ~m ) @ #vk.3 )
+                  case DBNet
+                  solve( !KU( g(~c,
+                                <f(~k.1, <'hello', ~m>), XOR(f(~k.1, <'hello', ~m>), ~k.1)>)
+                         ) @ #vk.4 )
+                    case DBNet
+                    by contradiction /* cyclic */
+                  next
+                    case c_g
+                    solve( !KU( ~c ) @ #vk.4 )
+                      case Verif2
+                      by contradiction /* cyclic */
+                    qed
+                  qed
+                qed
+              next
+                case case_2
+                solve( !KU( ~m ) @ #vk.3 )
+                  case DBNet
+                  solve( !KU( g(~c,
+                                <f(~k.1, <'hello', ~m>), XOR(f(~k.1, <'hello', ~m>), ~k.1)>)
+                         ) @ #vk.4 )
+                    case DBNet
+                    by contradiction /* cyclic */
+                  next
+                    case c_g
+                    solve( !KU( ~c ) @ #vk.4 )
+                      case Verif2
+                      by contradiction /* cyclic */
+                    qed
+                  qed
+                qed
+              qed
+            qed
+          qed
+        next
+          case Verif4_case_1
+          solve( (¬(#vr.1 < #vr.14))  ∥ (¬(#vr.14 < #vr.3)) )
+            case case_1
+            solve( !KU( g(~c,
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
+                   ) @ #vk.7 )
+              case DBNet
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_g
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          next
+            case case_2
+            solve( !KU( g(~c,
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
+                   ) @ #vk.7 )
+              case DBNet
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_g
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          qed
+        next
+          case Verif4_case_2
+          solve( (¬(#vr.1 < #vr.14))  ∥ (¬(#vr.14 < #vr.3)) )
+            case case_1
+            solve( !KU( g(~c,
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
+                   ) @ #vk.7 )
+              case DBNet
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_g
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          next
+            case case_2
+            solve( !KU( g(~c,
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
+                   ) @ #vk.7 )
+              case DBNet
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_g
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          qed
+        next
+          case Verif4_case_3
+          solve( (¬(#vr.1 < #vr.14))  ∥ (¬(#vr.14 < #vr.3)) )
+            case case_1
+            solve( !KU( g(~c,
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
+                   ) @ #vk.7 )
+              case DBNet
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_g
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          next
+            case case_2
+            solve( !KU( g(~c,
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
+                   ) @ #vk.7 )
+              case DBNet
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_g
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          qed
+        next
+          case c_f
+          solve( !KU( ~k.1 ) @ #vk.7 )
+            case ShkRevealX
+            by contradiction /* from formulas */
+          next
+            case ShkRevealY
+            solve( !KU( g(~c,
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
+                   ) @ #vk.8 )
+              case DBNet
+              solve( !KU( ~c ) @ #vk.4 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_g
+              solve( !KU( ~c ) @ #vk.4 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          qed
+        qed
+      qed
+    next
+      case ShkRevealX
+      solve( !Shk( $P, $Y, k ) ▶₀ #j )
+        case ShkGen
+        solve( !KU( f(~k.1, <~c, $P, ~n, m>) ) @ #vk.1 )
+          case DBNet
+          solve( (¬(#vr.1 < #vr.10))  ∥ (¬(#vr.10 < #vr.3)) )
+            case case_1
+            solve( !KU( ~c ) @ #vk.2 )
+              case Verif2
+              by contradiction /* cyclic */
+            qed
+          next
+            case case_2
+            solve( (¬(#vr.1 < #vr.12))  ∥ (¬(#vr.12 < #vr.3)) )
+              case case_1
+              solve( !KU( ~c ) @ #vk.2 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case case_2
+              solve( (¬(#vr.1 < #vr.13))  ∥ (¬(#vr.13 < #vr.3)) )
+                case case_1
+                solve( !KU( ~m ) @ #vk.3 )
+                  case DBNet
+                  solve( !KU( g(~c,
+                                <f(~k.1, <'hello', ~m>), XOR(f(~k.1, <'hello', ~m>), ~k.1)>)
+                         ) @ #vk.4 )
+                    case DBNet
+                    by contradiction /* cyclic */
+                  next
+                    case c_g
+                    solve( !KU( ~c ) @ #vk.4 )
+                      case Verif2
+                      by contradiction /* cyclic */
+                    qed
+                  qed
+                qed
+              next
+                case case_2
+                solve( !KU( ~m ) @ #vk.3 )
+                  case DBNet
+                  solve( !KU( g(~c,
+                                <f(~k.1, <'hello', ~m>), XOR(f(~k.1, <'hello', ~m>), ~k.1)>)
+                         ) @ #vk.4 )
+                    case DBNet
+                    by contradiction /* cyclic */
+                  next
+                    case c_g
+                    solve( !KU( ~c ) @ #vk.4 )
+                      case Verif2
+                      by contradiction /* cyclic */
+                    qed
+                  qed
+                qed
+              qed
+            qed
+          qed
+        next
+          case Verif4_case_1
+          solve( (¬(#vr.1 < #vr.14))  ∥ (¬(#vr.14 < #vr.3)) )
+            case case_1
+            solve( !KU( g(~c,
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
+                   ) @ #vk.7 )
+              case DBNet
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_g
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          next
+            case case_2
+            solve( !KU( g(~c,
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
+                   ) @ #vk.7 )
+              case DBNet
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_g
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          qed
+        next
+          case Verif4_case_2
+          solve( (¬(#vr.1 < #vr.14))  ∥ (¬(#vr.14 < #vr.3)) )
+            case case_1
+            solve( !KU( g(~c,
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
+                   ) @ #vk.7 )
+              case DBNet
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_g
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          next
+            case case_2
+            solve( !KU( g(~c,
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
+                   ) @ #vk.7 )
+              case DBNet
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_g
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          qed
+        next
+          case Verif4_case_3
+          solve( (¬(#vr.1 < #vr.14))  ∥ (¬(#vr.14 < #vr.3)) )
+            case case_1
+            solve( !KU( g(~c,
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
+                   ) @ #vk.7 )
+              case DBNet
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_g
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          next
+            case case_2
+            solve( !KU( g(~c,
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
+                   ) @ #vk.7 )
+              case DBNet
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_g
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          qed
+        next
+          case c_f
+          solve( !KU( ~k.1 ) @ #vk.7 )
+            case ShkRevealX
+            by contradiction /* from formulas */
+          next
+            case ShkRevealY
+            solve( !KU( g(~c,
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
+                   ) @ #vk.8 )
+              case DBNet
+              solve( !KU( ~c ) @ #vk.4 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_g
+              solve( !KU( ~c ) @ #vk.4 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          qed
+        qed
+      qed
+    next
+      case ShkRevealY
+      solve( !Shk( $X, $P, k ) ▶₀ #j )
+        case ShkGen
+        solve( !KU( f(~k.1, <~c, $P, ~n, m>) ) @ #vk.1 )
+          case DBNet
+          solve( (¬(#vr.1 < #vr.10))  ∥ (¬(#vr.10 < #vr.3)) )
+            case case_1
+            solve( !KU( ~c ) @ #vk.2 )
+              case Verif2
+              by contradiction /* cyclic */
+            qed
+          next
+            case case_2
+            solve( (¬(#vr.1 < #vr.12))  ∥ (¬(#vr.12 < #vr.3)) )
+              case case_1
+              solve( !KU( ~c ) @ #vk.2 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case case_2
+              solve( (¬(#vr.1 < #vr.13))  ∥ (¬(#vr.13 < #vr.3)) )
+                case case_1
+                solve( !KU( ~m ) @ #vk.3 )
+                  case DBNet
+                  solve( !KU( g(~c,
+                                <f(~k.1, <'hello', ~m>), XOR(f(~k.1, <'hello', ~m>), ~k.1)>)
+                         ) @ #vk.4 )
+                    case DBNet
+                    by contradiction /* cyclic */
+                  next
+                    case c_g
+                    solve( !KU( ~c ) @ #vk.4 )
+                      case Verif2
+                      by contradiction /* cyclic */
+                    qed
+                  qed
+                qed
+              next
+                case case_2
+                solve( !KU( ~m ) @ #vk.3 )
+                  case DBNet
+                  solve( !KU( g(~c,
+                                <f(~k.1, <'hello', ~m>), XOR(f(~k.1, <'hello', ~m>), ~k.1)>)
+                         ) @ #vk.4 )
+                    case DBNet
+                    by contradiction /* cyclic */
+                  next
+                    case c_g
+                    solve( !KU( ~c ) @ #vk.4 )
+                      case Verif2
+                      by contradiction /* cyclic */
+                    qed
+                  qed
+                qed
+              qed
+            qed
+          qed
+        next
+          case Verif4_case_1
+          solve( (¬(#vr.1 < #vr.14))  ∥ (¬(#vr.14 < #vr.3)) )
+            case case_1
+            solve( !KU( g(~c,
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
+                   ) @ #vk.7 )
+              case DBNet
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_g
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          next
+            case case_2
+            solve( !KU( g(~c,
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
+                   ) @ #vk.7 )
+              case DBNet
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_g
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          qed
+        next
+          case Verif4_case_2
+          solve( (¬(#vr.1 < #vr.14))  ∥ (¬(#vr.14 < #vr.3)) )
+            case case_1
+            solve( !KU( g(~c,
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
+                   ) @ #vk.7 )
+              case DBNet
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_g
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          next
+            case case_2
+            solve( !KU( g(~c,
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
+                   ) @ #vk.7 )
+              case DBNet
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_g
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          qed
+        next
+          case Verif4_case_3
+          solve( (¬(#vr.1 < #vr.14))  ∥ (¬(#vr.14 < #vr.3)) )
+            case case_1
+            solve( !KU( g(~c,
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
+                   ) @ #vk.7 )
+              case DBNet
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_g
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          next
+            case case_2
+            solve( !KU( g(~c,
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
+                   ) @ #vk.7 )
+              case DBNet
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_g
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          qed
+        next
+          case c_f
+          solve( !KU( ~k.1 ) @ #vk.7 )
+            case ShkRevealX
+            by contradiction /* from formulas */
+          next
+            case ShkRevealY
+            solve( !KU( g(~c,
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
+                   ) @ #vk.8 )
+              case DBNet
+              solve( !KU( ~c ) @ #vk.4 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_g
+              solve( !KU( ~c ) @ #vk.4 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          qed
+        qed
+      qed
+    qed
+  qed
+next
+  case Verif3_case_3
+  solve( !Shk( $V, $P, x ) ▶₂ #l )
+    case ShkGen
+    solve( !KeyComp( $P ) @ #j )
+      case LtkReveal
+      solve( !Ltk( $P, k ) ▶₀ #j )
+        case LtkGen
+        solve( !KU( f(~k.1, <~c, $P, ~n, m>) ) @ #vk.1 )
+          case DBNet
+          solve( (¬(#vr.1 < #vr.10))  ∥ (¬(#vr.10 < #vr.3)) )
+            case case_1
+            solve( !KU( ~c ) @ #vk.2 )
+              case Verif2
+              by contradiction /* cyclic */
+            qed
+          next
+            case case_2
+            solve( (¬(#vr.1 < #vr.12))  ∥ (¬(#vr.12 < #vr.3)) )
+              case case_1
+              solve( !KU( ~c ) @ #vk.2 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case case_2
+              solve( (¬(#vr.1 < #vr.13))  ∥ (¬(#vr.13 < #vr.3)) )
+                case case_1
+                solve( !KU( ~m ) @ #vk.3 )
+                  case DBNet
+                  solve( !KU( g(~c,
+                                <f(~k.1, <'hello', ~m>), XOR(f(~k.1, <'hello', ~m>), ~k.1)>)
+                         ) @ #vk.4 )
+                    case DBNet
+                    by contradiction /* cyclic */
+                  next
+                    case c_g
+                    solve( !KU( ~c ) @ #vk.4 )
+                      case Verif2
+                      by contradiction /* cyclic */
+                    qed
+                  qed
+                qed
+              next
+                case case_2
+                solve( !KU( ~m ) @ #vk.3 )
+                  case DBNet
+                  solve( !KU( g(~c,
+                                <f(~k.1, <'hello', ~m>), XOR(f(~k.1, <'hello', ~m>), ~k.1)>)
+                         ) @ #vk.4 )
+                    case DBNet
+                    by contradiction /* cyclic */
+                  next
+                    case c_g
+                    solve( !KU( ~c ) @ #vk.4 )
+                      case Verif2
+                      by contradiction /* cyclic */
+                    qed
+                  qed
+                qed
+              qed
+            qed
+          qed
+        next
+          case Verif4_case_1
+          solve( (¬(#vr.1 < #vr.14))  ∥ (¬(#vr.14 < #vr.3)) )
+            case case_1
+            solve( !KU( g(~c,
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
+                   ) @ #vk.7 )
+              case DBNet
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_g
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          next
+            case case_2
+            solve( !KU( g(~c,
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
+                   ) @ #vk.7 )
+              case DBNet
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_g
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          qed
+        next
+          case Verif4_case_2
+          solve( (¬(#vr.1 < #vr.14))  ∥ (¬(#vr.14 < #vr.3)) )
+            case case_1
+            solve( !KU( g(~c,
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
+                   ) @ #vk.7 )
+              case DBNet
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_g
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          next
+            case case_2
+            solve( !KU( g(~c,
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
+                   ) @ #vk.7 )
+              case DBNet
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_g
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          qed
+        next
+          case Verif4_case_3
+          solve( (¬(#vr.1 < #vr.14))  ∥ (¬(#vr.14 < #vr.3)) )
+            case case_1
+            solve( !KU( g(~c,
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
+                   ) @ #vk.7 )
+              case DBNet
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_g
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          next
+            case case_2
+            solve( !KU( g(~c,
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
+                   ) @ #vk.7 )
+              case DBNet
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_g
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          qed
+        next
+          case c_f
+          solve( !KU( ~k.1 ) @ #vk.7 )
+            case ShkRevealX
+            by contradiction /* from formulas */
+          next
+            case ShkRevealY
+            solve( !KU( g(~c,
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
+                   ) @ #vk.8 )
+              case DBNet
+              solve( !KU( ~c ) @ #vk.4 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_g
+              solve( !KU( ~c ) @ #vk.4 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          qed
+        qed
+      qed
+    next
+      case ShkRevealX
+      solve( !Shk( $P, $Y, k ) ▶₀ #j )
+        case ShkGen
+        solve( !KU( f(~k.1, <~c, $P, ~n, m>) ) @ #vk.1 )
+          case DBNet
+          solve( (¬(#vr.1 < #vr.10))  ∥ (¬(#vr.10 < #vr.3)) )
+            case case_1
+            solve( !KU( ~c ) @ #vk.2 )
+              case Verif2
+              by contradiction /* cyclic */
+            qed
+          next
+            case case_2
+            solve( (¬(#vr.1 < #vr.12))  ∥ (¬(#vr.12 < #vr.3)) )
+              case case_1
+              solve( !KU( ~c ) @ #vk.2 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case case_2
+              solve( (¬(#vr.1 < #vr.13))  ∥ (¬(#vr.13 < #vr.3)) )
+                case case_1
+                solve( !KU( ~m ) @ #vk.3 )
+                  case DBNet
+                  solve( !KU( g(~c,
+                                <f(~k.1, <'hello', ~m>), XOR(f(~k.1, <'hello', ~m>), ~k.1)>)
+                         ) @ #vk.4 )
+                    case DBNet
+                    by contradiction /* cyclic */
+                  next
+                    case c_g
+                    solve( !KU( ~c ) @ #vk.4 )
+                      case Verif2
+                      by contradiction /* cyclic */
+                    qed
+                  qed
+                qed
+              next
+                case case_2
+                solve( !KU( ~m ) @ #vk.3 )
+                  case DBNet
+                  solve( !KU( g(~c,
+                                <f(~k.1, <'hello', ~m>), XOR(f(~k.1, <'hello', ~m>), ~k.1)>)
+                         ) @ #vk.4 )
+                    case DBNet
+                    by contradiction /* cyclic */
+                  next
+                    case c_g
+                    solve( !KU( ~c ) @ #vk.4 )
+                      case Verif2
+                      by contradiction /* cyclic */
+                    qed
+                  qed
+                qed
+              qed
+            qed
+          qed
+        next
+          case Verif4_case_1
+          solve( (¬(#vr.1 < #vr.14))  ∥ (¬(#vr.14 < #vr.3)) )
+            case case_1
+            solve( !KU( g(~c,
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
+                   ) @ #vk.7 )
+              case DBNet
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_g
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          next
+            case case_2
+            solve( !KU( g(~c,
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
+                   ) @ #vk.7 )
+              case DBNet
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_g
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          qed
+        next
+          case Verif4_case_2
+          solve( (¬(#vr.1 < #vr.14))  ∥ (¬(#vr.14 < #vr.3)) )
+            case case_1
+            solve( !KU( g(~c,
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
+                   ) @ #vk.7 )
+              case DBNet
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_g
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          next
+            case case_2
+            solve( !KU( g(~c,
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
+                   ) @ #vk.7 )
+              case DBNet
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_g
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          qed
+        next
+          case Verif4_case_3
+          solve( (¬(#vr.1 < #vr.14))  ∥ (¬(#vr.14 < #vr.3)) )
+            case case_1
+            solve( !KU( g(~c,
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
+                   ) @ #vk.7 )
+              case DBNet
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_g
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          next
+            case case_2
+            solve( !KU( g(~c,
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
+                   ) @ #vk.7 )
+              case DBNet
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_g
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          qed
+        next
+          case c_f
+          solve( !KU( ~k.1 ) @ #vk.7 )
+            case ShkRevealX
+            by contradiction /* from formulas */
+          next
+            case ShkRevealY
+            solve( !KU( g(~c,
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
+                   ) @ #vk.8 )
+              case DBNet
+              solve( !KU( ~c ) @ #vk.4 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_g
+              solve( !KU( ~c ) @ #vk.4 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          qed
+        qed
+      qed
+    next
+      case ShkRevealY
+      solve( !Shk( $X, $P, k ) ▶₀ #j )
+        case ShkGen
+        solve( !KU( f(~k.1, <~c, $P, ~n, m>) ) @ #vk.1 )
+          case DBNet
+          solve( (¬(#vr.1 < #vr.10))  ∥ (¬(#vr.10 < #vr.3)) )
+            case case_1
+            solve( !KU( ~c ) @ #vk.2 )
+              case Verif2
+              by contradiction /* cyclic */
+            qed
+          next
+            case case_2
+            solve( (¬(#vr.1 < #vr.12))  ∥ (¬(#vr.12 < #vr.3)) )
+              case case_1
+              solve( !KU( ~c ) @ #vk.2 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case case_2
+              solve( (¬(#vr.1 < #vr.13))  ∥ (¬(#vr.13 < #vr.3)) )
+                case case_1
+                solve( !KU( ~m ) @ #vk.3 )
+                  case DBNet
+                  solve( !KU( g(~c,
+                                <f(~k.1, <'hello', ~m>), XOR(f(~k.1, <'hello', ~m>), ~k.1)>)
+                         ) @ #vk.4 )
+                    case DBNet
+                    by contradiction /* cyclic */
+                  next
+                    case c_g
+                    solve( !KU( ~c ) @ #vk.4 )
+                      case Verif2
+                      by contradiction /* cyclic */
+                    qed
+                  qed
+                qed
+              next
+                case case_2
+                solve( !KU( ~m ) @ #vk.3 )
+                  case DBNet
+                  solve( !KU( g(~c,
+                                <f(~k.1, <'hello', ~m>), XOR(f(~k.1, <'hello', ~m>), ~k.1)>)
+                         ) @ #vk.4 )
+                    case DBNet
+                    by contradiction /* cyclic */
+                  next
+                    case c_g
+                    solve( !KU( ~c ) @ #vk.4 )
+                      case Verif2
+                      by contradiction /* cyclic */
+                    qed
+                  qed
+                qed
+              qed
+            qed
+          qed
+        next
+          case Verif4_case_1
+          solve( (¬(#vr.1 < #vr.14))  ∥ (¬(#vr.14 < #vr.3)) )
+            case case_1
+            solve( !KU( g(~c,
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
+                   ) @ #vk.7 )
+              case DBNet
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_g
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          next
+            case case_2
+            solve( !KU( g(~c,
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
+                   ) @ #vk.7 )
+              case DBNet
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_g
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          qed
+        next
+          case Verif4_case_2
+          solve( (¬(#vr.1 < #vr.14))  ∥ (¬(#vr.14 < #vr.3)) )
+            case case_1
+            solve( !KU( g(~c,
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
+                   ) @ #vk.7 )
+              case DBNet
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_g
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          next
+            case case_2
+            solve( !KU( g(~c,
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
+                   ) @ #vk.7 )
+              case DBNet
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_g
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          qed
+        next
+          case Verif4_case_3
+          solve( (¬(#vr.1 < #vr.14))  ∥ (¬(#vr.14 < #vr.3)) )
+            case case_1
+            solve( !KU( g(~c,
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
+                   ) @ #vk.7 )
+              case DBNet
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_g
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          next
+            case case_2
+            solve( !KU( g(~c,
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
+                   ) @ #vk.7 )
+              case DBNet
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_g
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          qed
+        next
+          case c_f
+          solve( !KU( ~k.1 ) @ #vk.7 )
+            case ShkRevealX
+            by contradiction /* from formulas */
+          next
+            case ShkRevealY
+            solve( !KU( g(~c,
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
+                   ) @ #vk.8 )
+              case DBNet
+              solve( !KU( ~c ) @ #vk.4 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_g
+              solve( !KU( ~c ) @ #vk.4 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          qed
+        qed
+      qed
+    qed
+  qed
+next
+  case Verif3_case_4
+  solve( !Shk( $V, $P, x ) ▶₂ #l )
+    case ShkGen
+    solve( !KeyComp( $P ) @ #j )
+      case LtkReveal
+      solve( !Ltk( $P, k ) ▶₀ #j )
+        case LtkGen
+        solve( !KU( f(~k.1, <~c, $P, ~n, m>) ) @ #vk.1 )
+          case DBNet
+          solve( (¬(#vr.1 < #vr.10))  ∥ (¬(#vr.10 < #vr.3)) )
+            case case_1
+            solve( !KU( ~c ) @ #vk.2 )
+              case Verif2
+              by contradiction /* cyclic */
+            qed
+          next
+            case case_2
+            solve( (¬(#vr.1 < #vr.12))  ∥ (¬(#vr.12 < #vr.3)) )
+              case case_1
+              solve( !KU( ~c ) @ #vk.2 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case case_2
+              solve( (¬(#vr.1 < #vr.13))  ∥ (¬(#vr.13 < #vr.3)) )
+                case case_1
+                solve( !KU( ~m ) @ #vk.3 )
+                  case DBNet
+                  solve( !KU( g(~c,
+                                <f(~k.1, <'hello', ~m>), XOR(f(~k.1, <'hello', ~m>), ~k.1)>)
+                         ) @ #vk.4 )
+                    case DBNet
+                    by contradiction /* cyclic */
+                  next
+                    case c_g
+                    solve( !KU( ~c ) @ #vk.4 )
+                      case Verif2
+                      by contradiction /* cyclic */
+                    qed
+                  qed
+                qed
+              next
+                case case_2
+                solve( !KU( ~m ) @ #vk.3 )
+                  case DBNet
+                  solve( !KU( g(~c,
+                                <f(~k.1, <'hello', ~m>), XOR(f(~k.1, <'hello', ~m>), ~k.1)>)
+                         ) @ #vk.4 )
+                    case DBNet
+                    by contradiction /* cyclic */
+                  next
+                    case c_g
+                    solve( !KU( ~c ) @ #vk.4 )
+                      case Verif2
+                      by contradiction /* cyclic */
+                    qed
+                  qed
+                qed
+              qed
+            qed
+          qed
+        next
+          case Verif4_case_1
+          solve( (¬(#vr.1 < #vr.14))  ∥ (¬(#vr.14 < #vr.3)) )
+            case case_1
+            solve( !KU( g(~c,
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
+                   ) @ #vk.7 )
+              case DBNet
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_g
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          next
+            case case_2
+            solve( !KU( g(~c,
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
+                   ) @ #vk.7 )
+              case DBNet
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_g
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          qed
+        next
+          case Verif4_case_2
+          solve( (¬(#vr.1 < #vr.14))  ∥ (¬(#vr.14 < #vr.3)) )
+            case case_1
+            solve( !KU( g(~c,
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
+                   ) @ #vk.7 )
+              case DBNet
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_g
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          next
+            case case_2
+            solve( !KU( g(~c,
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
+                   ) @ #vk.7 )
+              case DBNet
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_g
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          qed
+        next
+          case Verif4_case_3
+          solve( (¬(#vr.1 < #vr.14))  ∥ (¬(#vr.14 < #vr.3)) )
+            case case_1
+            solve( !KU( g(~c,
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
+                   ) @ #vk.7 )
+              case DBNet
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_g
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          next
+            case case_2
+            solve( !KU( g(~c,
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
+                   ) @ #vk.7 )
+              case DBNet
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_g
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          qed
+        next
+          case c_f
+          solve( !KU( ~k.1 ) @ #vk.7 )
+            case ShkRevealX
+            by contradiction /* from formulas */
+          next
+            case ShkRevealY
+            solve( !KU( g(~c,
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
+                   ) @ #vk.8 )
+              case DBNet
+              solve( !KU( ~c ) @ #vk.4 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_g
+              solve( !KU( ~c ) @ #vk.4 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          qed
+        qed
+      qed
+    next
+      case ShkRevealX
+      solve( !Shk( $P, $Y, k ) ▶₀ #j )
+        case ShkGen
+        solve( !KU( f(~k.1, <~c, $P, ~n, m>) ) @ #vk.1 )
+          case DBNet
+          solve( (¬(#vr.1 < #vr.10))  ∥ (¬(#vr.10 < #vr.3)) )
+            case case_1
+            solve( !KU( ~c ) @ #vk.2 )
+              case Verif2
+              by contradiction /* cyclic */
+            qed
+          next
+            case case_2
+            solve( (¬(#vr.1 < #vr.12))  ∥ (¬(#vr.12 < #vr.3)) )
+              case case_1
+              solve( !KU( ~c ) @ #vk.2 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case case_2
+              solve( (¬(#vr.1 < #vr.13))  ∥ (¬(#vr.13 < #vr.3)) )
+                case case_1
+                solve( !KU( ~m ) @ #vk.3 )
+                  case DBNet
+                  solve( !KU( g(~c,
+                                <f(~k.1, <'hello', ~m>), XOR(f(~k.1, <'hello', ~m>), ~k.1)>)
+                         ) @ #vk.4 )
+                    case DBNet
+                    by contradiction /* cyclic */
+                  next
+                    case c_g
+                    solve( !KU( ~c ) @ #vk.4 )
+                      case Verif2
+                      by contradiction /* cyclic */
+                    qed
+                  qed
+                qed
+              next
+                case case_2
+                solve( !KU( ~m ) @ #vk.3 )
+                  case DBNet
+                  solve( !KU( g(~c,
+                                <f(~k.1, <'hello', ~m>), XOR(f(~k.1, <'hello', ~m>), ~k.1)>)
+                         ) @ #vk.4 )
+                    case DBNet
+                    by contradiction /* cyclic */
+                  next
+                    case c_g
+                    solve( !KU( ~c ) @ #vk.4 )
+                      case Verif2
+                      by contradiction /* cyclic */
+                    qed
+                  qed
+                qed
+              qed
+            qed
+          qed
+        next
+          case Verif4_case_1
+          solve( (¬(#vr.1 < #vr.14))  ∥ (¬(#vr.14 < #vr.3)) )
+            case case_1
+            solve( !KU( g(~c,
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
+                   ) @ #vk.7 )
+              case DBNet
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_g
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          next
+            case case_2
+            solve( !KU( g(~c,
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
+                   ) @ #vk.7 )
+              case DBNet
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_g
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          qed
+        next
+          case Verif4_case_2
+          solve( (¬(#vr.1 < #vr.14))  ∥ (¬(#vr.14 < #vr.3)) )
+            case case_1
+            solve( !KU( g(~c,
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
+                   ) @ #vk.7 )
+              case DBNet
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_g
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          next
+            case case_2
+            solve( !KU( g(~c,
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
+                   ) @ #vk.7 )
+              case DBNet
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_g
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          qed
+        next
+          case Verif4_case_3
+          solve( (¬(#vr.1 < #vr.14))  ∥ (¬(#vr.14 < #vr.3)) )
+            case case_1
+            solve( !KU( g(~c,
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
+                   ) @ #vk.7 )
+              case DBNet
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_g
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          next
+            case case_2
+            solve( !KU( g(~c,
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
+                   ) @ #vk.7 )
+              case DBNet
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_g
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          qed
+        next
+          case c_f
+          solve( !KU( ~k.1 ) @ #vk.7 )
+            case ShkRevealX
+            by contradiction /* from formulas */
+          next
+            case ShkRevealY
+            solve( !KU( g(~c,
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
+                   ) @ #vk.8 )
+              case DBNet
+              solve( !KU( ~c ) @ #vk.4 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_g
+              solve( !KU( ~c ) @ #vk.4 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          qed
+        qed
+      qed
+    next
+      case ShkRevealY
+      solve( !Shk( $X, $P, k ) ▶₀ #j )
+        case ShkGen
+        solve( !KU( f(~k.1, <~c, $P, ~n, m>) ) @ #vk.1 )
+          case DBNet
+          solve( (¬(#vr.1 < #vr.10))  ∥ (¬(#vr.10 < #vr.3)) )
+            case case_1
+            solve( !KU( ~c ) @ #vk.2 )
+              case Verif2
+              by contradiction /* cyclic */
+            qed
+          next
+            case case_2
+            solve( (¬(#vr.1 < #vr.12))  ∥ (¬(#vr.12 < #vr.3)) )
+              case case_1
+              solve( !KU( ~c ) @ #vk.2 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case case_2
+              solve( (¬(#vr.1 < #vr.13))  ∥ (¬(#vr.13 < #vr.3)) )
+                case case_1
+                solve( !KU( ~m ) @ #vk.3 )
+                  case DBNet
+                  solve( !KU( g(~c,
+                                <f(~k.1, <'hello', ~m>), XOR(f(~k.1, <'hello', ~m>), ~k.1)>)
+                         ) @ #vk.4 )
+                    case DBNet
+                    by contradiction /* cyclic */
+                  next
+                    case c_g
+                    solve( !KU( ~c ) @ #vk.4 )
+                      case Verif2
+                      by contradiction /* cyclic */
+                    qed
+                  qed
+                qed
+              next
+                case case_2
+                solve( !KU( ~m ) @ #vk.3 )
+                  case DBNet
+                  solve( !KU( g(~c,
+                                <f(~k.1, <'hello', ~m>), XOR(f(~k.1, <'hello', ~m>), ~k.1)>)
+                         ) @ #vk.4 )
+                    case DBNet
+                    by contradiction /* cyclic */
+                  next
+                    case c_g
+                    solve( !KU( ~c ) @ #vk.4 )
+                      case Verif2
+                      by contradiction /* cyclic */
+                    qed
+                  qed
+                qed
+              qed
+            qed
+          qed
+        next
+          case Verif4_case_1
+          solve( (¬(#vr.1 < #vr.14))  ∥ (¬(#vr.14 < #vr.3)) )
+            case case_1
+            solve( !KU( g(~c,
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
+                   ) @ #vk.7 )
+              case DBNet
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_g
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          next
+            case case_2
+            solve( !KU( g(~c,
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
+                   ) @ #vk.7 )
+              case DBNet
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_g
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          qed
+        next
+          case Verif4_case_2
+          solve( (¬(#vr.1 < #vr.14))  ∥ (¬(#vr.14 < #vr.3)) )
+            case case_1
+            solve( !KU( g(~c,
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
+                   ) @ #vk.7 )
+              case DBNet
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_g
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          next
+            case case_2
+            solve( !KU( g(~c,
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
+                   ) @ #vk.7 )
+              case DBNet
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_g
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          qed
+        next
+          case Verif4_case_3
+          solve( (¬(#vr.1 < #vr.14))  ∥ (¬(#vr.14 < #vr.3)) )
+            case case_1
+            solve( !KU( g(~c,
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
+                   ) @ #vk.7 )
+              case DBNet
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_g
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          next
+            case case_2
+            solve( !KU( g(~c,
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
+                   ) @ #vk.7 )
+              case DBNet
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_g
+              solve( !KU( ~c ) @ #vk.3 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          qed
+        next
+          case c_f
+          solve( !KU( ~k.1 ) @ #vk.7 )
+            case ShkRevealX
+            by contradiction /* from formulas */
+          next
+            case ShkRevealY
+            solve( !KU( g(~c,
+                          <f(~k.1, <'hello', m>), XOR(f(~k.1, <'hello', m>), ~k.1)>)
+                   ) @ #vk.8 )
+              case DBNet
+              solve( !KU( ~c ) @ #vk.4 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_g
+              solve( !KU( ~c ) @ #vk.4 )
+                case Verif2
+                by contradiction /* cyclic */
+              qed
+            qed
+          qed
+        qed
+      qed
+    qed
+  qed
+qed
+
+/* All well-formedness checks were successful. */
+
+end
+
+==============================================================================
+summary of summaries:
+
+analyzed: swiss.spthy
+
+  complete_trace_exists (exists-trace): verified (25 steps)
+  unique_runid (all-traces): verified (12 steps)
+  end_after_start (all-traces): verified (9 steps)
+  no_claim_before_fastphase (all-traces): verified (6 steps)
+  dbsec (all-traces): verified (192 steps)
+  dbsec_on_honest_prover (all-traces): verified (141 steps)
+  dbsec_on_compromised_prover (all-traces): verified (553 steps)
+
+==============================================================================
