@@ -16,7 +16,7 @@
 </style>
 </head>
 <body>
-<h2>Verification results: 15 protocol(s) analyzed</h2>
+<h2>Verification results: 16 protocol(s) analyzed</h2>
 
 <table data-role="table" data-mode="columntoggle" class="ui-responsive">
 <thead>
@@ -25,17 +25,29 @@
 	<th data-priority="1">complete_trace_exists</th>
 	<th data-priority="2">unique_runid</th>
 	<th data-priority="3">end_after_start</th>
-	<th data-priority="4">dbsec</th>
-	<th data-priority="5">dbsec_on_honest_prover</th>
-	<th data-priority="6">dbsec_on_corrupt_prover</th>
+	<th data-priority="4">no_claim_before_fastphase</th>
+	<th data-priority="5">dbsec</th>
+	<th data-priority="6">dbsec_on_honest_prover</th>
+	<th data-priority="7">dbsec_on_compromised_prover</th>
 </tr>
 </thead>
 <tbody>
+<tr>
+	<td><a href="https://github.com/jorgetp/dbverify/blob/master/msc/bc_fiatshamir.pdf">bc_fiatshamir</a></td>
+	<td style="color:green;">verified (21 steps)</td>
+	<td style="color:green;">verified (12 steps)</td>
+	<td style="color:green;">verified (11 steps)</td>
+	<td style="color:green;">verified (8 steps)</td>
+	<td style="color:red;">falsified - found trace (13 steps)</td>
+	<td style="color:green;">verified (79 steps)</td>
+	<td style="color:red;">falsified - found trace (15 steps)</td>
+</tr>
 <tr>
 	<td><a href="https://github.com/jorgetp/dbverify/blob/master/msc/bc_signature.pdf">bc_signature</a></td>
 	<td style="color:green;">verified (16 steps)</td>
 	<td style="color:green;">verified (12 steps)</td>
 	<td style="color:green;">verified (9 steps)</td>
+	<td style="color:green;">verified (6 steps)</td>
 	<td style="color:red;">falsified - found trace (11 steps)</td>
 	<td style="color:green;">verified (83 steps)</td>
 	<td style="color:red;">falsified - found trace (13 steps)</td>
@@ -45,6 +57,7 @@
 	<td style="color:green;">verified (16 steps)</td>
 	<td style="color:green;">verified (14 steps)</td>
 	<td style="color:green;">verified (9 steps)</td>
+	<td style="color:green;">verified (6 steps)</td>
 	<td style="color:green;">verified (179 steps)</td>
 	<td style="color:green;">verified (87 steps)</td>
 	<td style="color:green;">verified (531 steps)</td>
@@ -54,6 +67,7 @@
 	<td style="color:green;">verified (18 steps)</td>
 	<td style="color:green;">verified (14 steps)</td>
 	<td style="color:green;">verified (9 steps)</td>
+	<td style="color:green;">verified (6 steps)</td>
 	<td style="color:red;">falsified - found trace (10 steps)</td>
 	<td style="color:green;">verified (87 steps)</td>
 	<td style="color:red;">falsified - found trace (12 steps)</td>
@@ -63,6 +77,7 @@
 	<td style="color:green;">verified (16 steps)</td>
 	<td style="color:green;">verified (14 steps)</td>
 	<td style="color:green;">verified (6 steps)</td>
+	<td style="color:green;">verified (7 steps)</td>
 	<td style="color:green;">verified (53 steps)</td>
 	<td style="color:green;">verified (38 steps)</td>
 	<td style="color:green;">verified (161 steps)</td>
@@ -72,6 +87,7 @@
 	<td style="color:green;">verified (16 steps)</td>
 	<td style="color:green;">verified (14 steps)</td>
 	<td style="color:green;">verified (6 steps)</td>
+	<td style="color:green;">verified (8 steps)</td>
 	<td style="color:green;">verified (30 steps)</td>
 	<td style="color:green;">verified (27 steps)</td>
 	<td style="color:green;">verified (71 steps)</td>
@@ -81,6 +97,7 @@
 	<td style="color:green;">verified (16 steps)</td>
 	<td style="color:green;">verified (12 steps)</td>
 	<td style="color:green;">verified (9 steps)</td>
+	<td style="color:green;">verified (6 steps)</td>
 	<td style="color:red;">falsified - found trace (10 steps)</td>
 	<td style="color:green;">verified (91 steps)</td>
 	<td style="color:red;">falsified - found trace (12 steps)</td>
@@ -90,6 +107,7 @@
 	<td style="color:green;">verified (16 steps)</td>
 	<td style="color:green;">verified (12 steps)</td>
 	<td style="color:green;">verified (9 steps)</td>
+	<td style="color:green;">verified (6 steps)</td>
 	<td style="color:green;">verified (68 steps)</td>
 	<td style="color:green;">verified (65 steps)</td>
 	<td style="color:green;">verified (46 steps)</td>
@@ -99,6 +117,7 @@
 	<td style="color:green;">verified (16 steps)</td>
 	<td style="color:green;">verified (12 steps)</td>
 	<td style="color:green;">verified (9 steps)</td>
+	<td style="color:green;">verified (6 steps)</td>
 	<td style="color:green;">verified (77 steps)</td>
 	<td style="color:green;">verified (65 steps)</td>
 	<td style="color:green;">verified (235 steps)</td>
@@ -108,24 +127,27 @@
 	<td style="color:green;">verified (19 steps)</td>
 	<td style="color:green;">verified (14 steps)</td>
 	<td style="color:green;">verified (9 steps)</td>
+	<td style="color:green;">verified (6 steps)</td>
 	<td style="color:green;">verified (187 steps)</td>
 	<td style="color:green;">verified (129 steps)</td>
 	<td style="color:green;">verified (565 steps)</td>
 </tr>
 <tr>
 	<td><a href="https://github.com/jorgetp/dbverify/blob/master/msc/paysafe.pdf">paysafe</a></td>
-	<td style="color:green;">verified (16 steps)</td>
+	<td style="color:green;">verified (15 steps)</td>
 	<td style="color:green;">verified (12 steps)</td>
-	<td style="color:green;">verified (10 steps)</td>
+	<td style="color:green;">verified (9 steps)</td>
+	<td style="color:green;">verified (6 steps)</td>
 	<td style="color:red;">falsified - found trace (14 steps)</td>
-	<td style="color:green;">verified (65 steps)</td>
+	<td style="color:green;">verified (60 steps)</td>
 	<td style="color:red;">falsified - found trace (16 steps)</td>
 </tr>
 <tr>
 	<td><a href="https://github.com/jorgetp/dbverify/blob/master/msc/paysafe2.pdf">paysafe2</a></td>
-	<td style="color:green;">verified (16 steps)</td>
+	<td style="color:green;">verified (15 steps)</td>
 	<td style="color:green;">verified (12 steps)</td>
 	<td style="color:green;">verified (9 steps)</td>
+	<td style="color:green;">verified (6 steps)</td>
 	<td style="color:red;">falsified - found trace (14 steps)</td>
 	<td style="color:green;">verified (60 steps)</td>
 	<td style="color:red;">falsified - found trace (16 steps)</td>
@@ -135,15 +157,17 @@
 	<td style="color:green;">verified (16 steps)</td>
 	<td style="color:green;">verified (14 steps)</td>
 	<td style="color:green;">verified (6 steps)</td>
+	<td style="color:green;">verified (7 steps)</td>
 	<td style="color:green;">verified (33 steps)</td>
 	<td style="color:green;">verified (30 steps)</td>
 	<td style="color:green;">verified (74 steps)</td>
 </tr>
 <tr>
 	<td><a href="https://github.com/jorgetp/dbverify/blob/master/msc/swiss.pdf">swiss</a></td>
-	<td style="color:green;">verified (21 steps)</td>
-	<td style="color:green;">verified (14 steps)</td>
+	<td style="color:green;">verified (25 steps)</td>
+	<td style="color:green;">verified (12 steps)</td>
 	<td style="color:green;">verified (9 steps)</td>
+	<td style="color:green;">verified (6 steps)</td>
 	<td style="color:green;">verified (192 steps)</td>
 	<td style="color:green;">verified (141 steps)</td>
 	<td style="color:green;">verified (553 steps)</td>
@@ -153,6 +177,7 @@
 	<td style="color:green;">verified (16 steps)</td>
 	<td style="color:green;">verified (20 steps)</td>
 	<td style="color:green;">verified (6 steps)</td>
+	<td style="color:green;">verified (7 steps)</td>
 	<td style="color:red;">falsified - found trace (13 steps)</td>
 	<td style="color:red;">falsified - found trace (15 steps)</td>
 	<td style="color:red;">falsified - found trace (15 steps)</td>
@@ -162,6 +187,7 @@
 	<td style="color:green;">verified (18 steps)</td>
 	<td style="color:green;">verified (20 steps)</td>
 	<td style="color:green;">verified (6 steps)</td>
+	<td style="color:green;">verified (7 steps)</td>
 	<td style="color:red;">falsified - found trace (14 steps)</td>
 	<td style="color:green;">verified (46 steps)</td>
 	<td style="color:red;">falsified - found trace (16 steps)</td>
