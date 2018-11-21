@@ -8,10 +8,10 @@ theory meadows begin
 
 // Function signature and definition of the equational theory E
 
-functions: XOR/2, adec/2, aenc/2, fst/1, h/2, pair/2, pk/1, sdec/2,
-           senc/2, snd/1
+builtins: xor
+functions: adec/2, aenc/2, fst/1, h/2, pair/2, pk/1, sdec/2, senc/2,
+           snd/1
 equations:
-    XOR(XOR(x, y), y) = x,
     adec(aenc(x.1, pk(x.2)), x.2) = x.1,
     fst(<x.1, x.2>) = x.1,
     sdec(senc(x.1, x.2), x.2) = x.1,
@@ -41,7 +41,7 @@ rule (modulo E) Verifier2:
 rule (modulo E) Prover2:
    [ ProverState1( V, P, np ), In( nv ) ]
   --[ Action( P ) ]->
-   [ Send( P, <nv, XOR(np, P)> ), ProverState2( V, P, np, nv ) ]
+   [ Send( P, <nv, (P⊕np)> ), ProverState2( V, P, np, nv ) ]
 
   /*
   rule (modulo AC) Prover2:
@@ -51,11 +51,31 @@ rule (modulo E) Prover2:
     variants (modulo AC)
     1. P     = P.6
        np    = np.6
-       z     = XOR(np.6, P.6)
+       z     = (P.6⊕np.6)
     
-    2. P     = x.6
-       np    = XOR(x.7, x.6)
+    2. P     = P.6
+       np    = zero
+       z     = P.6
+    
+    3. P     = x.6
+       np    = x.6
+       z     = zero
+    
+    4. P     = x.6
+       np    = (x.6⊕x.7)
        z     = x.7
+    
+    5. P     = zero
+       np    = np.6
+       z     = np.6
+    
+    6. P     = (x.6⊕x.7)
+       np    = x.6
+       z     = x.7
+    
+    7. P     = (x.6⊕x.7)
+       np    = (x.7⊕x.8)
+       z     = (x.6⊕x.8)
   */
 
 rule (modulo E) Verifier3:
@@ -74,10 +94,10 @@ rule (modulo E) Prover3:
 
 rule (modulo E) Verifier4:
    [
-   VerifierState3( V, nv, XOR(np, P) ),
+   VerifierState3( V, nv, (P⊕np) ),
    In( <<P, locP, np, nv>, h(k, <P, locP, np, nv>)> ), !Shk( V, P, k )
    ]
-  --[ DBSec( V, P, nv, <nv, XOR(np, P)> ), End( nv ) ]->
+  --[ DBSec( V, P, nv, <nv, (P⊕np)> ), End( nv ) ]->
    [ ]
 
   /*
@@ -91,11 +111,31 @@ rule (modulo E) Verifier4:
     variants (modulo AC)
     1. P     = P.8
        np    = np.8
-       z     = XOR(np.8, P.8)
+       z     = (P.8⊕np.8)
     
-    2. P     = x.8
-       np    = XOR(x.9, x.8)
+    2. P     = P.8
+       np    = zero
+       z     = P.8
+    
+    3. P     = x.8
+       np    = x.8
+       z     = zero
+    
+    4. P     = x.8
+       np    = (x.8⊕x.9)
        z     = x.9
+    
+    5. P     = zero
+       np    = np.8
+       z     = np.8
+    
+    6. P     = (x.8⊕x.9)
+       np    = x.8
+       z     = x.9
+    
+    7. P     = (x.8⊕x.9)
+       np    = (x.9⊕x.10)
+       z     = (x.8⊕x.10)
   */
 
 lemma complete_trace_exists:
@@ -160,8 +200,8 @@ solve( VerifierState1( $Y, nv ) ▶₀ #t3 )
                         case DBNet
                         solve( !KU( ~nv ) @ #vk.9 )
                           case Verifier2
-                          solve( !KU( XOR(~np.2, $P) ) @ #vk.10 )
-                            case DBNet
+                          solve( !KU( ($P⊕~np.2) ) @ #vk.10 )
+                            case c_xor
                             SOLVED // trace found
                           qed
                         qed
@@ -371,17 +411,20 @@ solve( VerifierState3( V, chal, z ) ▶₀ #l )
     case ShkGen
     solve( splitEqs(0) )
       case split_case_2
-      solve( !KU( h(~k, <$Y.1, locP, XOR(XOR(~np, $X), $Y.1), ~nv>) ) @ #vk.8 )
+      solve( !KU( h(~k, <$Y.1, locP, ($X⊕~np⊕$Y.1), ~nv>) ) @ #vk.8 )
         case c_h
         solve( !KU( ~k ) @ #vk.12 )
           case ShkRevealY
-          solve( !KU( XOR(XOR(~np, $X), $Y.1) ) @ #vk.8 )
-            case c_XOR
-            solve( !KU( ~nv ) @ #vk.9 )
-              case Verifier2
-              solve( !KU( XOR(~np, $X) ) @ #vk.13 )
-                case DBNet
-                SOLVED // trace found
+          solve( !KU( ($X⊕~np⊕$Y.1) ) @ #vk.8 )
+            case c_xor_case_1
+            solve( !KU( ~np ) @ #vk.14 )
+              case DBNet_case_1
+              solve( !KU( ~nv ) @ #vk.10 )
+                case Verifier2
+                solve( !KU( ($X⊕$Y.1) ) @ #vk.14 )
+                  case c_xor
+                  SOLVED // trace found
+                qed
               qed
             qed
           qed
@@ -426,7 +469,7 @@ solve( VerifierState3( V, chal, z ) ▶₀ #l )
       qed
     next
       case split_case_2
-      solve( !KU( h(~k, <$Y.1, locP, XOR(XOR(~np, $X), $Y.1), ~nv>) ) @ #vk.8 )
+      solve( !KU( h(~k, <$Y.1, locP, ($X⊕~np⊕$Y.1), ~nv>) ) @ #vk.8 )
         case c_h
         solve( !KU( ~k ) @ #vk.12 )
           case ShkRevealX
@@ -442,11 +485,17 @@ next
   case Verifier3_case_2
   solve( !Shk( $Y, P, k ) ▶₂ #l )
     case ShkGen
-    solve( splitEqs(0) )
-      case split_case_1
-      solve( !KU( h(~k, <$Y.1, locP, np, ~nv>) ) @ #vk.9 )
-        case DBNet
-        solve( (¬(#vr.1 < #vr.9))  ∥ (¬(#vr.9 < #vr.2)) )
+    solve( !KU( h(~k, <$Y.1, locP, np, ~nv>) ) @ #vk.9 )
+      case DBNet
+      solve( (¬(#vr.1 < #vr.9))  ∥ (¬(#vr.9 < #vr.2)) )
+        case case_1
+        solve( !KU( ~nv ) @ #vk.8 )
+          case Verifier2
+          by contradiction /* cyclic */
+        qed
+      next
+        case case_2
+        solve( (¬(#vr.1 < #vr.11))  ∥ (¬(#vr.11 < #vr.2)) )
           case case_1
           solve( !KU( ~nv ) @ #vk.8 )
             case Verifier2
@@ -454,68 +503,443 @@ next
           qed
         next
           case case_2
-          solve( (¬(#vr.1 < #vr.11))  ∥ (¬(#vr.11 < #vr.2)) )
+          solve( (¬(#vr.1 < #vr.12))  ∥ (¬(#vr.12 < #vr.2)) )
             case case_1
-            solve( !KU( ~nv ) @ #vk.8 )
-              case Verifier2
-              by contradiction /* cyclic */
+            solve( !KU( (~np⊕$Y.1) ) @ #vk.10 )
+              case c_xor
+              solve( !KU( ~np ) @ #vk.8 )
+                case DBNet_case_1
+                by contradiction /* cyclic */
+              next
+                case DBNet_case_2
+                by contradiction /* cyclic */
+              qed
+            next
+              case coerce
+              solve( !KD( (~np⊕$Y.1) ) ▶₀ #vk.1 )
+                case DBNet
+                solve( Send( $X.1, t ) ▶₀ #vr.13 )
+                  case DBAdv_case_1
+                  by contradiction /* cyclic */
+                next
+                  case DBAdv_case_2
+                  by contradiction /* cyclic */
+                next
+                  case DBAdv_case_3
+                  by contradiction /* cyclic */
+                next
+                  case Prover2
+                  solve( (#vl.1, 0) ~~> (#vk.1, 0) )
+                    case d_0_fst
+                    by contradiction /* cyclic */
+                  next
+                    case d_0_snd
+                    solve( (#vr.16, 0) ~~> (#vk.1, 0) )
+                      case Xor
+                      by contradiction /* cyclic */
+                    next
+                      case d_xor_case_1
+                      solve( (#vr.17, 0) ~~> (#vk.1, 0) )
+                        case Xor
+                        solve( !KU( (~np⊕~np.1) ) @ #vk.17 )
+                          case c_xor
+                          solve( !KU( ~np ) @ #vk.10 )
+                            case DBNet
+                            by contradiction /* cyclic */
+                          qed
+                        next
+                          case coerce
+                          solve( !KD( (~np⊕~np.1) ) ▶₀ #vk.2 )
+                            case DBNet
+                            solve( Send( $X.2, t ) ▶₀ #vr.18 )
+                              case DBAdv_case_1
+                              by contradiction /* cyclic */
+                            next
+                              case DBAdv_case_2
+                              by contradiction /* cyclic */
+                            next
+                              case DBAdv_case_3
+                              by contradiction /* cyclic */
+                            next
+                              case Prover2
+                              solve( (#vl.2, 0) ~~> (#vk.2, 0) )
+                                case d_0_fst
+                                by contradiction /* cyclic */
+                              next
+                                case d_0_snd
+                                solve( (#vr.21, 0) ~~> (#vk.2, 0) )
+                                  case d_xor_case_1
+                                  by solve( (#vr.22, 0) ~~> (#vk.2, 0) )
+                                next
+                                  case d_xor_case_2
+                                  solve( (#vr.22, 0) ~~> (#vk.2, 0) )
+                                    case Xor
+                                    by contradiction /* cyclic */
+                                  qed
+                                next
+                                  case d_xor_case_3
+                                  by contradiction /* forbidden KD-fact */
+                                next
+                                  case d_xor_case_4
+                                  by contradiction /* impossible chain */
+                                qed
+                              qed
+                            next
+                              case Prover3
+                              solve( (#vl.2, 0) ~~> (#vk.2, 0) )
+                                case d_0_fst
+                                solve( (#vr.23, 0) ~~> (#vk.2, 0) )
+                                  case d_0_fst
+                                  by contradiction /* forbidden KD-fact */
+                                next
+                                  case d_0_snd
+                                  solve( (#vr.24, 0) ~~> (#vk.2, 0) )
+                                    case d_0_fst
+                                    by contradiction /* forbidden KD-fact */
+                                  next
+                                    case d_0_snd
+                                    solve( (#vr.25, 0) ~~> (#vk.2, 0) )
+                                      case d_0_fst
+                                      by contradiction /* impossible chain */
+                                    next
+                                      case d_0_snd
+                                      by contradiction /* cyclic */
+                                    qed
+                                  qed
+                                qed
+                              next
+                                case d_0_snd
+                                by solve( (#vr.23, 0) ~~> (#vk.2, 0) )
+                              qed
+                            qed
+                          next
+                            case LtkGen
+                            by contradiction /* impossible chain */
+                          next
+                            case LtkReveal
+                            solve( !Ltk( $X.2, t ) ▶₀ #vr.18 )
+                              case LtkGen
+                              by contradiction /* impossible chain */
+                            qed
+                          next
+                            case ShkRevealX
+                            solve( !Shk( $X.2, $Y.3, t ) ▶₀ #vr.18 )
+                              case ShkGen
+                              by contradiction /* impossible chain */
+                            qed
+                          next
+                            case ShkRevealY
+                            solve( !Shk( $X.2, $Y.3, t ) ▶₀ #vr.18 )
+                              case ShkGen
+                              by contradiction /* impossible chain */
+                            qed
+                          next
+                            case Verifier1
+                            by contradiction /* forbidden KD-fact */
+                          next
+                            case Verifier2
+                            solve( VerifierState1( V.1, t ) ▶₀ #vr.18 )
+                              case Verifier1
+                              by contradiction /* impossible chain */
+                            qed
+                          qed
+                        qed
+                      qed
+                    next
+                      case d_xor_case_2
+                      by solve( (#vr.17, 0) ~~> (#vk.1, 0) )
+                    next
+                      case d_xor_case_3
+                      by contradiction /* forbidden KD-fact */
+                    next
+                      case d_xor_case_4
+                      by contradiction /* impossible chain */
+                    qed
+                  qed
+                next
+                  case Prover3
+                  solve( (#vl.1, 0) ~~> (#vk.1, 0) )
+                    case d_0_fst
+                    solve( (#vr.18, 0) ~~> (#vk.1, 0) )
+                      case d_0_fst
+                      by contradiction /* forbidden KD-fact */
+                    next
+                      case d_0_snd
+                      solve( (#vr.19, 0) ~~> (#vk.1, 0) )
+                        case d_0_fst
+                        by contradiction /* forbidden KD-fact */
+                      next
+                        case d_0_snd
+                        solve( (#vr.20, 0) ~~> (#vk.1, 0) )
+                          case d_0_fst
+                          by contradiction /* impossible chain */
+                        next
+                          case d_0_snd
+                          by contradiction /* cyclic */
+                        qed
+                      qed
+                    qed
+                  next
+                    case d_0_snd
+                    by solve( (#vr.18, 0) ~~> (#vk.1, 0) )
+                  qed
+                qed
+              next
+                case LtkGen
+                by contradiction /* impossible chain */
+              next
+                case LtkReveal
+                solve( !Ltk( $X.1, t ) ▶₀ #vr.13 )
+                  case LtkGen
+                  by contradiction /* impossible chain */
+                qed
+              next
+                case ShkRevealX
+                solve( !Shk( $X.1, $Y.3, t ) ▶₀ #vr.13 )
+                  case ShkGen
+                  by contradiction /* impossible chain */
+                qed
+              next
+                case ShkRevealY
+                solve( !Shk( $X.1, $Y.3, t ) ▶₀ #vr.13 )
+                  case ShkGen
+                  by contradiction /* impossible chain */
+                qed
+              next
+                case Verifier1
+                by contradiction /* forbidden KD-fact */
+              next
+                case Verifier2
+                solve( VerifierState1( V, t ) ▶₀ #vr.13 )
+                  case Verifier1
+                  by contradiction /* impossible chain */
+                qed
+              qed
             qed
           next
             case case_2
-            solve( (¬(#vr.1 < #vr.12))  ∥ (¬(#vr.12 < #vr.2)) )
-              case case_1
-              solve( !KU( XOR(~np, $Y.1) ) @ #vk.10 )
-                case DBNet
+            solve( !KU( (~np⊕$Y.1) ) @ #vk.10 )
+              case c_xor
+              solve( !KU( ~np ) @ #vk.8 )
+                case DBNet_case_1
                 by contradiction /* cyclic */
               next
-                case c_XOR
-                solve( !KU( ~np ) @ #vk.8 )
-                  case DBNet_case_1
-                  by contradiction /* cyclic */
-                next
-                  case DBNet_case_2
-                  by contradiction /* cyclic */
-                qed
+                case DBNet_case_2
+                by contradiction /* cyclic */
               qed
             next
-              case case_2
-              solve( !KU( XOR(~np, $Y.1) ) @ #vk.10 )
+              case coerce
+              solve( !KD( (~np⊕$Y.1) ) ▶₀ #vk.1 )
                 case DBNet
-                by contradiction /* cyclic */
-              next
-                case c_XOR
-                solve( !KU( ~np ) @ #vk.8 )
-                  case DBNet_case_1
+                solve( Send( $X.1, t ) ▶₀ #vr.13 )
+                  case DBAdv_case_1
                   by contradiction /* cyclic */
                 next
-                  case DBNet_case_2
+                  case DBAdv_case_2
                   by contradiction /* cyclic */
+                next
+                  case DBAdv_case_3
+                  by contradiction /* cyclic */
+                next
+                  case Prover2
+                  solve( (#vl.1, 0) ~~> (#vk.1, 0) )
+                    case d_0_fst
+                    by contradiction /* cyclic */
+                  next
+                    case d_0_snd
+                    solve( (#vr.16, 0) ~~> (#vk.1, 0) )
+                      case Xor
+                      by contradiction /* cyclic */
+                    next
+                      case d_xor_case_1
+                      solve( (#vr.17, 0) ~~> (#vk.1, 0) )
+                        case Xor
+                        solve( !KU( (~np⊕~np.1) ) @ #vk.17 )
+                          case c_xor
+                          solve( !KU( ~np ) @ #vk.10 )
+                            case DBNet
+                            by contradiction /* cyclic */
+                          qed
+                        next
+                          case coerce
+                          solve( !KD( (~np⊕~np.1) ) ▶₀ #vk.2 )
+                            case DBNet
+                            solve( Send( $X.2, t ) ▶₀ #vr.18 )
+                              case DBAdv_case_1
+                              by contradiction /* cyclic */
+                            next
+                              case DBAdv_case_2
+                              by contradiction /* cyclic */
+                            next
+                              case DBAdv_case_3
+                              by contradiction /* cyclic */
+                            next
+                              case Prover2
+                              solve( (#vl.2, 0) ~~> (#vk.2, 0) )
+                                case d_0_fst
+                                by contradiction /* cyclic */
+                              next
+                                case d_0_snd
+                                solve( (#vr.21, 0) ~~> (#vk.2, 0) )
+                                  case d_xor_case_1
+                                  by solve( (#vr.22, 0) ~~> (#vk.2, 0) )
+                                next
+                                  case d_xor_case_2
+                                  solve( (#vr.22, 0) ~~> (#vk.2, 0) )
+                                    case Xor
+                                    by contradiction /* cyclic */
+                                  qed
+                                next
+                                  case d_xor_case_3
+                                  by contradiction /* forbidden KD-fact */
+                                next
+                                  case d_xor_case_4
+                                  by contradiction /* impossible chain */
+                                qed
+                              qed
+                            next
+                              case Prover3
+                              solve( (#vl.2, 0) ~~> (#vk.2, 0) )
+                                case d_0_fst
+                                solve( (#vr.23, 0) ~~> (#vk.2, 0) )
+                                  case d_0_fst
+                                  by contradiction /* forbidden KD-fact */
+                                next
+                                  case d_0_snd
+                                  solve( (#vr.24, 0) ~~> (#vk.2, 0) )
+                                    case d_0_fst
+                                    by contradiction /* forbidden KD-fact */
+                                  next
+                                    case d_0_snd
+                                    solve( (#vr.25, 0) ~~> (#vk.2, 0) )
+                                      case d_0_fst
+                                      by contradiction /* impossible chain */
+                                    next
+                                      case d_0_snd
+                                      by contradiction /* cyclic */
+                                    qed
+                                  qed
+                                qed
+                              next
+                                case d_0_snd
+                                by solve( (#vr.23, 0) ~~> (#vk.2, 0) )
+                              qed
+                            qed
+                          next
+                            case LtkGen
+                            by contradiction /* impossible chain */
+                          next
+                            case LtkReveal
+                            solve( !Ltk( $X.2, t ) ▶₀ #vr.18 )
+                              case LtkGen
+                              by contradiction /* impossible chain */
+                            qed
+                          next
+                            case ShkRevealX
+                            solve( !Shk( $X.2, $Y.3, t ) ▶₀ #vr.18 )
+                              case ShkGen
+                              by contradiction /* impossible chain */
+                            qed
+                          next
+                            case ShkRevealY
+                            solve( !Shk( $X.2, $Y.3, t ) ▶₀ #vr.18 )
+                              case ShkGen
+                              by contradiction /* impossible chain */
+                            qed
+                          next
+                            case Verifier1
+                            by contradiction /* forbidden KD-fact */
+                          next
+                            case Verifier2
+                            solve( VerifierState1( V.1, t ) ▶₀ #vr.18 )
+                              case Verifier1
+                              by contradiction /* impossible chain */
+                            qed
+                          qed
+                        qed
+                      qed
+                    next
+                      case d_xor_case_2
+                      by solve( (#vr.17, 0) ~~> (#vk.1, 0) )
+                    next
+                      case d_xor_case_3
+                      by contradiction /* forbidden KD-fact */
+                    next
+                      case d_xor_case_4
+                      by contradiction /* impossible chain */
+                    qed
+                  qed
+                next
+                  case Prover3
+                  solve( (#vl.1, 0) ~~> (#vk.1, 0) )
+                    case d_0_fst
+                    solve( (#vr.18, 0) ~~> (#vk.1, 0) )
+                      case d_0_fst
+                      by contradiction /* forbidden KD-fact */
+                    next
+                      case d_0_snd
+                      solve( (#vr.19, 0) ~~> (#vk.1, 0) )
+                        case d_0_fst
+                        by contradiction /* forbidden KD-fact */
+                      next
+                        case d_0_snd
+                        solve( (#vr.20, 0) ~~> (#vk.1, 0) )
+                          case d_0_fst
+                          by contradiction /* impossible chain */
+                        next
+                          case d_0_snd
+                          by contradiction /* cyclic */
+                        qed
+                      qed
+                    qed
+                  next
+                    case d_0_snd
+                    by solve( (#vr.18, 0) ~~> (#vk.1, 0) )
+                  qed
+                qed
+              next
+                case LtkGen
+                by contradiction /* impossible chain */
+              next
+                case LtkReveal
+                solve( !Ltk( $X.1, t ) ▶₀ #vr.13 )
+                  case LtkGen
+                  by contradiction /* impossible chain */
+                qed
+              next
+                case ShkRevealX
+                solve( !Shk( $X.1, $Y.3, t ) ▶₀ #vr.13 )
+                  case ShkGen
+                  by contradiction /* impossible chain */
+                qed
+              next
+                case ShkRevealY
+                solve( !Shk( $X.1, $Y.3, t ) ▶₀ #vr.13 )
+                  case ShkGen
+                  by contradiction /* impossible chain */
+                qed
+              next
+                case Verifier1
+                by contradiction /* forbidden KD-fact */
+              next
+                case Verifier2
+                solve( VerifierState1( V, t ) ▶₀ #vr.13 )
+                  case Verifier1
+                  by contradiction /* impossible chain */
                 qed
               qed
             qed
           qed
         qed
-      next
-        case c_h
-        solve( !KU( ~k ) @ #vk.11 )
-          case ShkRevealX
-          by contradiction /* from formulas */
-        next
-          case ShkRevealY
-          by contradiction /* from formulas */
-        qed
       qed
     next
-      case split_case_2
-      solve( !KU( h(~k, <$Y.1, locP, XOR(z, $Y.1), ~nv>) ) @ #vk.9 )
-        case c_h
-        solve( !KU( ~k ) @ #vk.11 )
-          case ShkRevealX
-          by contradiction /* from formulas */
-        next
-          case ShkRevealY
-          by contradiction /* from formulas */
-        qed
+      case c_h
+      solve( !KU( ~k ) @ #vk.11 )
+        case ShkRevealX
+        by contradiction /* from formulas */
+      next
+        case ShkRevealY
+        by contradiction /* from formulas */
       qed
     qed
   qed
@@ -523,11 +947,17 @@ next
   case Verifier3_case_3
   solve( !Shk( $Y, P, k ) ▶₂ #l )
     case ShkGen
-    solve( splitEqs(0) )
-      case split_case_1
-      solve( !KU( h(~k, <$Y.1, locP, np, ~nv>) ) @ #vk.9 )
-        case DBNet
-        solve( (¬(#vr.1 < #vr.9))  ∥ (¬(#vr.9 < #vr.2)) )
+    solve( !KU( h(~k, <$Y.1, locP, np, ~nv>) ) @ #vk.9 )
+      case DBNet
+      solve( (¬(#vr.1 < #vr.9))  ∥ (¬(#vr.9 < #vr.2)) )
+        case case_1
+        solve( !KU( ~nv ) @ #vk.8 )
+          case Verifier2
+          by contradiction /* cyclic */
+        qed
+      next
+        case case_2
+        solve( (¬(#vr.1 < #vr.11))  ∥ (¬(#vr.11 < #vr.2)) )
           case case_1
           solve( !KU( ~nv ) @ #vk.8 )
             case Verifier2
@@ -535,68 +965,443 @@ next
           qed
         next
           case case_2
-          solve( (¬(#vr.1 < #vr.11))  ∥ (¬(#vr.11 < #vr.2)) )
+          solve( (¬(#vr.1 < #vr.12))  ∥ (¬(#vr.12 < #vr.2)) )
             case case_1
-            solve( !KU( ~nv ) @ #vk.8 )
-              case Verifier2
-              by contradiction /* cyclic */
+            solve( !KU( (~np⊕$Y.1) ) @ #vk.10 )
+              case c_xor
+              solve( !KU( ~np ) @ #vk.8 )
+                case DBNet_case_1
+                by contradiction /* cyclic */
+              next
+                case DBNet_case_2
+                by contradiction /* cyclic */
+              qed
+            next
+              case coerce
+              solve( !KD( (~np⊕$Y.1) ) ▶₀ #vk.1 )
+                case DBNet
+                solve( Send( $X.1, t ) ▶₀ #vr.13 )
+                  case DBAdv_case_1
+                  by contradiction /* cyclic */
+                next
+                  case DBAdv_case_2
+                  by contradiction /* cyclic */
+                next
+                  case DBAdv_case_3
+                  by contradiction /* cyclic */
+                next
+                  case Prover2
+                  solve( (#vl.1, 0) ~~> (#vk.1, 0) )
+                    case d_0_fst
+                    by contradiction /* cyclic */
+                  next
+                    case d_0_snd
+                    solve( (#vr.16, 0) ~~> (#vk.1, 0) )
+                      case Xor
+                      by contradiction /* cyclic */
+                    next
+                      case d_xor_case_1
+                      solve( (#vr.17, 0) ~~> (#vk.1, 0) )
+                        case Xor
+                        solve( !KU( (~np⊕~np.1) ) @ #vk.17 )
+                          case c_xor
+                          solve( !KU( ~np ) @ #vk.10 )
+                            case DBNet
+                            by contradiction /* cyclic */
+                          qed
+                        next
+                          case coerce
+                          solve( !KD( (~np⊕~np.1) ) ▶₀ #vk.2 )
+                            case DBNet
+                            solve( Send( $X.2, t ) ▶₀ #vr.18 )
+                              case DBAdv_case_1
+                              by contradiction /* cyclic */
+                            next
+                              case DBAdv_case_2
+                              by contradiction /* cyclic */
+                            next
+                              case DBAdv_case_3
+                              by contradiction /* cyclic */
+                            next
+                              case Prover2
+                              solve( (#vl.2, 0) ~~> (#vk.2, 0) )
+                                case d_0_fst
+                                by contradiction /* cyclic */
+                              next
+                                case d_0_snd
+                                solve( (#vr.21, 0) ~~> (#vk.2, 0) )
+                                  case d_xor_case_1
+                                  by solve( (#vr.22, 0) ~~> (#vk.2, 0) )
+                                next
+                                  case d_xor_case_2
+                                  solve( (#vr.22, 0) ~~> (#vk.2, 0) )
+                                    case Xor
+                                    by contradiction /* cyclic */
+                                  qed
+                                next
+                                  case d_xor_case_3
+                                  by contradiction /* forbidden KD-fact */
+                                next
+                                  case d_xor_case_4
+                                  by contradiction /* impossible chain */
+                                qed
+                              qed
+                            next
+                              case Prover3
+                              solve( (#vl.2, 0) ~~> (#vk.2, 0) )
+                                case d_0_fst
+                                solve( (#vr.23, 0) ~~> (#vk.2, 0) )
+                                  case d_0_fst
+                                  by contradiction /* forbidden KD-fact */
+                                next
+                                  case d_0_snd
+                                  solve( (#vr.24, 0) ~~> (#vk.2, 0) )
+                                    case d_0_fst
+                                    by contradiction /* forbidden KD-fact */
+                                  next
+                                    case d_0_snd
+                                    solve( (#vr.25, 0) ~~> (#vk.2, 0) )
+                                      case d_0_fst
+                                      by contradiction /* impossible chain */
+                                    next
+                                      case d_0_snd
+                                      by contradiction /* cyclic */
+                                    qed
+                                  qed
+                                qed
+                              next
+                                case d_0_snd
+                                by solve( (#vr.23, 0) ~~> (#vk.2, 0) )
+                              qed
+                            qed
+                          next
+                            case LtkGen
+                            by contradiction /* impossible chain */
+                          next
+                            case LtkReveal
+                            solve( !Ltk( $X.2, t ) ▶₀ #vr.18 )
+                              case LtkGen
+                              by contradiction /* impossible chain */
+                            qed
+                          next
+                            case ShkRevealX
+                            solve( !Shk( $X.2, $Y.4, t ) ▶₀ #vr.18 )
+                              case ShkGen
+                              by contradiction /* impossible chain */
+                            qed
+                          next
+                            case ShkRevealY
+                            solve( !Shk( $X.2, $Y.4, t ) ▶₀ #vr.18 )
+                              case ShkGen
+                              by contradiction /* impossible chain */
+                            qed
+                          next
+                            case Verifier1
+                            by contradiction /* forbidden KD-fact */
+                          next
+                            case Verifier2
+                            solve( VerifierState1( V.1, t ) ▶₀ #vr.18 )
+                              case Verifier1
+                              by contradiction /* impossible chain */
+                            qed
+                          qed
+                        qed
+                      qed
+                    next
+                      case d_xor_case_2
+                      by solve( (#vr.17, 0) ~~> (#vk.1, 0) )
+                    next
+                      case d_xor_case_3
+                      by contradiction /* forbidden KD-fact */
+                    next
+                      case d_xor_case_4
+                      by contradiction /* impossible chain */
+                    qed
+                  qed
+                next
+                  case Prover3
+                  solve( (#vl.1, 0) ~~> (#vk.1, 0) )
+                    case d_0_fst
+                    solve( (#vr.18, 0) ~~> (#vk.1, 0) )
+                      case d_0_fst
+                      by contradiction /* forbidden KD-fact */
+                    next
+                      case d_0_snd
+                      solve( (#vr.19, 0) ~~> (#vk.1, 0) )
+                        case d_0_fst
+                        by contradiction /* forbidden KD-fact */
+                      next
+                        case d_0_snd
+                        solve( (#vr.20, 0) ~~> (#vk.1, 0) )
+                          case d_0_fst
+                          by contradiction /* impossible chain */
+                        next
+                          case d_0_snd
+                          by contradiction /* cyclic */
+                        qed
+                      qed
+                    qed
+                  next
+                    case d_0_snd
+                    by solve( (#vr.18, 0) ~~> (#vk.1, 0) )
+                  qed
+                qed
+              next
+                case LtkGen
+                by contradiction /* impossible chain */
+              next
+                case LtkReveal
+                solve( !Ltk( $X.1, t ) ▶₀ #vr.13 )
+                  case LtkGen
+                  by contradiction /* impossible chain */
+                qed
+              next
+                case ShkRevealX
+                solve( !Shk( $X.1, $Y.4, t ) ▶₀ #vr.13 )
+                  case ShkGen
+                  by contradiction /* impossible chain */
+                qed
+              next
+                case ShkRevealY
+                solve( !Shk( $X.1, $Y.4, t ) ▶₀ #vr.13 )
+                  case ShkGen
+                  by contradiction /* impossible chain */
+                qed
+              next
+                case Verifier1
+                by contradiction /* forbidden KD-fact */
+              next
+                case Verifier2
+                solve( VerifierState1( V, t ) ▶₀ #vr.13 )
+                  case Verifier1
+                  by contradiction /* impossible chain */
+                qed
+              qed
             qed
           next
             case case_2
-            solve( (¬(#vr.1 < #vr.12))  ∥ (¬(#vr.12 < #vr.2)) )
-              case case_1
-              solve( !KU( XOR(~np, $Y.1) ) @ #vk.10 )
-                case DBNet
+            solve( !KU( (~np⊕$Y.1) ) @ #vk.10 )
+              case c_xor
+              solve( !KU( ~np ) @ #vk.8 )
+                case DBNet_case_1
                 by contradiction /* cyclic */
               next
-                case c_XOR
-                solve( !KU( ~np ) @ #vk.8 )
-                  case DBNet_case_1
-                  by contradiction /* cyclic */
-                next
-                  case DBNet_case_2
-                  by contradiction /* cyclic */
-                qed
+                case DBNet_case_2
+                by contradiction /* cyclic */
               qed
             next
-              case case_2
-              solve( !KU( XOR(~np, $Y.1) ) @ #vk.10 )
+              case coerce
+              solve( !KD( (~np⊕$Y.1) ) ▶₀ #vk.1 )
                 case DBNet
-                by contradiction /* cyclic */
-              next
-                case c_XOR
-                solve( !KU( ~np ) @ #vk.8 )
-                  case DBNet_case_1
+                solve( Send( $X.1, t ) ▶₀ #vr.13 )
+                  case DBAdv_case_1
                   by contradiction /* cyclic */
                 next
-                  case DBNet_case_2
+                  case DBAdv_case_2
                   by contradiction /* cyclic */
+                next
+                  case DBAdv_case_3
+                  by contradiction /* cyclic */
+                next
+                  case Prover2
+                  solve( (#vl.1, 0) ~~> (#vk.1, 0) )
+                    case d_0_fst
+                    by contradiction /* cyclic */
+                  next
+                    case d_0_snd
+                    solve( (#vr.16, 0) ~~> (#vk.1, 0) )
+                      case Xor
+                      by contradiction /* cyclic */
+                    next
+                      case d_xor_case_1
+                      solve( (#vr.17, 0) ~~> (#vk.1, 0) )
+                        case Xor
+                        solve( !KU( (~np⊕~np.1) ) @ #vk.17 )
+                          case c_xor
+                          solve( !KU( ~np ) @ #vk.10 )
+                            case DBNet
+                            by contradiction /* cyclic */
+                          qed
+                        next
+                          case coerce
+                          solve( !KD( (~np⊕~np.1) ) ▶₀ #vk.2 )
+                            case DBNet
+                            solve( Send( $X.2, t ) ▶₀ #vr.18 )
+                              case DBAdv_case_1
+                              by contradiction /* cyclic */
+                            next
+                              case DBAdv_case_2
+                              by contradiction /* cyclic */
+                            next
+                              case DBAdv_case_3
+                              by contradiction /* cyclic */
+                            next
+                              case Prover2
+                              solve( (#vl.2, 0) ~~> (#vk.2, 0) )
+                                case d_0_fst
+                                by contradiction /* cyclic */
+                              next
+                                case d_0_snd
+                                solve( (#vr.21, 0) ~~> (#vk.2, 0) )
+                                  case d_xor_case_1
+                                  by solve( (#vr.22, 0) ~~> (#vk.2, 0) )
+                                next
+                                  case d_xor_case_2
+                                  solve( (#vr.22, 0) ~~> (#vk.2, 0) )
+                                    case Xor
+                                    by contradiction /* cyclic */
+                                  qed
+                                next
+                                  case d_xor_case_3
+                                  by contradiction /* forbidden KD-fact */
+                                next
+                                  case d_xor_case_4
+                                  by contradiction /* impossible chain */
+                                qed
+                              qed
+                            next
+                              case Prover3
+                              solve( (#vl.2, 0) ~~> (#vk.2, 0) )
+                                case d_0_fst
+                                solve( (#vr.23, 0) ~~> (#vk.2, 0) )
+                                  case d_0_fst
+                                  by contradiction /* forbidden KD-fact */
+                                next
+                                  case d_0_snd
+                                  solve( (#vr.24, 0) ~~> (#vk.2, 0) )
+                                    case d_0_fst
+                                    by contradiction /* forbidden KD-fact */
+                                  next
+                                    case d_0_snd
+                                    solve( (#vr.25, 0) ~~> (#vk.2, 0) )
+                                      case d_0_fst
+                                      by contradiction /* impossible chain */
+                                    next
+                                      case d_0_snd
+                                      by contradiction /* cyclic */
+                                    qed
+                                  qed
+                                qed
+                              next
+                                case d_0_snd
+                                by solve( (#vr.23, 0) ~~> (#vk.2, 0) )
+                              qed
+                            qed
+                          next
+                            case LtkGen
+                            by contradiction /* impossible chain */
+                          next
+                            case LtkReveal
+                            solve( !Ltk( $X.2, t ) ▶₀ #vr.18 )
+                              case LtkGen
+                              by contradiction /* impossible chain */
+                            qed
+                          next
+                            case ShkRevealX
+                            solve( !Shk( $X.2, $Y.4, t ) ▶₀ #vr.18 )
+                              case ShkGen
+                              by contradiction /* impossible chain */
+                            qed
+                          next
+                            case ShkRevealY
+                            solve( !Shk( $X.2, $Y.4, t ) ▶₀ #vr.18 )
+                              case ShkGen
+                              by contradiction /* impossible chain */
+                            qed
+                          next
+                            case Verifier1
+                            by contradiction /* forbidden KD-fact */
+                          next
+                            case Verifier2
+                            solve( VerifierState1( V.1, t ) ▶₀ #vr.18 )
+                              case Verifier1
+                              by contradiction /* impossible chain */
+                            qed
+                          qed
+                        qed
+                      qed
+                    next
+                      case d_xor_case_2
+                      by solve( (#vr.17, 0) ~~> (#vk.1, 0) )
+                    next
+                      case d_xor_case_3
+                      by contradiction /* forbidden KD-fact */
+                    next
+                      case d_xor_case_4
+                      by contradiction /* impossible chain */
+                    qed
+                  qed
+                next
+                  case Prover3
+                  solve( (#vl.1, 0) ~~> (#vk.1, 0) )
+                    case d_0_fst
+                    solve( (#vr.18, 0) ~~> (#vk.1, 0) )
+                      case d_0_fst
+                      by contradiction /* forbidden KD-fact */
+                    next
+                      case d_0_snd
+                      solve( (#vr.19, 0) ~~> (#vk.1, 0) )
+                        case d_0_fst
+                        by contradiction /* forbidden KD-fact */
+                      next
+                        case d_0_snd
+                        solve( (#vr.20, 0) ~~> (#vk.1, 0) )
+                          case d_0_fst
+                          by contradiction /* impossible chain */
+                        next
+                          case d_0_snd
+                          by contradiction /* cyclic */
+                        qed
+                      qed
+                    qed
+                  next
+                    case d_0_snd
+                    by solve( (#vr.18, 0) ~~> (#vk.1, 0) )
+                  qed
+                qed
+              next
+                case LtkGen
+                by contradiction /* impossible chain */
+              next
+                case LtkReveal
+                solve( !Ltk( $X.1, t ) ▶₀ #vr.13 )
+                  case LtkGen
+                  by contradiction /* impossible chain */
+                qed
+              next
+                case ShkRevealX
+                solve( !Shk( $X.1, $Y.4, t ) ▶₀ #vr.13 )
+                  case ShkGen
+                  by contradiction /* impossible chain */
+                qed
+              next
+                case ShkRevealY
+                solve( !Shk( $X.1, $Y.4, t ) ▶₀ #vr.13 )
+                  case ShkGen
+                  by contradiction /* impossible chain */
+                qed
+              next
+                case Verifier1
+                by contradiction /* forbidden KD-fact */
+              next
+                case Verifier2
+                solve( VerifierState1( V, t ) ▶₀ #vr.13 )
+                  case Verifier1
+                  by contradiction /* impossible chain */
                 qed
               qed
             qed
           qed
         qed
-      next
-        case c_h
-        solve( !KU( ~k ) @ #vk.11 )
-          case ShkRevealX
-          by contradiction /* from formulas */
-        next
-          case ShkRevealY
-          by contradiction /* from formulas */
-        qed
       qed
     next
-      case split_case_2
-      solve( !KU( h(~k, <$Y.1, locP, XOR(z, $Y.1), ~nv>) ) @ #vk.9 )
-        case c_h
-        solve( !KU( ~k ) @ #vk.11 )
-          case ShkRevealX
-          by contradiction /* from formulas */
-        next
-          case ShkRevealY
-          by contradiction /* from formulas */
-        qed
+      case c_h
+      solve( !KU( ~k ) @ #vk.11 )
+        case ShkRevealX
+        by contradiction /* from formulas */
+      next
+        case ShkRevealY
+        by contradiction /* from formulas */
       qed
     qed
   qed
@@ -604,11 +1409,17 @@ next
   case Verifier3_case_4
   solve( !Shk( $Y, P, k ) ▶₂ #l )
     case ShkGen
-    solve( splitEqs(0) )
-      case split_case_1
-      solve( !KU( h(~k, <$Y.1, locP, np, ~nv>) ) @ #vk.9 )
-        case DBNet
-        solve( (¬(#vr.1 < #vr.9))  ∥ (¬(#vr.9 < #vr.2)) )
+    solve( !KU( h(~k, <$Y.1, locP, np, ~nv>) ) @ #vk.9 )
+      case DBNet
+      solve( (¬(#vr.1 < #vr.9))  ∥ (¬(#vr.9 < #vr.2)) )
+        case case_1
+        solve( !KU( ~nv ) @ #vk.8 )
+          case Verifier2
+          by contradiction /* cyclic */
+        qed
+      next
+        case case_2
+        solve( (¬(#vr.1 < #vr.11))  ∥ (¬(#vr.11 < #vr.2)) )
           case case_1
           solve( !KU( ~nv ) @ #vk.8 )
             case Verifier2
@@ -616,68 +1427,443 @@ next
           qed
         next
           case case_2
-          solve( (¬(#vr.1 < #vr.11))  ∥ (¬(#vr.11 < #vr.2)) )
+          solve( (¬(#vr.1 < #vr.12))  ∥ (¬(#vr.12 < #vr.2)) )
             case case_1
-            solve( !KU( ~nv ) @ #vk.8 )
-              case Verifier2
-              by contradiction /* cyclic */
+            solve( !KU( (~np⊕$Y.1) ) @ #vk.10 )
+              case c_xor
+              solve( !KU( ~np ) @ #vk.8 )
+                case DBNet_case_1
+                by contradiction /* cyclic */
+              next
+                case DBNet_case_2
+                by contradiction /* cyclic */
+              qed
+            next
+              case coerce
+              solve( !KD( (~np⊕$Y.1) ) ▶₀ #vk.1 )
+                case DBNet
+                solve( Send( $X.2, t ) ▶₀ #vr.13 )
+                  case DBAdv_case_1
+                  by contradiction /* cyclic */
+                next
+                  case DBAdv_case_2
+                  by contradiction /* cyclic */
+                next
+                  case DBAdv_case_3
+                  by contradiction /* cyclic */
+                next
+                  case Prover2
+                  solve( (#vl.1, 0) ~~> (#vk.1, 0) )
+                    case d_0_fst
+                    by contradiction /* cyclic */
+                  next
+                    case d_0_snd
+                    solve( (#vr.16, 0) ~~> (#vk.1, 0) )
+                      case Xor
+                      by contradiction /* cyclic */
+                    next
+                      case d_xor_case_1
+                      solve( (#vr.17, 0) ~~> (#vk.1, 0) )
+                        case Xor
+                        solve( !KU( (~np⊕~np.1) ) @ #vk.17 )
+                          case c_xor
+                          solve( !KU( ~np ) @ #vk.10 )
+                            case DBNet
+                            by contradiction /* cyclic */
+                          qed
+                        next
+                          case coerce
+                          solve( !KD( (~np⊕~np.1) ) ▶₀ #vk.2 )
+                            case DBNet
+                            solve( Send( $X.3, t ) ▶₀ #vr.18 )
+                              case DBAdv_case_1
+                              by contradiction /* cyclic */
+                            next
+                              case DBAdv_case_2
+                              by contradiction /* cyclic */
+                            next
+                              case DBAdv_case_3
+                              by contradiction /* cyclic */
+                            next
+                              case Prover2
+                              solve( (#vl.2, 0) ~~> (#vk.2, 0) )
+                                case d_0_fst
+                                by contradiction /* cyclic */
+                              next
+                                case d_0_snd
+                                solve( (#vr.21, 0) ~~> (#vk.2, 0) )
+                                  case d_xor_case_1
+                                  by solve( (#vr.22, 0) ~~> (#vk.2, 0) )
+                                next
+                                  case d_xor_case_2
+                                  solve( (#vr.22, 0) ~~> (#vk.2, 0) )
+                                    case Xor
+                                    by contradiction /* cyclic */
+                                  qed
+                                next
+                                  case d_xor_case_3
+                                  by contradiction /* forbidden KD-fact */
+                                next
+                                  case d_xor_case_4
+                                  by contradiction /* impossible chain */
+                                qed
+                              qed
+                            next
+                              case Prover3
+                              solve( (#vl.2, 0) ~~> (#vk.2, 0) )
+                                case d_0_fst
+                                solve( (#vr.23, 0) ~~> (#vk.2, 0) )
+                                  case d_0_fst
+                                  by contradiction /* forbidden KD-fact */
+                                next
+                                  case d_0_snd
+                                  solve( (#vr.24, 0) ~~> (#vk.2, 0) )
+                                    case d_0_fst
+                                    by contradiction /* forbidden KD-fact */
+                                  next
+                                    case d_0_snd
+                                    solve( (#vr.25, 0) ~~> (#vk.2, 0) )
+                                      case d_0_fst
+                                      by contradiction /* impossible chain */
+                                    next
+                                      case d_0_snd
+                                      by contradiction /* cyclic */
+                                    qed
+                                  qed
+                                qed
+                              next
+                                case d_0_snd
+                                by solve( (#vr.23, 0) ~~> (#vk.2, 0) )
+                              qed
+                            qed
+                          next
+                            case LtkGen
+                            by contradiction /* impossible chain */
+                          next
+                            case LtkReveal
+                            solve( !Ltk( $X.3, t ) ▶₀ #vr.18 )
+                              case LtkGen
+                              by contradiction /* impossible chain */
+                            qed
+                          next
+                            case ShkRevealX
+                            solve( !Shk( $X.3, $Y.3, t ) ▶₀ #vr.18 )
+                              case ShkGen
+                              by contradiction /* impossible chain */
+                            qed
+                          next
+                            case ShkRevealY
+                            solve( !Shk( $X.3, $Y.3, t ) ▶₀ #vr.18 )
+                              case ShkGen
+                              by contradiction /* impossible chain */
+                            qed
+                          next
+                            case Verifier1
+                            by contradiction /* forbidden KD-fact */
+                          next
+                            case Verifier2
+                            solve( VerifierState1( V.1, t ) ▶₀ #vr.18 )
+                              case Verifier1
+                              by contradiction /* impossible chain */
+                            qed
+                          qed
+                        qed
+                      qed
+                    next
+                      case d_xor_case_2
+                      by solve( (#vr.17, 0) ~~> (#vk.1, 0) )
+                    next
+                      case d_xor_case_3
+                      by contradiction /* forbidden KD-fact */
+                    next
+                      case d_xor_case_4
+                      by contradiction /* impossible chain */
+                    qed
+                  qed
+                next
+                  case Prover3
+                  solve( (#vl.1, 0) ~~> (#vk.1, 0) )
+                    case d_0_fst
+                    solve( (#vr.18, 0) ~~> (#vk.1, 0) )
+                      case d_0_fst
+                      by contradiction /* forbidden KD-fact */
+                    next
+                      case d_0_snd
+                      solve( (#vr.19, 0) ~~> (#vk.1, 0) )
+                        case d_0_fst
+                        by contradiction /* forbidden KD-fact */
+                      next
+                        case d_0_snd
+                        solve( (#vr.20, 0) ~~> (#vk.1, 0) )
+                          case d_0_fst
+                          by contradiction /* impossible chain */
+                        next
+                          case d_0_snd
+                          by contradiction /* cyclic */
+                        qed
+                      qed
+                    qed
+                  next
+                    case d_0_snd
+                    by solve( (#vr.18, 0) ~~> (#vk.1, 0) )
+                  qed
+                qed
+              next
+                case LtkGen
+                by contradiction /* impossible chain */
+              next
+                case LtkReveal
+                solve( !Ltk( $X.2, t ) ▶₀ #vr.13 )
+                  case LtkGen
+                  by contradiction /* impossible chain */
+                qed
+              next
+                case ShkRevealX
+                solve( !Shk( $X.2, $Y.3, t ) ▶₀ #vr.13 )
+                  case ShkGen
+                  by contradiction /* impossible chain */
+                qed
+              next
+                case ShkRevealY
+                solve( !Shk( $X.2, $Y.3, t ) ▶₀ #vr.13 )
+                  case ShkGen
+                  by contradiction /* impossible chain */
+                qed
+              next
+                case Verifier1
+                by contradiction /* forbidden KD-fact */
+              next
+                case Verifier2
+                solve( VerifierState1( V, t ) ▶₀ #vr.13 )
+                  case Verifier1
+                  by contradiction /* impossible chain */
+                qed
+              qed
             qed
           next
             case case_2
-            solve( (¬(#vr.1 < #vr.12))  ∥ (¬(#vr.12 < #vr.2)) )
-              case case_1
-              solve( !KU( XOR(~np, $Y.1) ) @ #vk.10 )
-                case DBNet
+            solve( !KU( (~np⊕$Y.1) ) @ #vk.10 )
+              case c_xor
+              solve( !KU( ~np ) @ #vk.8 )
+                case DBNet_case_1
                 by contradiction /* cyclic */
               next
-                case c_XOR
-                solve( !KU( ~np ) @ #vk.8 )
-                  case DBNet_case_1
-                  by contradiction /* cyclic */
-                next
-                  case DBNet_case_2
-                  by contradiction /* cyclic */
-                qed
+                case DBNet_case_2
+                by contradiction /* cyclic */
               qed
             next
-              case case_2
-              solve( !KU( XOR(~np, $Y.1) ) @ #vk.10 )
+              case coerce
+              solve( !KD( (~np⊕$Y.1) ) ▶₀ #vk.1 )
                 case DBNet
-                by contradiction /* cyclic */
-              next
-                case c_XOR
-                solve( !KU( ~np ) @ #vk.8 )
-                  case DBNet_case_1
+                solve( Send( $X.2, t ) ▶₀ #vr.13 )
+                  case DBAdv_case_1
                   by contradiction /* cyclic */
                 next
-                  case DBNet_case_2
+                  case DBAdv_case_2
                   by contradiction /* cyclic */
+                next
+                  case DBAdv_case_3
+                  by contradiction /* cyclic */
+                next
+                  case Prover2
+                  solve( (#vl.1, 0) ~~> (#vk.1, 0) )
+                    case d_0_fst
+                    by contradiction /* cyclic */
+                  next
+                    case d_0_snd
+                    solve( (#vr.16, 0) ~~> (#vk.1, 0) )
+                      case Xor
+                      by contradiction /* cyclic */
+                    next
+                      case d_xor_case_1
+                      solve( (#vr.17, 0) ~~> (#vk.1, 0) )
+                        case Xor
+                        solve( !KU( (~np⊕~np.1) ) @ #vk.17 )
+                          case c_xor
+                          solve( !KU( ~np ) @ #vk.10 )
+                            case DBNet
+                            by contradiction /* cyclic */
+                          qed
+                        next
+                          case coerce
+                          solve( !KD( (~np⊕~np.1) ) ▶₀ #vk.2 )
+                            case DBNet
+                            solve( Send( $X.3, t ) ▶₀ #vr.18 )
+                              case DBAdv_case_1
+                              by contradiction /* cyclic */
+                            next
+                              case DBAdv_case_2
+                              by contradiction /* cyclic */
+                            next
+                              case DBAdv_case_3
+                              by contradiction /* cyclic */
+                            next
+                              case Prover2
+                              solve( (#vl.2, 0) ~~> (#vk.2, 0) )
+                                case d_0_fst
+                                by contradiction /* cyclic */
+                              next
+                                case d_0_snd
+                                solve( (#vr.21, 0) ~~> (#vk.2, 0) )
+                                  case d_xor_case_1
+                                  by solve( (#vr.22, 0) ~~> (#vk.2, 0) )
+                                next
+                                  case d_xor_case_2
+                                  solve( (#vr.22, 0) ~~> (#vk.2, 0) )
+                                    case Xor
+                                    by contradiction /* cyclic */
+                                  qed
+                                next
+                                  case d_xor_case_3
+                                  by contradiction /* forbidden KD-fact */
+                                next
+                                  case d_xor_case_4
+                                  by contradiction /* impossible chain */
+                                qed
+                              qed
+                            next
+                              case Prover3
+                              solve( (#vl.2, 0) ~~> (#vk.2, 0) )
+                                case d_0_fst
+                                solve( (#vr.23, 0) ~~> (#vk.2, 0) )
+                                  case d_0_fst
+                                  by contradiction /* forbidden KD-fact */
+                                next
+                                  case d_0_snd
+                                  solve( (#vr.24, 0) ~~> (#vk.2, 0) )
+                                    case d_0_fst
+                                    by contradiction /* forbidden KD-fact */
+                                  next
+                                    case d_0_snd
+                                    solve( (#vr.25, 0) ~~> (#vk.2, 0) )
+                                      case d_0_fst
+                                      by contradiction /* impossible chain */
+                                    next
+                                      case d_0_snd
+                                      by contradiction /* cyclic */
+                                    qed
+                                  qed
+                                qed
+                              next
+                                case d_0_snd
+                                by solve( (#vr.23, 0) ~~> (#vk.2, 0) )
+                              qed
+                            qed
+                          next
+                            case LtkGen
+                            by contradiction /* impossible chain */
+                          next
+                            case LtkReveal
+                            solve( !Ltk( $X.3, t ) ▶₀ #vr.18 )
+                              case LtkGen
+                              by contradiction /* impossible chain */
+                            qed
+                          next
+                            case ShkRevealX
+                            solve( !Shk( $X.3, $Y.3, t ) ▶₀ #vr.18 )
+                              case ShkGen
+                              by contradiction /* impossible chain */
+                            qed
+                          next
+                            case ShkRevealY
+                            solve( !Shk( $X.3, $Y.3, t ) ▶₀ #vr.18 )
+                              case ShkGen
+                              by contradiction /* impossible chain */
+                            qed
+                          next
+                            case Verifier1
+                            by contradiction /* forbidden KD-fact */
+                          next
+                            case Verifier2
+                            solve( VerifierState1( V.1, t ) ▶₀ #vr.18 )
+                              case Verifier1
+                              by contradiction /* impossible chain */
+                            qed
+                          qed
+                        qed
+                      qed
+                    next
+                      case d_xor_case_2
+                      by solve( (#vr.17, 0) ~~> (#vk.1, 0) )
+                    next
+                      case d_xor_case_3
+                      by contradiction /* forbidden KD-fact */
+                    next
+                      case d_xor_case_4
+                      by contradiction /* impossible chain */
+                    qed
+                  qed
+                next
+                  case Prover3
+                  solve( (#vl.1, 0) ~~> (#vk.1, 0) )
+                    case d_0_fst
+                    solve( (#vr.18, 0) ~~> (#vk.1, 0) )
+                      case d_0_fst
+                      by contradiction /* forbidden KD-fact */
+                    next
+                      case d_0_snd
+                      solve( (#vr.19, 0) ~~> (#vk.1, 0) )
+                        case d_0_fst
+                        by contradiction /* forbidden KD-fact */
+                      next
+                        case d_0_snd
+                        solve( (#vr.20, 0) ~~> (#vk.1, 0) )
+                          case d_0_fst
+                          by contradiction /* impossible chain */
+                        next
+                          case d_0_snd
+                          by contradiction /* cyclic */
+                        qed
+                      qed
+                    qed
+                  next
+                    case d_0_snd
+                    by solve( (#vr.18, 0) ~~> (#vk.1, 0) )
+                  qed
+                qed
+              next
+                case LtkGen
+                by contradiction /* impossible chain */
+              next
+                case LtkReveal
+                solve( !Ltk( $X.2, t ) ▶₀ #vr.13 )
+                  case LtkGen
+                  by contradiction /* impossible chain */
+                qed
+              next
+                case ShkRevealX
+                solve( !Shk( $X.2, $Y.3, t ) ▶₀ #vr.13 )
+                  case ShkGen
+                  by contradiction /* impossible chain */
+                qed
+              next
+                case ShkRevealY
+                solve( !Shk( $X.2, $Y.3, t ) ▶₀ #vr.13 )
+                  case ShkGen
+                  by contradiction /* impossible chain */
+                qed
+              next
+                case Verifier1
+                by contradiction /* forbidden KD-fact */
+              next
+                case Verifier2
+                solve( VerifierState1( V, t ) ▶₀ #vr.13 )
+                  case Verifier1
+                  by contradiction /* impossible chain */
                 qed
               qed
             qed
           qed
         qed
-      next
-        case c_h
-        solve( !KU( ~k ) @ #vk.11 )
-          case ShkRevealX
-          by contradiction /* from formulas */
-        next
-          case ShkRevealY
-          by contradiction /* from formulas */
-        qed
       qed
     next
-      case split_case_2
-      solve( !KU( h(~k, <$Y.1, locP, XOR(z, $Y.1), ~nv>) ) @ #vk.9 )
-        case c_h
-        solve( !KU( ~k ) @ #vk.11 )
-          case ShkRevealX
-          by contradiction /* from formulas */
-        next
-          case ShkRevealY
-          by contradiction /* from formulas */
-        qed
+      case c_h
+      solve( !KU( ~k ) @ #vk.11 )
+        case ShkRevealX
+        by contradiction /* from formulas */
+      next
+        case ShkRevealY
+        by contradiction /* from formulas */
       qed
     qed
   qed
@@ -720,17 +1906,20 @@ solve( VerifierState3( V, chal, z ) ▶₀ #l )
         case LtkGen
         solve( splitEqs(0) )
           case split_case_2
-          solve( !KU( h(~k.1, <$Y, locP, XOR(XOR(~np, $X), $Y), ~nv>) ) @ #vk.8 )
+          solve( !KU( h(~k.1, <$Y, locP, ($X⊕$Y⊕~np), ~nv>) ) @ #vk.8 )
             case c_h
             solve( !KU( ~k.1 ) @ #vk.12 )
               case ShkRevealY
-              solve( !KU( XOR(XOR(~np, $X), $Y) ) @ #vk.8 )
-                case c_XOR
+              solve( !KU( ($X⊕$Y⊕~np) ) @ #vk.8 )
+                case c_xor_case_1
                 solve( !KU( ~nv ) @ #vk.9 )
                   case Verifier2
-                  solve( !KU( XOR(~np, $X) ) @ #vk.13 )
-                    case DBNet
-                    SOLVED // trace found
+                  solve( !KU( ($X⊕~np) ) @ #vk.13 )
+                    case c_xor
+                    solve( !KU( ~np ) @ #vk.14 )
+                      case DBNet_case_1
+                      SOLVED // trace found
+                    qed
                   qed
                 qed
               qed
@@ -755,8 +1944,8 @@ analyzed: meadows.spthy
   unique_runid (all-traces): verified (12 steps)
   end_after_start (all-traces): verified (9 steps)
   no_claim_before_fastphase (all-traces): verified (6 steps)
-  dbsec (all-traces): falsified - found trace (10 steps)
-  dbsec_on_honest_prover (all-traces): verified (91 steps)
-  dbsec_on_compromised_prover (all-traces): falsified - found trace (12 steps)
+  dbsec (all-traces): falsified - found trace (11 steps)
+  dbsec_on_honest_prover (all-traces): verified (472 steps)
+  dbsec_on_compromised_prover (all-traces): falsified - found trace (13 steps)
 
 ==============================================================================

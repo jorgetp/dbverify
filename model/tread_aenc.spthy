@@ -5,9 +5,9 @@ theory tread_aenc
 
 begin
 
-builtins: 	asymmetric-encryption, symmetric-encryption, signing
+builtins: 	asymmetric-encryption, symmetric-encryption, signing, xor
 
-functions: f/2, XOR/2
+functions: f/2
 
 // -------------------- Protocol Rules -------------------- //
 rule Prover1:
@@ -60,10 +60,10 @@ rule Prover3:			//prover sends response
 			In(c) ]
 	--[ Action(P),
 			End(a) ]->
-		[ Send(P, f(c, <a, XOR(b,m)> ) ) ]
+		[ Send(P, f(c, <a, b ⊕ m> ) ) ]
 
 rule Verifier3:		//fast phase ends
-		let rp = f(c, <a, XOR(b,m)> )
+		let rp = f(c, <a, b ⊕ m> )
 		in
 		[ VerifierState2(V, P, m, a, b, c),
 			Recv(V, rp) ]
@@ -81,7 +81,7 @@ restriction equals:
 lemma complete_trace_exists:
 	exists-trace
 	"
-	Ex V P a b c m #t1 #t2 #t3 #t4 #t5 #t6 #t7.
+	Ex V P a bXORm c m #t1 #t2 #t3 #t4 #t5 #t6 #t7.
 		
 		//initial phase
 		Start(a) @ t1 &
@@ -92,10 +92,10 @@ lemma complete_trace_exists:
 		//fast phase
 		Send(V, c) @ t4 &
 		Action(P) @ t5 &
-		Recv(V, f(c, <a, XOR(b,m)>) ) @ t6 &
+		Recv(V, f(c, <a, bXORm>) ) @ t6 &
 
 		//verification phase
-		DBSec(V, P, c, f(c, <a, XOR(b,m)>) ) @ t7 &
+		DBSec(V, P, c, f(c, <a, bXORm>) ) @ t7 &
 		
 		//check order
 		t1 < t2 & t2 < t3 & t3 < t4 & t4 < t5 & t5 < t6 & t6 < t7

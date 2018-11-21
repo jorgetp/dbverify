@@ -8,8 +8,9 @@ theory tread_aenc begin
 
 // Function signature and definition of the equational theory E
 
-functions: XOR/2, adec/2, aenc/2, f/2, fst/1, pair/2, pk/1, sdec/2,
-           senc/2, sign/2, snd/1, true/0, verify/3
+builtins: xor
+functions: adec/2, aenc/2, f/2, fst/1, pair/2, pk/1, sdec/2, senc/2,
+           sign/2, snd/1, true/0, verify/3
 equations:
     adec(aenc(x.1, pk(x.2)), x.2) = x.1,
     fst(<x.1, x.2>) = x.1,
@@ -141,16 +142,82 @@ rule (modulo E) Verifier2:
 rule (modulo E) Prover3:
    [ ProverState2( V, P, a, b, m ), In( c ) ]
   --[ Action( P ), End( a ) ]->
-   [ Send( P, f(c, <a, XOR(b, m)>) ) ]
+   [ Send( P, f(c, <a, (b⊕m)>) ) ]
 
-  /* has exactly the trivial AC variant */
+  /*
+  rule (modulo AC) Prover3:
+     [ ProverState2( V, P, a, b, m ), In( c ) ]
+    --[ Action( P ), End( a ) ]->
+     [ Send( P, f(c, <a, z>) ) ]
+    variants (modulo AC)
+    1. b     = b.8
+       m     = m.8
+       z     = (b.8⊕m.8)
+    
+    2. b     = b.8
+       m     = zero
+       z     = b.8
+    
+    3. b     = x.8
+       m     = x.8
+       z     = zero
+    
+    4. b     = x.8
+       m     = (x.8⊕x.9)
+       z     = x.9
+    
+    5. b     = zero
+       m     = m.8
+       z     = m.8
+    
+    6. b     = (x.8⊕x.9)
+       m     = x.8
+       z     = x.9
+    
+    7. b     = (x.8⊕x.9)
+       m     = (x.9⊕x.10)
+       z     = (x.8⊕x.10)
+  */
 
 rule (modulo E) Verifier3:
-   [ VerifierState2( V, P, m, a, b, c ), Recv( V, f(c, <a, XOR(b, m)>) ) ]
-  --[ DBSec( V, P, c, f(c, <a, XOR(b, m)>) ), End( m ) ]->
+   [ VerifierState2( V, P, m, a, b, c ), Recv( V, f(c, <a, (b⊕m)>) ) ]
+  --[ DBSec( V, P, c, f(c, <a, (b⊕m)>) ), End( m ) ]->
    [ ]
 
-  /* has exactly the trivial AC variant */
+  /*
+  rule (modulo AC) Verifier3:
+     [ VerifierState2( V, P, m, a, b, c ), Recv( V, f(c, <a, z>) ) ]
+    --[ DBSec( V, P, c, f(c, <a, z>) ), End( m ) ]->
+     [ ]
+    variants (modulo AC)
+    1. b     = b.8
+       m     = m.8
+       z     = (b.8⊕m.8)
+    
+    2. b     = b.8
+       m     = zero
+       z     = b.8
+    
+    3. b     = x.8
+       m     = x.8
+       z     = zero
+    
+    4. b     = x.8
+       m     = (x.8⊕x.9)
+       z     = x.9
+    
+    5. b     = zero
+       m     = m.8
+       z     = m.8
+    
+    6. b     = (x.8⊕x.9)
+       m     = x.8
+       z     = x.9
+    
+    7. b     = (x.8⊕x.9)
+       m     = (x.9⊕x.10)
+       z     = (x.8⊕x.10)
+  */
 
 restriction equals:
   "∀ a b #i. (Eq( a, b ) @ #i) ⇒ (a = b)"
@@ -158,14 +225,14 @@ restriction equals:
 
 lemma complete_trace_exists:
   exists-trace
-  "∃ V P a b c m #t1 #t2 #t3 #t4 #t5 #t6 #t7.
+  "∃ V P a bXORm c m #t1 #t2 #t3 #t4 #t5 #t6 #t7.
     (((((((((((((Start( a ) @ #t1) ∧ (Action( P ) @ #t1)) ∧
                (Start( m ) @ #t2)) ∧
               (Action( P ) @ #t3)) ∧
              (Send( V, c ) @ #t4)) ∧
             (Action( P ) @ #t5)) ∧
-           (Recv( V, f(c, <a, XOR(b, m)>) ) @ #t6)) ∧
-          (DBSec( V, P, c, f(c, <a, XOR(b, m)>) ) @ #t7)) ∧
+           (Recv( V, f(c, <a, bXORm>) ) @ #t6)) ∧
+          (DBSec( V, P, c, f(c, <a, bXORm>) ) @ #t7)) ∧
          (#t1 < #t2)) ∧
         (#t2 < #t3)) ∧
        (#t3 < #t4)) ∧
@@ -174,15 +241,15 @@ lemma complete_trace_exists:
     (#t6 < #t7)"
 /*
 guarded formula characterizing all satisfying traces:
-"∃ V P a b c m #t1 #t2 #t3 #t4 #t5 #t6 #t7.
+"∃ V P a bXORm c m #t1 #t2 #t3 #t4 #t5 #t6 #t7.
   (Start( a ) @ #t1) ∧
   (Action( P ) @ #t1) ∧
   (Start( m ) @ #t2) ∧
   (Action( P ) @ #t3) ∧
   (Send( V, c ) @ #t4) ∧
   (Action( P ) @ #t5) ∧
-  (Recv( V, f(c, <a, XOR(b, m)>) ) @ #t6) ∧
-  (DBSec( V, P, c, f(c, <a, XOR(b, m)>) ) @ #t7)
+  (Recv( V, f(c, <a, bXORm>) ) @ #t6) ∧
+  (DBSec( V, P, c, f(c, <a, bXORm>) ) @ #t7)
  ∧
   (#t1 < #t2) ∧
   (#t2 < #t3) ∧
@@ -194,34 +261,46 @@ guarded formula characterizing all satisfying traces:
 simplify
 solve( VerifierState1( $Y, P, m, a, b ) ▶₀ #t4 )
   case Verifier1
-  solve( Send( $X, f(~c, <a.1, XOR(b.1, m.1)>) ) ▶₀ #t6 )
-    case Prover3
-    solve( VerifierState2( $Y, P.1, m.1, ~a.1, ~b.1, ~c ) ▶₀ #t7 )
+  solve( Send( $X, f(~c, <a.1, bXORm>) ) ▶₀ #t6 )
+    case DBAdv_case_1
+    solve( VerifierState2( $Y, P.1, m.1, a.1, b.1, ~c ) ▶₀ #t7 )
       case Verifier2
-      solve( Recv( $Y, f(~c, <~a, XOR(~b, ~m)>) ) ▶₁ #t7 )
+      solve( Recv( $Y, f(~c, <a, bXORm>) ) ▶₁ #t7 )
         case DBNet_case_1
         solve( Start( ~a ) @ #t1 )
           case Prover1
           solve( Action( $P ) @ #t1 )
             case Prover1
-            solve( Start( ~m ) @ #t2 )
-              case Verifier1
-              solve( Action( $P ) @ #t3 )
-                case DBAdv
-                solve( !KeyComp( $P ) ▶₁ #t3 )
-                  case LtkReveal
-                  solve( Action( $P ) @ #t5 )
+            solve( Start( m.2 ) @ #t2 )
+              case Prover1
+              solve( !Ltk( $P.1, ltkP ) ▶₂ #t2 )
+                case LtkGen
+                solve( !Pk( $V.1, pkV ) ▶₃ #t2 )
+                  case LtkGen
+                  solve( Action( $P ) @ #t3 )
                     case DBAdv
-                    solve( !KeyComp( $P ) ▶₁ #t5 )
+                    solve( !KeyComp( $P ) ▶₁ #t3 )
                       case LtkReveal
-                      solve( !KU( aenc(<<<~a, ~b>, $P>, sign(<<~a, ~b>, $P>, ~k)>, pk(~k.2))
-                             ) @ #vk.1 )
-                        case DBNet
-                        solve( !KU( ~c ) @ #vk.3 )
-                          case Verifier2
-                          solve( !KU( ~m ) @ #vk.4 )
-                            case Verifier1
-                            SOLVED // trace found
+                      solve( Action( $P ) @ #t5 )
+                        case DBAdv
+                        solve( !KeyComp( $P ) ▶₁ #t5 )
+                          case LtkReveal
+                          solve( !KU( aenc(<<<~a, b.2>, $P>, sign(<<~a, b.2>, $P>, ~k)>, pk(~k.4))
+                                 ) @ #vk.1 )
+                            case DBNet
+                            solve( splitEqs(2) )
+                              case split
+                              solve( !KU( ~c ) @ #vk.4 )
+                                case Verifier2
+                                solve( !KU( ~m.1 ) @ #vk.5 )
+                                  case Verifier1
+                                  solve( !KU( f(~c, <~a, (~b⊕~m.1)>) ) @ #vk.5 )
+                                    case DBNet
+                                    SOLVED // trace found
+                                  qed
+                                qed
+                              qed
+                            qed
                           qed
                         qed
                       qed
@@ -390,7 +469,7 @@ guarded formula characterizing all counter-examples:
 simplify
 solve( VerifierState2( V, P, m, a, b, chal ) ▶₀ #l )
   case Verifier2
-  solve( Recv( $V, f(~c, <a, XOR(b, ~m)>) ) ▶₁ #l )
+  solve( Recv( $V, f(~c, <a, z>) ) ▶₁ #l )
     case DBNet_case_1
     by contradiction /* from formulas */
   next
@@ -444,28 +523,34 @@ guarded formula characterizing all counter-examples:
 simplify
 solve( VerifierState2( V, P, m, a, b, chal ) ▶₀ #l )
   case Verifier2
-  solve( Recv( $V, f(~c, <a, XOR(b, ~m)>) ) ▶₁ #l )
+  solve( Recv( $V, f(~c, <a, z>) ) ▶₁ #l )
     case DBNet_case_1
-    solve( !KU( aenc(<<<~a, ~b>, $P>, sign(<<~a, ~b>, $P>, ~k)>, pk(~k.1))
+    solve( !KU( aenc(<<<~a, b>, $P>, sign(<<~a, b>, $P>, ~k)>, pk(~k.1))
            ) @ #vk.1 )
       case c_aenc
       solve( !KU( ~a ) @ #vk.9 )
         case DBNet
         solve( !KU( ~k.3 ) @ #vk.12 )
           case LtkReveal
-          solve( !KU( sign(<<~a, ~b>, $P>, ~k) ) @ #vk.12 )
+          solve( !KU( sign(<<~a, b>, $P>, ~k) ) @ #vk.12 )
             case c_sign
             solve( !KU( ~k ) @ #vk.13 )
               case LtkReveal
-              solve( !KU( ~c ) @ #vk.10 )
-                case Verifier2
-                solve( !KU( ~m ) @ #vk.11 )
-                  case Verifier1
-                  solve( !KU( ~b ) @ #vk.13 )
-                    case DBNet
-                    solve( !KU( pk(~k.1) ) @ #vk.13 )
-                      case LtkGen
-                      SOLVED // trace found
+              solve( splitEqs(0) )
+                case split_case_2
+                solve( splitEqs(2) )
+                  case split_case_1
+                  solve( !KU( ~c ) @ #vk.10 )
+                    case Verifier2
+                    solve( !KU( ~m ) @ #vk.11 )
+                      case Verifier1
+                      solve( !KU( ~b ) @ #vk.13 )
+                        case DBNet
+                        solve( !KU( pk(~k.1) ) @ #vk.13 )
+                          case LtkGen
+                          SOLVED // trace found
+                        qed
+                      qed
                     qed
                   qed
                 qed
@@ -503,7 +588,7 @@ guarded formula characterizing all counter-examples:
 simplify
 solve( VerifierState2( V, P, m, a, b, chal ) ▶₀ #l )
   case Verifier2
-  solve( Recv( $V, f(~c, <a, XOR(b, ~m)>) ) ▶₁ #l )
+  solve( Recv( $V, f(~c, <a, z>) ) ▶₁ #l )
     case DBNet_case_2
     solve( splitEqs(1) )
       case split_case_1
@@ -514,21 +599,24 @@ solve( VerifierState2( V, P, m, a, b, chal ) ▶₀ #l )
           case DBNet
           solve( !KU( ~k.3 ) @ #vk.11 )
             case LtkReveal
-            solve( !KU( f(~c, <~a, XOR(~b, ~m)>) ) @ #vk.7 )
-              case c_f
-              solve( !KU( XOR(~b, ~m) ) @ #vk.14 )
-                case c_XOR
-                solve( !KU( ~a ) @ #vk.11 )
-                  case DBNet
-                  solve( !KU( ~b ) @ #vk.13 )
+            solve( splitEqs(0) )
+              case split
+              solve( !KU( f(~c, <~a, (~b⊕~m)>) ) @ #vk.7 )
+                case c_f
+                solve( !KU( (~b⊕~m) ) @ #vk.14 )
+                  case c_xor
+                  solve( !KU( ~a ) @ #vk.11 )
                     case DBNet
-                    solve( !KU( ~c ) @ #vk.14 )
-                      case Verifier2
-                      solve( !KU( ~m ) @ #vk.15 )
-                        case Verifier1
-                        solve( !KU( pk(~k.1) ) @ #vk.15 )
-                          case LtkGen
-                          SOLVED // trace found
+                    solve( !KU( ~b ) @ #vk.13 )
+                      case DBNet
+                      solve( !KU( ~c ) @ #vk.14 )
+                        case Verifier2
+                        solve( !KU( ~m ) @ #vk.15 )
+                          case Verifier1
+                          solve( !KU( pk(~k.1) ) @ #vk.15 )
+                            case LtkGen
+                            SOLVED // trace found
+                          qed
                         qed
                       qed
                     qed
@@ -572,32 +660,38 @@ guarded formula characterizing all counter-examples:
 simplify
 solve( VerifierState2( V, P, m, a, b, chal ) ▶₀ #l )
   case Verifier2
-  solve( Recv( $V, f(~c, <a, XOR(b, ~m)>) ) ▶₁ #l )
+  solve( Recv( $V, f(~c, <a, z>) ) ▶₁ #l )
     case DBNet_case_1
     solve( !KeyComp( $P ) @ #j )
       case LtkReveal
       solve( !Ltk( $P, k ) ▶₀ #j )
         case LtkGen
-        solve( !KU( aenc(<<<~a, ~b>, $P>, sign(<<~a, ~b>, $P>, ~k)>, pk(~k.1))
+        solve( !KU( aenc(<<<~a, b>, $P>, sign(<<~a, b>, $P>, ~k)>, pk(~k.1))
                ) @ #vk.1 )
           case c_aenc
           solve( !KU( ~a ) @ #vk.9 )
             case DBNet
             solve( !KU( ~k.3 ) @ #vk.12 )
               case LtkReveal
-              solve( !KU( sign(<<~a, ~b>, $P>, ~k) ) @ #vk.12 )
+              solve( !KU( sign(<<~a, b>, $P>, ~k) ) @ #vk.12 )
                 case c_sign
-                solve( !KU( ~c ) @ #vk.9 )
-                  case Verifier2
-                  solve( !KU( ~m ) @ #vk.10 )
-                    case Verifier1
-                    solve( !KU( ~b ) @ #vk.12 )
-                      case DBNet
+                solve( splitEqs(0) )
+                  case split_case_2
+                  solve( splitEqs(2) )
+                    case split_case_1
+                    solve( !KU( ~c ) @ #vk.9 )
+                      case Verifier2
                       solve( !KU( ~k ) @ #vk.13 )
                         case LtkReveal
-                        solve( !KU( pk(~k.1) ) @ #vk.13 )
-                          case LtkGen
-                          SOLVED // trace found
+                        solve( !KU( ~m ) @ #vk.11 )
+                          case Verifier1
+                          solve( !KU( ~b ) @ #vk.13 )
+                            case DBNet
+                            solve( !KU( pk(~k.1) ) @ #vk.13 )
+                              case LtkGen
+                              SOLVED // trace found
+                            qed
+                          qed
                         qed
                       qed
                     qed
@@ -621,12 +715,12 @@ summary of summaries:
 
 analyzed: tread_aenc.spthy
 
-  complete_trace_exists (exists-trace): verified (16 steps)
+  complete_trace_exists (exists-trace): verified (20 steps)
   unique_runid (all-traces): verified (20 steps)
   end_after_start (all-traces): verified (6 steps)
   no_claim_before_fastphase (all-traces): verified (7 steps)
-  dbsec (all-traces): falsified - found trace (13 steps)
-  dbsec_on_honest_prover (all-traces): falsified - found trace (15 steps)
-  dbsec_on_compromised_prover (all-traces): falsified - found trace (15 steps)
+  dbsec (all-traces): falsified - found trace (15 steps)
+  dbsec_on_honest_prover (all-traces): falsified - found trace (16 steps)
+  dbsec_on_compromised_prover (all-traces): falsified - found trace (17 steps)
 
 ==============================================================================

@@ -1,6 +1,6 @@
 /*
 		Implementation of Meadows et al. protocol
-		Version: F(...) := <nv, XOR(np, P)>
+		Version: F(...) := <nv, np ⊕ P>
 
 		By Jorge Toro 
 */
@@ -9,11 +9,9 @@ theory meadows
 
 begin
 
-builtins : symmetric-encryption, asymmetric-encryption
+builtins : symmetric-encryption, asymmetric-encryption, xor
 
-functions: h/2, XOR/2
-
-equations: XOR(XOR(x,y), y) = x
+functions: h/2
 
 // -------------------- Protocol Rules -------------------- //
 rule Verifier1:	
@@ -39,7 +37,7 @@ rule Prover2:
 		[ ProverState1(V, P, np),
 			In(nv) ]
 	--[ Action(P) ]->
-		[ Send(P, <nv, XOR(np, P)>),
+		[ Send(P, <nv, np ⊕ P>),
 			ProverState2(V, P, np, nv) ]
 
 rule Verifier3:			//fast phase ends
@@ -61,9 +59,9 @@ rule Prover3:
 
 rule Verifier4:
 		let s = <P, locP, np, nv>
-				rp = <nv, XOR(np, P)>	          
+				rp = <nv, np ⊕ P>	          
 		in
-		[ VerifierState3(V, nv, XOR(np, P)),
+		[ VerifierState3(V, nv, np ⊕ P),
 			In(<s, h(k, s)>),
 			!Shk(V, P, k) ]
 	--[ DBSec(V, P, nv, rp),

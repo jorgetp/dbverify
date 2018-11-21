@@ -15,9 +15,9 @@ theory swiss
 
 begin
 
-builtins: 	symmetric-encryption, asymmetric-encryption
+builtins: 	symmetric-encryption, asymmetric-encryption, xor
 
-functions: 	f/2, g/2, XOR/2
+functions: 	f/2, g/2
 
 // -------------------- Protocol Rules -------------------- //
 rule Verif1:
@@ -42,7 +42,7 @@ rule Verif2:		//fast phase starts
 
 rule Prover2:
 	  let z0 = f(x, <'hello', m>)
-	  		z1 = XOR(z0, x)
+	  		z1 = z0 ⊕ x
 	  		resp = g(c, <z0, z1>)
 	  in
 	  [ ProverState1(P, n, m),
@@ -54,7 +54,7 @@ rule Prover2:
 
 rule Verif3:			//fast phase ends
 	  let z0 = f(x, <'hello', m>)
-	  		z1 = XOR(z0, x)
+	  		z1 = z0 ⊕ x
 	  		resp = g(c, <z0, z1>)
 	  in
 	  [ VerifState2(V, n, m, c),

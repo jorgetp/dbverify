@@ -4,9 +4,9 @@ theory bc_fiatshamir
 
 begin
 
-builtins: 	symmetric-encryption, asymmetric-encryption
+builtins: 	symmetric-encryption, asymmetric-encryption, xor
 
-functions: 	XOR/2, sq/1, mul/2, pow/2, check/2, true/0
+functions: 	sq/1, mul/2, pow/2, check/2, true/0
 
 equations: 	check( sq(mul(pow(x, y), r)), mul(pow(pk(x), y), sq(r)) ) = true
 
@@ -42,7 +42,7 @@ rule Ver2:			//fast phase ends
 	  [ VerifierState2(V, r_squared, sealed_commit, a, b) ]
 
 rule Prov3:
-	  let s = mul(pow(x, XOR(a, b)), r)
+	  let s = mul(pow(x, a ⊕ b), r)
 	  in
 	  [ ProverState2(P, r, b, ck, a),
 	    !Ltk(P, x) ]
@@ -52,7 +52,7 @@ rule Prov3:
 
 rule Ver3:
 	  let left = sq(s)
-	      right = mul(pow(pkP, XOR(a,b)), r_squared)
+	      right = mul(pow(pkP, a ⊕ b), r_squared)
 	      checkEq = check(left, right)
 	  in
 	  [ In(<ck, s>),
