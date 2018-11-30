@@ -75,6 +75,6 @@ To deal with exclusive-OR operations, we recommend you use the built-in ```xor``
 
 ## Contact
 
-Should you have any inquiries, email me at ```jorgeXtoroYuniXlu``` (where ```X``` is dot and ```Y``` is at).
+Should you have any inquiries, don't hesitate to [contact me](https://jorgetp.github.io/contact/).
 
 
