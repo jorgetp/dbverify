@@ -1,6 +1,6 @@
 # DBVerify
 
-This repository contains [Tamarin](https://tamarin-prover.github.io/) symbolic models for a number of state-of-the-art **distance bounding protocols**, which are cryptogrphic protocols that, in addition to authentication, are meant to guarantee physical proximity between the principals.
+This repository contains [Tamarin](https://tamarin-prover.github.io/)-based symbolic models for a number of **distance bounding protocols**. These are cryptogrphic protocols that, in addition to authentication, are meant to guarantee physical proximity between the participants.
 
 For further details see our **IEEE S\&P'18** paper [Distance-Bounding Protocols: Verification without Time and Location](https://jorgetp.github.io/files/papers/SP18-preprint.pdf).
 
@@ -15,10 +15,6 @@ For further details see our **IEEE S\&P'18** paper [Distance-Bounding Protocols:
   * ```results.html```: the ouput of the Python script
 * ```README.md```: this readme
 
-
-## Presentation
-For the sake of presentation, we recommend you indent with 2-space tabs in your editor.
-
 ## How to DBVerify
 Execute the ```Makefile``` which does the following:
 
@@ -26,9 +22,9 @@ Execute the ```Makefile``` which does the following:
 ```
 //GENERIC CODE AFTER THIS LINE
 ```
-in each one of the ```.spthy``` files. **Warning: this overrides whatever is thereafter**.
+in each one of the ```.spthy``` files. **\[Warning\] this overrides whatever is thereafter!!!**.
 
-* The Tamarin proof of each one of the files from step above is written into the corresponding ```.proof``` file.
+* Writes the Tamarin proof into the corresponding ```.proof``` file.
 
 ## DBVerify your own protocol
 
@@ -82,6 +78,10 @@ To identify the type of attack(s) against a protocol, say ```my_protocol.spthy``
 ## On exclusive-OR operations
 
 To deal with exclusive-OR operations, we recommend you use the built-in ```xor``` that comes with Tamarin version 1.4.0 or later (see releases [here](https://github.com/tamarin-prover/tamarin-prover/releases)).
+
+## Presentation
+
+For the sake of presentation, we recommend you indent with 2-space tabs in your editor.
 
 ## Contact
 
