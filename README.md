@@ -1,8 +1,8 @@
 # DBVerify
 
-This repository contains [Tamarin](https://tamarin-prover.github.io/)-based symbolic models for a number of state-of-the-art **distance bounding protocols**, which are cryptogrphic protocols that, in addition to authentication, are meant to guarantee physical proximity between the principals.
+This repository contains [Tamarin](https://tamarin-prover.github.io/) symbolic models for a number of state-of-the-art **distance bounding protocols**, which are cryptogrphic protocols that, in addition to authentication, are meant to guarantee physical proximity between the principals.
 
-For further details see our **IEEE S\&P'18** paper [Distance-Bounding Protocols: Verification without Time and Location](https://drive.google.com/file/d/1VtMDUKLYr8BTgKy8aSjLG-UBS8VcKcuR/view).
+For further details see our **IEEE S\&P'18** paper [Distance-Bounding Protocols: Verification without Time and Location](https://jorgetp.github.io/files/papers/SP18-preprint.pdf).
 
 ## Folder layout
 * ```msc```: contains the message sequence charts of the protocols
@@ -75,6 +75,6 @@ To deal with exclusive-OR operations, we recommend you use the built-in ```xor``
 
 ## Contact
 
-Should you have any inquiries, don't hesitate to [contact me](https://jorgetp.github.io/contact/).
+Should you have any inquiries or should you want to report bugs, please [contact me](https://jorgetp.github.io/contact/).
 
 
