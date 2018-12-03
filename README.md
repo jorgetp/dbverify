@@ -5,22 +5,30 @@ This repository contains [Tamarin](https://tamarin-prover.github.io/) symbolic m
 For further details see our **IEEE S\&P'18** paper [Distance-Bounding Protocols: Verification without Time and Location](https://jorgetp.github.io/files/papers/SP18-preprint.pdf).
 
 ## Folder layout
-* [msc](/msc/): contains the message sequence charts of the protocols
-* [model](/model/): contains:
+* [msc](/msc/) contains the message sequence charts of the protocols
+* [model](/model/) contains:
   * Tamarin models: ```.spthy``` files
   * Tamarin proofs: ```.proof``` files
   * ```generic```: the generic Tamarin code (includes the security lemmas)
   * ```Makefile```: to verify all protocols in this folder
   * ```collect.py```: a Python script to collect the results of the verification
   * ```results.html```: the ouput of the Python script
+* ```README.md```: this readme
 
-For the sake of presentation, we recommend you use 2-space width tabs in your editor.
+
+## Presentation
+For the sake of presentation, we recommend you indent with 2-space tabs in your editor.
 
 ## How to DBVerify
 Execute the ```Makefile``` which does the following:
 
-1. The content of ```generic``` is written right after the line ```//GENERIC CODE AFTER THIS LINE``` in each one of the ```.spthy``` files. *Be aware that this overrides whatever is thereafter!!!*.
-2. The Tamarin proof of each one of the files from step above is written into the corresponding ```.proof``` file.
+* Writes the content of ```generic``` right after the line
+```
+//GENERIC CODE AFTER THIS LINE
+```
+in each one of the ```.spthy``` files. **Warning: this overrides whatever is thereafter**.
+
+* The Tamarin proof of each one of the files from step above is written into the corresponding ```.proof``` file.
 
 ## DBVerify your own protocol
 
