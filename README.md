@@ -87,4 +87,8 @@ For the sake of presentation, we recommend you indent with 2-space tabs in your 
 
 Should you have any inquiries or should you want to report bugs, please [contact me](https://jorgetp.github.io/contact/).
 
+## Acknowledgment
+
+This work is supported by Luxembourg [FNR](https://www.fnr.lu/)'s grant **AFR-PhD-10188265**.
+
 
