@@ -1,4 +1,4 @@
-import os
+import os, re
 
 def protocol_name(results):
 	return results.get('Protocol')
@@ -42,10 +42,12 @@ def create_html_code():
 	proto_count = 0
 
 	for file in os.listdir("./"):
-		
+
 		if '.proof' in file:
+
+			proto_name = file.replace('.proof', '')
 			
-			print '\tProcessing:', file
+			print '\tProcessing protocol:', proto_name
 
 			proto_count += 1
 			
@@ -55,7 +57,8 @@ def create_html_code():
 			lines = lines[lines.index('summary of summaries:\n')+1:]
 			
 			for line in lines:
-				if ':' in line:
+				if ':' in line[:-4]:
+					
 					l = line.split(':')
 					
 					lemma = l[0].strip()
@@ -77,13 +80,23 @@ def create_html_code():
 
 					results[ lemma ] = result
 
+			# lines of code
+			results['LoC'] = str(len(open(proto_name + '.spthy').readlines()))
+
+			# timings
+			real = lines[-3].split()[1]
+			user = lines[-2].split()[1]
+			sys = lines[-1].split()[1]
+			results['Time (real, user, sys)'] = real + ", " + user + ", " + sys			
+
 			global_results.append(results)
 
-	# move 'warning' column to the end		
+	# move warning, loc and time columns to the end		
 	if 'WARNING' in lemmas:
 		index = lemmas.index('WARNING')
 		lemmas = lemmas[:index] + lemmas[index+1:] + ['WARNING']
-
+	lemmas = lemmas + ['LoC', 'Time (real, user, sys)']
+	
 	global_results.sort(key=protocol_name)
 
 	# create HTML code

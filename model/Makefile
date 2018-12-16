@@ -9,7 +9,6 @@ verify: $(PROTOS:.spthy=.proof)
 	echo end >> $<.tmp
 	cat $<.tmp > $<
 	$(RM) $<.tmp
-	tamarin-prover --prove $< > $@
-
-
-
+	(time tamarin-prover --prove $< ) > $@.tmp 2>&1
+	(sed -n '/^theory $* begin/,$$p' $@.tmp) > $@
+	$(RM) $@.tmp

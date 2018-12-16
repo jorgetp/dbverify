@@ -1,9 +1,3 @@
-maude tool: 'maude'
- checking version: 2.7.1. OK.
- checking installation: OK.
-SAPIC tool: 'sapic'
-Checking availablity ... OK.
-
 theory bc_fiatshamir begin
 
 // Function signature and definition of the equational theory E
@@ -12491,3 +12485,7 @@ analyzed: bc_fiatshamir.spthy
   dbsec_on_compromised_prover (all-traces): falsified - found trace (15 steps)
 
 ==============================================================================
+
+real	1m46.338s
+user	3m22.047s
+sys	0m25.800s

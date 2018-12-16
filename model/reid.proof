@@ -1,9 +1,3 @@
-maude tool: 'maude'
- checking version: 2.7.1. OK.
- checking installation: OK.
-SAPIC tool: 'sapic'
-Checking availablity ... OK.
-
 theory reid begin
 
 // Function signature and definition of the equational theory E
@@ -849,3 +843,7 @@ analyzed: reid.spthy
   dbsec_on_compromised_prover (all-traces): verified (74 steps)
 
 ==============================================================================
+
+real	0m2.538s
+user	0m4.786s
+sys	0m0.599s

@@ -1,9 +1,3 @@
-maude tool: 'maude'
- checking version: 2.7.1. OK.
- checking installation: OK.
-SAPIC tool: 'sapic'
-Checking availablity ... OK.
-
 theory ka begin
 
 // Function signature and definition of the equational theory E
@@ -1196,3 +1190,7 @@ analyzed: ka.spthy
   dbsec_on_compromised_prover (all-traces): verified (161 steps)
 
 ==============================================================================
+
+real	0m18.607s
+user	0m35.719s
+sys	0m4.898s

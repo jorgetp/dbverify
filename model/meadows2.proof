@@ -1,9 +1,3 @@
-maude tool: 'maude'
- checking version: 2.7.1. OK.
- checking installation: OK.
-SAPIC tool: 'sapic'
-Checking availablity ... OK.
-
 theory meadows2 begin
 
 // Function signature and definition of the equational theory E
@@ -928,3 +922,7 @@ analyzed: meadows2.spthy
   dbsec_on_compromised_prover (all-traces): verified (46 steps)
 
 ==============================================================================
+
+real	0m4.992s
+user	0m9.603s
+sys	0m1.409s

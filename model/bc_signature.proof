@@ -1,9 +1,3 @@
-maude tool: 'maude'
- checking version: 2.7.1. OK.
- checking installation: OK.
-SAPIC tool: 'sapic'
-Checking availablity ... OK.
-
 theory bc_signature begin
 
 // Function signature and definition of the equational theory E
@@ -751,3 +745,7 @@ analyzed: bc_signature.spthy
   dbsec_on_compromised_prover (all-traces): falsified - found trace (13 steps)
 
 ==============================================================================
+
+real	0m5.741s
+user	0m10.826s
+sys	0m1.303s

@@ -1,9 +1,3 @@
-maude tool: 'maude'
- checking version: 2.7.1. OK.
- checking installation: OK.
-SAPIC tool: 'sapic'
-Checking availablity ... OK.
-
 theory munilla begin
 
 // Function signature and definition of the equational theory E
@@ -3173,3 +3167,7 @@ analyzed: munilla.spthy
   dbsec_on_compromised_prover (all-traces): verified (565 steps)
 
 ==============================================================================
+
+real	3m22.370s
+user	6m41.252s
+sys	1m1.952s

@@ -1,9 +1,3 @@
-maude tool: 'maude'
- checking version: 2.7.1. OK.
- checking installation: OK.
-SAPIC tool: 'sapic'
-Checking availablity ... OK.
-
 theory paysafe begin
 
 // Function signature and definition of the equational theory E
@@ -708,3 +702,7 @@ analyzed: paysafe.spthy
   dbsec_on_compromised_prover (all-traces): falsified - found trace (16 steps)
 
 ==============================================================================
+
+real	0m6.301s
+user	0m11.612s
+sys	0m1.770s

@@ -1,9 +1,3 @@
-maude tool: 'maude'
- checking version: 2.7.1. OK.
- checking installation: OK.
-SAPIC tool: 'sapic'
-Checking availablity ... OK.
-
 theory tread_senc begin
 
 // Function signature and definition of the equational theory E
@@ -772,3 +766,7 @@ analyzed: tread_senc.spthy
   dbsec_on_compromised_prover (all-traces): falsified - found trace (18 steps)
 
 ==============================================================================
+
+real	1m37.408s
+user	3m6.926s
+sys	0m25.229s

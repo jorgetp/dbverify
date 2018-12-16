@@ -1,9 +1,3 @@
-maude tool: 'maude'
- checking version: 2.7.1. OK.
- checking installation: OK.
-SAPIC tool: 'sapic'
-Checking availablity ... OK.
-
 theory crcs2 begin
 
 // Function signature and definition of the equational theory E
@@ -782,3 +776,7 @@ analyzed: crcs2.spthy
   dbsec_on_compromised_prover (all-traces): falsified - found trace (12 steps)
 
 ==============================================================================
+
+real	8m28.921s
+user	16m50.705s
+sys	2m35.534s

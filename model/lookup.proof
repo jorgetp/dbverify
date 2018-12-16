@@ -1,9 +1,3 @@
-maude tool: 'maude'
- checking version: 2.7.1. OK.
- checking installation: OK.
-SAPIC tool: 'sapic'
-Checking availablity ... OK.
-
 theory lookup begin
 
 // Function signature and definition of the equational theory E
@@ -752,3 +746,7 @@ analyzed: lookup.spthy
   dbsec_on_compromised_prover (all-traces): verified (71 steps)
 
 ==============================================================================
+
+real	0m2.018s
+user	0m2.926s
+sys	0m0.427s
