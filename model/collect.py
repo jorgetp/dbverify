@@ -1,4 +1,28 @@
-import os, re
+import os, re, platform
+
+
+def to_timeformat(time):
+	hours = int(time / 3600)
+	time -= hours * 3600
+	mins = int(time / 60)
+	time  -= mins * 60
+	secs = time
+
+	tt = str(mins) + 'm' + '{0:.3f}'.format(secs) + 's'
+	if hours > 0:
+		tt = hours + 'h' + tt
+	return tt
+
+def to_secs(time):
+	t = 0.0
+	if 'h' in time:
+		t += int(time.split('h')[0]) * 3600
+		time = time.split('h')[1]
+	if 'm' in time:
+		t += int(time.split('m')[0]) * 60
+		time = time.split('m')[1]
+	t += float(time.split('s')[0])
+	return t
 
 def protocol_name(results):
 	return results.get('Protocol')
@@ -38,6 +62,11 @@ def create_html_code():
 	
 	global_results = []
 	lemmas = []
+
+	real_sum = 0
+	user_sum = 0
+	sys_sum = 0
+	loc_sum = 0
 
 	proto_count = 0
 
@@ -81,12 +110,19 @@ def create_html_code():
 					results[ lemma ] = result
 
 			# lines of code
-			results['LoC'] = str(len(open(proto_name + '.spthy').readlines()))
+			loc = len(open(proto_name + '.spthy').readlines())
+			results['LoC'] = str(loc)
+			loc_sum  += loc
 
 			# timings
 			real = lines[-3].split()[1]
 			user = lines[-2].split()[1]
 			sys = lines[-1].split()[1]
+
+			real_sum += to_secs(real)
+			user_sum += to_secs(user)
+			sys_sum += to_secs(sys)
+
 			results['Time (real, user, sys)'] = real + ", " + user + ", " + sys			
 
 			global_results.append(results)
@@ -117,7 +153,13 @@ def create_html_code():
 	head += "</style>\n</head>\n"
 
 	html 	= "<!DOCTYPE html>\n<html>\n"+ head +"<body>\n"
-	html += "<h2>Verification results: " + str(proto_count) + " protocol(s) analyzed</h2>\n\n"
+	html += "<h2>Verification results</h2>\n\n"
+	#html += "<p>System info: \'<b>" + str(platform.uname()) + "\'</b></p>\n\n"
+	#html += "<p>Protocol models in: \'<b>" + os.path.abspath('.') + "\'</b></p>\n\n"
+	html += "<p>Number of protocols analyzed: <b>" + str(proto_count) + "</b></p>\n\n"
+	html += "<p>Average number of lines of code: <b>" + str( loc_sum / proto_count ) + "</b></p>\n\n"
+	html += "<p>Average timings: real <b>" + to_timeformat(real_sum / proto_count) + "</b>, user <b>" + to_timeformat(user_sum / proto_count) + "</b>, sys <b>" + to_timeformat(sys_sum / proto_count) +"</b></p>\n\n"
+	
 	html += "<table data-role=\"table\" data-mode=\"columntoggle\" class=\"ui-responsive\">\n"
 	html += list_to_table_head(lemmas)
 	
