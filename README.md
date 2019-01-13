@@ -2,7 +2,7 @@
 
 This repository contains [Tamarin](https://tamarin-prover.github.io/)-based symbolic models for a number of **distance bounding protocols**. These are cryptogrphic protocols that, in addition to authentication, are meant to guarantee physical proximity between the participants.
 
-For further details see our **IEEE S\&P'18** paper [Distance-Bounding Protocols: Verification without Time and Location](https://jorgetp.github.io/files/papers/SP18-preprint.pdf).
+For further details see our **IEEE S\&P'18** paper [Distance-Bounding Protocols: Verification without Time and Location](https://drive.google.com/open?id=1xfNu-trtMVeyqSrh_UcQxRFWrlIuAIHI).
 
 ## Folder layout
 * [msc](/msc/) contains the message sequence charts of the protocols
