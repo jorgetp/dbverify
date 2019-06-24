@@ -1,0 +1,83 @@
+(* Example protocol *)
+free c.
+
+private fun getSharedKey/1.
+
+fun xor/2.
+reduc unpackXor(xor(a,b),a) = b
+  otherwise unpackXor(xor(a,b),b) = a.
+
+fun mac/2.
+
+data Ready/0.
+
+let Verifier =
+(*  in(c, idV);*)
+  startTimer;
+  new nonceV;
+  out(c, nonceV);
+  in(c, (=nonceV, xorP));
+  stopTimer;
+  in(c, (idV, nonceP, =nonceV, macP));
+  if xorP = xor(nonceP, idV) then
+  if macP = mac(getSharedKey(idV), (idV, nonceP, nonceV)) then
+  event Verified(idV).
+
+let Prover =
+(*  out(c, idP);*)
+  in(c, nonceV);
+  new nonceP;
+  out(c, (nonceV,xor(nonceP,idP)));
+  in(c, b);
+  let macP = mac(getSharedKey(idP), (idP, nonceP, nonceV)) in
+  out(c, (idP, nonceP, nonceV, macP)).
+
+let DishonestProver =
+  out(c, (idP, getSharedKey(idP))).
+
+let DishonestTerroristProver =
+  (in(c, message);
+  let macMessage = mac(getSharedKey(idP), message) in
+  out(c, macMessage))
+  | out(c, idP).
+
+(* Check whether prover can be successfully verified for identity id 
+*)
+query ev:Verified(id).
+
+
+(* Check regular use *)
+(*
+query ev:Verified(a) ==> ev:StartProof(a).
+*)
+(*
+process
+  [ !Verifier | !(new id; let idP = id in !(event StartProof(idP); Prover)) ]
+*)
+
+(* Check for mafia fraud/relay security *)
+
+process
+  [ !Verifier ] | [ !(new id; let idP = id in !Prover) ]
+
+
+(* Check for uncompromised distance bounding security *)
+(*
+process
+  [ !Verifier | (new id2; let idP = id2 in DishonestProver) ]
+| [ !(new id; let idP = id in !Prover) | (new id2; let idP = id2 in DishonestProver) ]
+*)
+
+(* Check for terrorist fraud security *)
+(*
+process
+  [ !Verifier ]
+| [ !(new id; let idP = id in !DishonestTerroristProver) ]
+*)
+
+(* Check for distance fraud security (no local attacker) *)
+(*
+process
+  [ !Verifier ]
+| [ !(new id; let idP = id in !DishonestProver) ]
+*)

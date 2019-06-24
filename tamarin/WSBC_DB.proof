@@ -1,0 +1,4291 @@
+theory WSBC_DB begin
+
+// Function signature and definition of the equational theory E
+
+builtins: multiset
+functions: DEXOR/2, XOR/2, adec/2, aenc/2, fst/1, h/1, omega/2, pair/2,
+           pk/1, sdec/2, senc/2, snd/1
+equations:
+    DEXOR(XOR(x, y), x) = y,
+    adec(aenc(x.1, pk(x.2)), x.2) = x.1,
+    fst(<x.1, x.2>) = x.1,
+    sdec(senc(x.1, x.2), x.2) = x.1,
+    snd(<x.1, x.2>) = x.2
+
+
+
+rule (modulo E) Reader1:
+   [ Fr( ~alpha ), Fr( ~n1 ) ]
+  --[ Start( ~alpha ) ]->
+   [ Out( <'request', ~n1> ), ReaderState1( ~alpha, ~n1 ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Tag1:
+   [ In( <'request', n1> ), Fr( ~s ), Fr( ~n2 ), Fr( ~j ), !Shk( $T, $R, k )
+   ]
+  --[ Start( ~s ) ]->
+   [
+   Send( $T, <~n2, senc(<'1', n1, $T, ~s, n1, ~j>, k)> ),
+   TagState1( $R, $T, ~s, ~j, n1, ~n2 ), MayLeak( $T, ~s )
+   ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Reader2:
+   [
+   ReaderState1( alpha, n1 ), In( <n2, senc(<'1', n1, $T, s, n1, j>, k)> ),
+   !Shk( $R, $T, k )
+   ]
+  --[ Send( $R, alpha ) ]->
+   [ Out( alpha ), ReaderState2( $R, $T, alpha, s, n1, n2, j ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Tag2:
+   [ TagState1( R, T, s, j, n1, n2 ), In( alpha ) ]
+  -->
+   [ Send( T, XOR(alpha, s) ), TagState2( R, T, alpha, s, j, n1, n2 ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Reader3:
+   [ ReaderState2( R, T, alpha, s, n1, n2, j ), Recv( R, XOR(alpha, s) ) ]
+  -->
+   [ ReaderState3( R, T, alpha, s, n1, n2, j ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Tag3:
+   [ TagState2( R, T, alpha, s, j, n1, n2 ), Fr( ~n3 ), !Shk( R, T, k ) ]
+  -->
+   [
+   Send( T,
+         <omega(k, j), h(<j, n1, T, s, n2>), 
+          senc(<'2', j, ~n3, T, alpha, XOR(alpha, s), n1>, k)>
+   ),
+   TagState3( R, T, alpha, s, j, n1, n2, ~n3 )
+   ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Reader4:
+   [
+   ReaderState3( R, T, alpha, s, n1, n2, j ),
+   In( <omega(k, j), h(<j, n1, T, s, n2>), 
+        senc(<'2', j, n3, T, alpha, XOR(alpha, s), n1>, k)>
+   ),
+   !Shk( R, T, k )
+   ]
+  -->
+   [ ReaderState4( R, T, alpha, s, n1, n2, n3, j ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Tag4:
+   [ TagState3( R, T, alpha, s, j, n1, n2, n3 ), Fr( ~n4 ), !Shk( R, T, k )
+   ]
+  --[ End( s ) ]->
+   [
+   Send( T, <~n4, senc(<'3', j, ~n4, ('1'+T), n3, n1>, k)> ),
+   CounterInTag( T, R, ('1'+j) )
+   ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Reader5:
+   [
+   ReaderState4( R, T, alpha, s, n1, n2, n3, j ),
+   In( <n4, senc(<'3', j, n4, ('1'+T), n3, n1>, k)> ), !Shk( R, T, k )
+   ]
+  --[ DBSec( R, T, alpha, XOR(alpha, s) ), End( alpha ) ]->
+   [ ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) LtkGen:
+   [ Fr( ~k ) ]
+  --[ Once( $X ) ]->
+   [ !Ltk( $X, ~k ), !Pk( $X, pk(~k) ), Out( pk(~k) ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) ShkGen:
+   [ Fr( ~k ) ] --[ Once( <$X, $Y> ) ]-> [ !Shk( $X, $Y, ~k ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) LtkReveal:
+   [ !Ltk( $X, k ) ]
+  --[ !Compromise( $X ) ]->
+   [ Out( k ), !Compromise( $X ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) ShkRevealX:
+   [ !Shk( $X, $Y, k ) ]
+  --[ !Compromise( $X ) ]->
+   [ Out( k ), !Compromise( $X ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) ShkRevealY:
+   [ !Shk( $X, $Y, k ) ]
+  --[ !Compromise( $Y ) ]->
+   [ Out( k ), !Compromise( $Y ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) DBInject:
+   [ In( m ), !Compromise( $X ) ] --> [ Send( $X, m ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) DBSend:
+   [ Send( $X, m ) ]
+  --[ Send( $X, m ), Action( $X ) ]->
+   [ Net( m ), Out( m ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) DBRecv:
+   [ Net( m ) ] --[ Action( $Y ), Recv( $Y, m ) ]-> [ Recv( $Y, m ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Leak:
+   [ MayLeak( $X, m ) ] --[ Action( $X ), Collusion( ) ]-> [ Out( m ) ]
+
+  /* has exactly the trivial AC variant */
+
+lemma reachability:
+  exists-trace
+  "∃ V P chal resp #i #j #k #l.
+    ((((((((Send( V, chal ) @ #i) ∧ (Send( P, resp ) @ #j)) ∧
+          (Recv( V, resp ) @ #k)) ∧
+         (DBSec( V, P, chal, resp ) @ #l)) ∧
+        (#i < #j)) ∧
+       (#j < #k)) ∧
+      (#k < #l)) ∧
+     (¬(∃ C #r. !Compromise( C ) @ #r))) ∧
+    (¬(∃ #c. Collusion( ) @ #c))"
+/*
+guarded formula characterizing all satisfying traces:
+"∃ V P chal resp #i #j #k #l.
+  (Send( V, chal ) @ #i) ∧
+  (Send( P, resp ) @ #j) ∧
+  (Recv( V, resp ) @ #k) ∧
+  (DBSec( V, P, chal, resp ) @ #l)
+ ∧
+  (#i < #j) ∧
+  (#j < #k) ∧
+  (#k < #l) ∧
+  (∀ C #r. (!Compromise( C ) @ #r) ⇒ ⊥) ∧
+  (∀ #c. (Collusion( ) @ #c) ⇒ ⊥)"
+*/
+simplify
+solve( Net( XOR(chal, s) ) ▶₀ #k )
+  case DBSend_case_1
+  solve( ReaderState4( $Y, P, chal, ~s, n1, n2, n3, j ) ▶₀ #l )
+    case Reader4_case_1
+    solve( !Shk( $Y, $Y.1, k.1 ) ▶₂ #l )
+      case ShkGen
+      solve( Send( $Y, ~alpha ) @ #i )
+        case Reader2
+        solve( ReaderState1( ~alpha, n1 ) ▶₀ #i )
+          case Reader1
+          solve( Send( $T, XOR(~alpha, ~s) ) @ #j.2 )
+            case DBSend
+            solve( Send( $T, XOR(~alpha, ~s) ) ▶₀ #j.2 )
+              case Tag2
+              solve( !KU( senc(<'3', j, n4, ('1'+$T), n3, ~n1>, ~k) ) @ #vk.2 )
+                case DBSend
+                solve( !KU( omega(~k, ~j) ) @ #vk.9 )
+                  case DBSend
+                  solve( !KU( h(<~j, ~n1, $T, ~s, n2>) ) @ #vk.11 )
+                    case DBSend
+                    solve( !KU( ~n2 ) @ #vk.13 )
+                      case DBSend
+                      solve( !KU( senc(<'1', ~n1, $T, ~s, ~n1, ~j>, ~k) ) @ #vk.14 )
+                        case DBSend
+                        solve( !KU( ~alpha ) @ #vk.10 )
+                          case Reader2
+                          solve( !KU( ~n1 ) @ #vk.13 )
+                            case Reader1
+                            solve( !KU( ~n4 ) @ #vk.11 )
+                              case DBSend_case_1
+                              solve( !KU( senc(<'2', ~j, ~n3, $R, ~alpha, XOR(~alpha, ~s), ~n1>, ~k)
+                                     ) @ #vk.14 )
+                                case DBSend
+                                SOLVED // trace found
+                              qed
+                            qed
+                          qed
+                        qed
+                      qed
+                    qed
+                  qed
+                qed
+              qed
+            qed
+          qed
+        qed
+      qed
+    qed
+  qed
+qed
+
+lemma unique_runid:
+  all-traces
+  "∀ x #i #j. ((Start( x ) @ #i) ∧ (Start( x ) @ #j)) ⇒ (#i = #j)"
+/*
+guarded formula characterizing all counter-examples:
+"∃ x #i #j. (Start( x ) @ #i) ∧ (Start( x ) @ #j) ∧ ¬(#i = #j)"
+*/
+simplify
+solve( (#i < #j)  ∥ (#j < #i) )
+  case case_1
+  solve( Start( x ) @ #i )
+    case Reader1
+    solve( Start( ~alpha ) @ #j )
+      case Reader1
+      by contradiction /* cyclic */
+    qed
+  next
+    case Tag1
+    solve( !Shk( $T, $R, k ) ▶₄ #i )
+      case ShkGen
+      solve( Start( ~s ) @ #j.1 )
+        case Tag1
+        by contradiction /* cyclic */
+      qed
+    qed
+  qed
+next
+  case case_2
+  solve( Start( x ) @ #i )
+    case Reader1
+    solve( Start( ~alpha ) @ #j )
+      case Reader1
+      by contradiction /* cyclic */
+    qed
+  next
+    case Tag1
+    solve( !Shk( $T, $R, k ) ▶₄ #i )
+      case ShkGen
+      solve( Start( ~s ) @ #j.1 )
+        case Tag1
+        by contradiction /* cyclic */
+      qed
+    qed
+  qed
+qed
+
+lemma end_after_start:
+  all-traces
+  "∀ x #j.
+    (End( x ) @ #j) ⇒ (∃ #i. (Start( x ) @ #i) ∧ ((#i = #j) ∨ (#i < #j)))"
+/*
+guarded formula characterizing all counter-examples:
+"∃ x #j.
+  (End( x ) @ #j) ∧ ∀ #i. (Start( x ) @ #i) ⇒ (¬(#i = #j)) ∧ (¬(#i < #j))"
+*/
+simplify
+solve( End( x ) @ #j )
+  case Reader5
+  solve( ReaderState4( R, T, x, s, n1, n2, n3, j.1 ) ▶₀ #j )
+    case Reader4_case_1
+    by contradiction /* from formulas */
+  next
+    case Reader4_case_2
+    by contradiction /* from formulas */
+  next
+    case Reader4_case_3
+    by contradiction /* from formulas */
+  next
+    case Reader4_case_4
+    by contradiction /* from formulas */
+  qed
+next
+  case Tag4
+  solve( TagState3( R, T, alpha, x, j.1, n1, n2, n3 ) ▶₀ #j )
+    case Tag3
+    by contradiction /* from formulas */
+  qed
+qed
+
+lemma fast_before_claim:
+  all-traces
+  "∀ V P chal resp #l.
+    (DBSec( V, P, chal, resp ) @ #l) ⇒
+    ((∃ #i #j.
+       (((Send( V, chal ) @ #i) ∧ (Recv( V, resp ) @ #j)) ∧ (#i < #l)) ∧
+       (#j < #l)) ∨
+     (∃ #j. !Compromise( V ) @ #j))"
+/*
+guarded formula characterizing all counter-examples:
+"∃ V P chal resp #l.
+  (DBSec( V, P, chal, resp ) @ #l)
+ ∧
+  (∀ #i #j.
+    (Send( V, chal ) @ #i) ∧ (Recv( V, resp ) @ #j)
+   ⇒
+    ((¬(#i < #l)) ∨ (¬(#j < #l)))) ∧
+  (∀ #j. (!Compromise( V ) @ #j) ⇒ ⊥)"
+*/
+simplify
+solve( ReaderState4( V, P, chal, s, n1, n2, n3, j ) ▶₀ #l )
+  case Reader4_case_1
+  by contradiction /* from formulas */
+next
+  case Reader4_case_2
+  by contradiction /* from formulas */
+next
+  case Reader4_case_3
+  by contradiction /* from formulas */
+next
+  case Reader4_case_4
+  by contradiction /* from formulas */
+qed
+
+restriction once:
+  "∀ x #i #j. ((Once( x ) @ #i) ∧ (Once( x ) @ #j)) ⇒ (#i = #j)"
+  // safety formula
+
+rule (modulo E) SetExpiry:
+   [ ] --[ Expiry( ), Once( 'expiry' ) ]-> [ ]
+
+  /* has exactly the trivial AC variant */
+
+restriction no_collusion_after_expiry:
+  "∀ #i #j. ((Expiry( ) @ #i) ∧ (Collusion( ) @ #j)) ⇒ (#j < #i)"
+  // safety formula
+
+restriction sessions_complete_before_expiry:
+  "∀ x #i #e.
+    (((Start( x ) @ #i) ∧ (Expiry( ) @ #e)) ∧ (#i < #e)) ⇒
+    (∃ #j. (End( x ) @ #j) ∧ (#j < #e))"
+
+lemma dbsec:
+  all-traces
+  "∀ V P chal resp #l.
+    (DBSec( V, P, chal, resp ) @ #l) ⇒
+    ((((∃ #i #j #k.
+         ((((Send( V, chal ) @ #i) ∧ (Action( P ) @ #j)) ∧
+           (Recv( V, resp ) @ #k)) ∧
+          (#i < #j)) ∧
+         (#j < #k)) ∨
+       (∃ P2 #p #p2 #i #j #k.
+         ((((((!Compromise( P ) @ #p) ∧ (!Compromise( P2 ) @ #p2)) ∧
+             (Send( V, chal ) @ #i)) ∧
+            (Action( P2 ) @ #j)) ∧
+           (Recv( V, resp ) @ #k)) ∧
+          (#i < #j)) ∧
+         (#j < #k))) ∨
+      (∃ #j. !Compromise( V ) @ #j)) ∨
+     (∃ #j. Collusion( ) @ #j))"
+/*
+guarded formula characterizing all counter-examples:
+"∃ V P chal resp #l.
+  (DBSec( V, P, chal, resp ) @ #l)
+ ∧
+  (∀ #i #j #k.
+    (Send( V, chal ) @ #i) ∧ (Action( P ) @ #j) ∧ (Recv( V, resp ) @ #k)
+   ⇒
+    ((¬(#i < #j)) ∨ (¬(#j < #k)))) ∧
+  (∀ P2 #p #p2 #i #j #k.
+    (!Compromise( P ) @ #p) ∧
+    (!Compromise( P2 ) @ #p2) ∧
+    (Send( V, chal ) @ #i) ∧
+    (Action( P2 ) @ #j) ∧
+    (Recv( V, resp ) @ #k)
+   ⇒
+    ((¬(#i < #j)) ∨ (¬(#j < #k)))) ∧
+  (∀ #j. (!Compromise( V ) @ #j) ⇒ ⊥) ∧
+  (∀ #j. (Collusion( ) @ #j) ⇒ ⊥)"
+*/
+simplify
+solve( ReaderState4( V, P, chal, s, n1, n2, n3, j ) ▶₀ #l )
+  case Reader4_case_1
+  solve( !Shk( $X, $Y, k ) ▶₂ #l )
+    case ShkGen
+    solve( !KU( senc(<'3', j, n4, ('1'+$Y), n3, ~n1>, ~k) ) @ #vk.2 )
+      case c_senc
+      solve( !KU( ~k ) @ #vk.17 )
+        case ShkRevealY
+        solve( !KU( omega(~k, j) ) @ #vk.7 )
+          case c_omega
+          solve( !KU( h(<j, ~n1, $Y, ~s, n2>) ) @ #vk.10 )
+            case c_h
+            solve( !KU( ~s ) @ #vk.32 )
+              case DBSend_case_1
+              solve( !KU( ~k.1 ) @ #vk.33 )
+                case ShkRevealY
+                solve( !KU( senc(<'2', j, n3, $Y, ~alpha, XOR(~alpha, ~s), ~n1>, ~k)
+                       ) @ #vk.14 )
+                  case c_senc
+                  solve( !KU( senc(<'1', ~n1, $Y, ~s, ~n1, j>, ~k) ) @ #vk.20 )
+                    case c_senc
+                    solve( !KU( ~alpha ) @ #vk.22 )
+                      case Reader2
+                      solve( !KU( ~n1 ) @ #vk.43 )
+                        case Reader1
+                        solve( !KU( XOR(~alpha, ~s) ) @ #vk.46 )
+                          case DBSend_case_1
+                          SOLVED // trace found
+                        qed
+                      qed
+                    qed
+                  qed
+                qed
+              qed
+            qed
+          qed
+        qed
+      qed
+    qed
+  qed
+qed
+
+lemma dbsec_hnst:
+  all-traces
+  "∀ V P chal resp #l.
+    (DBSec( V, P, chal, resp ) @ #l) ⇒
+    ((((∃ #i #j #k.
+         ((((Send( V, chal ) @ #i) ∧ (Action( P ) @ #j)) ∧
+           (Recv( V, resp ) @ #k)) ∧
+          (#i < #j)) ∧
+         (#j < #k)) ∨
+       (∃ #j. !Compromise( V ) @ #j)) ∨
+      (∃ #j. !Compromise( P ) @ #j)) ∨
+     (∃ #j. Collusion( ) @ #j))"
+/*
+guarded formula characterizing all counter-examples:
+"∃ V P chal resp #l.
+  (DBSec( V, P, chal, resp ) @ #l)
+ ∧
+  (∀ #i #j #k.
+    (Send( V, chal ) @ #i) ∧ (Action( P ) @ #j) ∧ (Recv( V, resp ) @ #k)
+   ⇒
+    ((¬(#i < #j)) ∨ (¬(#j < #k)))) ∧
+  (∀ #j. (!Compromise( V ) @ #j) ⇒ ⊥) ∧
+  (∀ #j. (!Compromise( P ) @ #j) ⇒ ⊥) ∧
+  (∀ #j. (Collusion( ) @ #j) ⇒ ⊥)"
+*/
+simplify
+solve( ReaderState4( V, P, chal, s, n1, n2, n3, j ) ▶₀ #l )
+  case Reader4_case_1
+  solve( !Shk( $X, $Y, k ) ▶₂ #l )
+    case ShkGen
+    solve( !KU( senc(<'3', j, n4, ('1'+$Y), n3, ~n1>, ~k) ) @ #vk.2 )
+      case DBSend
+      solve( (¬(#vr.3 < #vr.10))  ∥ (¬(#vr.10 < #vr.4)) )
+        case case_1
+        solve( !KU( omega(~k, ~j) ) @ #vk.4 )
+          case DBSend
+          solve( (¬(#vr.3 < #vr.17))  ∥ (¬(#vr.17 < #vr.4)) )
+            case case_1
+            solve( !KU( h(<~j, ~n1, $Y, ~s, n2>) ) @ #vk.6 )
+              case DBSend
+              solve( !KU( ~alpha ) @ #vk.11 )
+                case Reader2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_h
+              solve( !KU( ~j ) @ #vk.21 )
+                case DBSend_case_1
+                solve( (¬(#vr.3 < #vr.19))  ∥ (¬(#vr.19 < #vr.4)) )
+                  case case_1
+                  solve( !KU( ~s ) @ #vk.24 )
+                    case DBSend_case_1
+                    solve( !KU( ~k.1 ) @ #vk.25 )
+                      case ShkRevealX
+                      by contradiction /* from formulas */
+                    next
+                      case ShkRevealY
+                      by contradiction /* from formulas */
+                    qed
+                  next
+                    case DBSend_case_2
+                    solve( !KU( ~k.1 ) @ #vk.25 )
+                      case ShkRevealX
+                      by contradiction /* from formulas */
+                    next
+                      case ShkRevealY
+                      by contradiction /* from formulas */
+                    qed
+                  next
+                    case DBSend_case_3
+                    solve( !KU( ~k.1 ) @ #vk.25 )
+                      case ShkRevealX
+                      by contradiction /* from formulas */
+                    next
+                      case ShkRevealY
+                      by contradiction /* from formulas */
+                    qed
+                  next
+                    case Leak
+                    by contradiction /* from formulas */
+                  qed
+                next
+                  case case_2
+                  solve( !KU( ~s ) @ #vk.24 )
+                    case DBSend_case_1
+                    solve( !KU( ~k.1 ) @ #vk.25 )
+                      case ShkRevealX
+                      by contradiction /* from formulas */
+                    next
+                      case ShkRevealY
+                      by contradiction /* from formulas */
+                    qed
+                  next
+                    case DBSend_case_2
+                    solve( !KU( ~k.1 ) @ #vk.25 )
+                      case ShkRevealX
+                      by contradiction /* from formulas */
+                    next
+                      case ShkRevealY
+                      by contradiction /* from formulas */
+                    qed
+                  next
+                    case DBSend_case_3
+                    solve( !KU( ~k.1 ) @ #vk.25 )
+                      case ShkRevealX
+                      by contradiction /* from formulas */
+                    next
+                      case ShkRevealY
+                      by contradiction /* from formulas */
+                    qed
+                  next
+                    case Leak
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              next
+                case DBSend_case_2
+                solve( !KU( ~s ) @ #vk.24 )
+                  case DBSend_case_1
+                  solve( !KU( ~k ) @ #vk.25 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                next
+                  case DBSend_case_2
+                  solve( !KU( ~k ) @ #vk.25 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                next
+                  case DBSend_case_3
+                  solve( !KU( ~k ) @ #vk.25 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                next
+                  case Leak
+                  by contradiction /* from formulas */
+                qed
+              next
+                case DBSend_case_3
+                solve( !KU( ~s ) @ #vk.24 )
+                  case DBSend_case_1
+                  solve( !KU( ~k ) @ #vk.25 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                next
+                  case DBSend_case_2
+                  solve( !KU( ~k ) @ #vk.25 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                next
+                  case DBSend_case_3
+                  solve( !KU( ~k ) @ #vk.25 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                next
+                  case Leak
+                  by contradiction /* from formulas */
+                qed
+              qed
+            qed
+          next
+            case case_2
+            solve( !KU( h(<~j, ~n1, $Y, ~s, n2>) ) @ #vk.6 )
+              case DBSend
+              solve( !KU( ~alpha ) @ #vk.11 )
+                case Reader2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_h
+              solve( !KU( ~j ) @ #vk.21 )
+                case DBSend_case_1
+                solve( (¬(#vr.3 < #vr.19))  ∥ (¬(#vr.19 < #vr.4)) )
+                  case case_1
+                  solve( !KU( ~s ) @ #vk.24 )
+                    case DBSend_case_1
+                    solve( !KU( ~k.1 ) @ #vk.25 )
+                      case ShkRevealX
+                      by contradiction /* from formulas */
+                    next
+                      case ShkRevealY
+                      by contradiction /* from formulas */
+                    qed
+                  next
+                    case DBSend_case_2
+                    solve( !KU( ~k.1 ) @ #vk.25 )
+                      case ShkRevealX
+                      by contradiction /* from formulas */
+                    next
+                      case ShkRevealY
+                      by contradiction /* from formulas */
+                    qed
+                  next
+                    case DBSend_case_3
+                    solve( !KU( ~k.1 ) @ #vk.25 )
+                      case ShkRevealX
+                      by contradiction /* from formulas */
+                    next
+                      case ShkRevealY
+                      by contradiction /* from formulas */
+                    qed
+                  next
+                    case Leak
+                    by contradiction /* from formulas */
+                  qed
+                next
+                  case case_2
+                  solve( !KU( ~s ) @ #vk.24 )
+                    case DBSend_case_1
+                    solve( !KU( ~k.1 ) @ #vk.25 )
+                      case ShkRevealX
+                      by contradiction /* from formulas */
+                    next
+                      case ShkRevealY
+                      by contradiction /* from formulas */
+                    qed
+                  next
+                    case DBSend_case_2
+                    solve( !KU( ~k.1 ) @ #vk.25 )
+                      case ShkRevealX
+                      by contradiction /* from formulas */
+                    next
+                      case ShkRevealY
+                      by contradiction /* from formulas */
+                    qed
+                  next
+                    case DBSend_case_3
+                    solve( !KU( ~k.1 ) @ #vk.25 )
+                      case ShkRevealX
+                      by contradiction /* from formulas */
+                    next
+                      case ShkRevealY
+                      by contradiction /* from formulas */
+                    qed
+                  next
+                    case Leak
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              next
+                case DBSend_case_2
+                solve( !KU( ~s ) @ #vk.24 )
+                  case DBSend_case_1
+                  solve( !KU( ~k ) @ #vk.25 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                next
+                  case DBSend_case_2
+                  solve( !KU( ~k ) @ #vk.25 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                next
+                  case DBSend_case_3
+                  solve( !KU( ~k ) @ #vk.25 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                next
+                  case Leak
+                  by contradiction /* from formulas */
+                qed
+              next
+                case DBSend_case_3
+                solve( !KU( ~s ) @ #vk.24 )
+                  case DBSend_case_1
+                  solve( !KU( ~k ) @ #vk.25 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                next
+                  case DBSend_case_2
+                  solve( !KU( ~k ) @ #vk.25 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                next
+                  case DBSend_case_3
+                  solve( !KU( ~k ) @ #vk.25 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                next
+                  case Leak
+                  by contradiction /* from formulas */
+               solved goal nr. 108 (precomputed): !KU( ~k.2 ) @ #vk.47
+   qed
+              qed
+            qed
+          qed
+        next
+          case c_omega
+          solve( !KU( ~k ) @ #vk.18 )
+            case ShkRevealX
+            by contradiction /* from formulas */
+          next
+            case ShkRevealY
+            by contradiction /* from formulas */
+          qed
+        qed
+      next
+        case case_2
+        solve( !KU( omega(~k, ~j) ) @ #vk.4 )
+          case DBSend
+          solve( (¬(#vr.3 < #vr.17))  ∥ (¬(#vr.17 < #vr.4)) )
+            case case_1
+            solve( !KU( h(<~j, ~n1, $Y, ~s, n2>) ) @ #vk.6 )
+              case DBSend
+              solve( !KU( ~alpha ) @ #vk.11 )
+                case Reader2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_h
+              solve( !KU( ~j ) @ #vk.21 )
+                case DBSend_case_1
+                solve( (¬(#vr.3 < #vr.19))  ∥ (¬(#vr.19 < #vr.4)) )
+                  case case_1
+                  solve( !KU( ~s ) @ #vk.24 )
+                    case DBSend_case_1
+                    solve( !KU( ~k.1 ) @ #vk.25 )
+                      case ShkRevealX
+                      by contradiction /* from formulas */
+                    next
+                      case ShkRevealY
+                      by contradiction /* from formulas */
+                    qed
+                  next
+                    case DBSend_case_2
+                    solve( !KU( ~k.1 ) @ #vk.25 )
+                      case ShkRevealX
+                      by contradiction /* from formulas */
+                    next
+                      case ShkRevealY
+                      by contradiction /* from formulas */
+                    qed
+                  next
+                    case DBSend_case_3
+                    solve( !KU( ~k.1 ) @ #vk.25 )
+                      case ShkRevealX
+                      by contradiction /* from formulas */
+                    next
+                      case ShkRevealY
+                      by contradiction /* from formulas */
+                    qed
+                  next
+                    case Leak
+                    by contradiction /* from formulas */
+                  qed
+                next
+                  case case_2
+                  solve( !KU( ~s ) @ #vk.24 )
+                    case DBSend_case_1
+                    solve( !KU( ~k.1 ) @ #vk.25 )
+                      case ShkRevealX
+                      by contradiction /* from formulas */
+                    next
+                      case ShkRevealY
+                      by contradiction /* from formulas */
+                    qed
+                  next
+                    case DBSend_case_2
+                    solve( !KU( ~k.1 ) @ #vk.25 )
+                      case ShkRevealX
+                      by contradiction /* from formulas */
+                    next
+                      case ShkRevealY
+                      by contradiction /* from formulas */
+                    qed
+                  next
+                    case DBSend_case_3
+                    solve( !KU( ~k.1 ) @ #vk.25 )
+                      case ShkRevealX
+                      by contradiction /* from formulas */
+                    next
+                      case ShkRevealY
+                      by contradiction /* from formulas */
+                    qed
+                  next
+                    case Leak
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              next
+                case DBSend_case_2
+                solve( !KU( ~s ) @ #vk.24 )
+                  case DBSend_case_1
+                  solve( !KU( ~k ) @ #vk.25 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                next
+                  case DBSend_case_2
+                  solve( !KU( ~k ) @ #vk.25 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                next
+                  case DBSend_case_3
+                  solve( !KU( ~k ) @ #vk.25 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                next
+                  case Leak
+                  by contradiction /* from formulas */
+                qed
+              next
+                case DBSend_case_3
+                solve( !KU( ~s ) @ #vk.24 )
+                  case DBSend_case_1
+                  solve( !KU( ~k ) @ #vk.25 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                next
+                  case DBSend_case_2
+                  solve( !KU( ~k ) @ #vk.25 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                next
+                  case DBSend_case_3
+                  solve( !KU( ~k ) @ #vk.25 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                next
+                  case Leak
+                  by contradiction /* from formulas */
+                qed
+              qed
+            qed
+          next
+            case case_2
+            solve( !KU( h(<~j, ~n1, $Y, ~s, n2>) ) @ #vk.6 )
+              case DBSend
+              solve( !KU( ~alpha ) @ #vk.11 )
+                case Reader2
+                by contradiction /* cyclic */
+              qed
+            next
+              case c_h
+              solve( !KU( ~j ) @ #vk.21 )
+                case DBSend_case_1
+                solve( (¬(#vr.3 < #vr.19))  ∥ (¬(#vr.19 < #vr.4)) )
+                  case case_1
+                  solve( !KU( ~s ) @ #vk.24 )
+                    case DBSend_case_1
+                    solve( !KU( ~k.1 ) @ #vk.25 )
+                      case ShkRevealX
+                      by contradiction /* from formulas */
+                    next
+                      case ShkRevealY
+                      by contradiction /* from formulas */
+                    qed
+                  next
+                    case DBSend_case_2
+                    solve( !KU( ~k.1 ) @ #vk.25 )
+                      case ShkRevealX
+                      by contradiction /* from formulas */
+                    next
+                      case ShkRevealY
+                      by contradiction /* from formulas */
+                    qed
+                  next
+                    case DBSend_case_3
+                    solve( !KU( ~k.1 ) @ #vk.25 )
+                      case ShkRevealX
+                      by contradiction /* from formulas */
+                    next
+                      case ShkRevealY
+                      by contradiction /* from formulas */
+                    qed
+                  next
+                    case Leak
+                    by contradiction /* from formulas */
+                  qed
+                next
+                  case case_2
+                  solve( !KU( ~s ) @ #vk.24 )
+                    case DBSend_case_1
+                    solve( !KU( ~k.1 ) @ #vk.25 )
+                      case ShkRevealX
+                      by contradiction /* from formulas */
+                    next
+                      case ShkRevealY
+                      by contradiction /* from formulas */
+                    qed
+                  next
+                    case DBSend_case_2
+                    solve( !KU( ~k.1 ) @ #vk.25 )
+                      case ShkRevealX
+                      by contradiction /* from formulas */
+                    next
+                      case ShkRevealY
+                      by contradiction /* from formulas */
+                    qed
+                  next
+                    case DBSend_case_3
+                    solve( !KU( ~k.1 ) @ #vk.25 )
+                      case ShkRevealX
+                      by contradiction /* from formulas */
+                    next
+                      case ShkRevealY
+                      by contradiction /* from formulas */
+                    qed
+                  next
+                    case Leak
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              next
+                case DBSend_case_2
+                solve( !KU( ~s ) @ #vk.24 )
+                  case DBSend_case_1
+                  solve( !KU( ~k ) @ #vk.25 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                next
+                  case DBSend_case_2
+                  solve( !KU( ~k ) @ #vk.25 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                next
+                  case DBSend_case_3
+                  solve( !KU( ~k ) @ #vk.25 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                next
+                  case Leak
+                  by contradiction /* from formulas */
+                qed
+              next
+                case DBSend_case_3
+                solve( !KU( ~s ) @ #vk.24 )
+                  case DBSend_case_1
+                  solve( !KU( ~k ) @ #vk.25 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                next
+                  case DBSend_case_2
+                  solve( !KU( ~k ) @ #vk.25 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                next
+                  case DBSend_case_3
+                  solve( !KU( ~k ) @ #vk.25 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                next
+                  case Leak
+                  by contradiction /* from formulas */
+                qed
+              qed
+            qed
+          qed
+        next
+          case c_omega
+          solve( !KU( ~k ) @ #vk.18 )
+            case ShkRevealX
+            by contradiction /* from formulas */
+          next
+            case ShkRevealY
+            by contradiction /* from formulas */
+          qed
+        qed
+      qed
+    next
+      case c_senc
+      solve( !KU( ~k ) @ #vk.17 )
+        case ShkRevealX
+        by contradiction /* from formulas */
+      next
+        case ShkRevealY
+        by contradiction /* from formulas */
+      qed
+    qed
+  qed
+next
+  case Reader4_case_2
+  solve( !Shk( $X, $Y, k ) ▶₂ #l )
+    case ShkGen
+    solve( !KU( senc(<'3', j, n4, ('1'+$Y), n3, ~n1>, ~k) ) @ #vk.2 )
+      case DBSend
+      solve( (¬(#vr.3 < #vr.10))  ∥ (¬(#vr.10 < #vr.4)) )
+        case case_1
+        solve( !KU( omega(~k, ~j) ) @ #vk.4 )
+          case DBSend
+          solve( (¬(#vr.3 < #vr.17))  ∥ (¬(#vr.17 < #vr.4)) )
+            case case_1
+            solve( !KU( h(<~j, ~n1, $Y, s, n2>) ) @ #vk.6 )
+              case DBSend
+              solve( !KU( ~n2 ) @ #vk.9 )
+                case DBSend
+                solve( !KU( senc(<'2', ~j, ~n3, $Y, ~alpha, XOR(~alpha, ~s), ~n1>, ~k)
+                       ) @ #vk.8 )
+                  case DBSend
+                  solve( !KU( ~alpha ) @ #vk.12 )
+                    case Reader2
+                    by contradiction /* cyclic */
+                  qed
+                next
+                  case c_senc
+                  solve( !KU( ~k ) @ #vk.18 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              qed
+            next
+              case c_h
+              solve( !KU( ~j ) @ #vk.19 )
+                case DBSend_case_1
+                solve( (¬(#vr.3 < #vr.19))  ∥ (¬(#vr.19 < #vr.4)) )
+                  case case_1
+                  solve( !KU( ~k.1 ) @ #vk.23 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                next
+                  case case_2
+                  solve( !KU( ~k.1 ) @ #vk.23 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              next
+                case DBSend_case_2
+                solve( !KU( ~k ) @ #vk.23 )
+                  case ShkRevealX
+                  by contradiction /* from formulas */
+                next
+                  case ShkRevealY
+                  by contradiction /* from formulas */
+                qed
+              next
+                case DBSend_case_3
+                solve( !KU( ~k ) @ #vk.23 )
+                  case ShkRevealX
+                  by contradiction /* from formulas */
+                next
+                  case ShkRevealY
+                  by contradiction /* from formulas */
+                qed
+              qed
+            qed
+          next
+            case case_2
+            solve( !KU( h(<~j, ~n1, $Y, s, n2>) ) @ #vk.6 )
+              case DBSend
+              solve( !KU( ~n2 ) @ #vk.9 )
+                case DBSend
+                solve( !KU( senc(<'2', ~j, ~n3, $Y, ~alpha, XOR(~alpha, ~s), ~n1>, ~k)
+                       ) @ #vk.8 )
+                  case DBSend
+                  solve( !KU( ~alpha ) @ #vk.12 )
+                    case Reader2
+                    by contradiction /* cyclic */
+                  qed
+                next
+                  case c_senc
+                  solve( !KU( ~k ) @ #vk.18 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              qed
+            next
+              case c_h
+              solve( !KU( ~j ) @ #vk.19 )
+                case DBSend_case_1
+                solve( (¬(#vr.3 < #vr.19))  ∥ (¬(#vr.19 < #vr.4)) )
+                  case case_1
+                  solve( !KU( ~k.1 ) @ #vk.23 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                next
+                  case case_2
+                  solve( !KU( ~k.1 ) @ #vk.23 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              next
+                case DBSend_case_2
+                solve( !KU( ~k ) @ #vk.23 )
+                  case ShkRevealX
+                  by contradiction /* from formulas */
+                next
+                  case ShkRevealY
+                  by contradiction /* from formulas */
+                qed
+              next
+                case DBSend_case_3
+                solve( !KU( ~k ) @ #vk.23 )
+                  case ShkRevealX
+                  by contradiction /* from formulas */
+                next
+                  case ShkRevealY
+                  by contradiction /* from formulas */
+                qed
+              qed
+            qed
+          qed
+        next
+          case c_omega
+          solve( !KU( ~k ) @ #vk.16 )
+            case ShkRevealX
+            by contradiction /* from formulas */
+          next
+            case ShkRevealY
+            by contradiction /* from formulas */
+          qed
+        qed
+      next
+        case case_2
+        solve( !KU( omega(~k, ~j) ) @ #vk.4 )
+          case DBSend
+          solve( (¬(#vr.3 < #vr.17))  ∥ (¬(#vr.17 < #vr.4)) )
+            case case_1
+            solve( !KU( h(<~j, ~n1, $Y, s, n2>) ) @ #vk.6 )
+              case DBSend
+              solve( !KU( ~n2 ) @ #vk.9 )
+                case DBSend
+                solve( !KU( senc(<'2', ~j, ~n3, $Y, ~alpha, XOR(~alpha, ~s), ~n1>, ~k)
+                       ) @ #vk.8 )
+                  case DBSend
+                  solve( !KU( ~alpha ) @ #vk.12 )
+                    case Reader2
+                    by contradiction /* cyclic */
+                  qed
+                next
+                  case c_senc
+                  solve( !KU( ~k ) @ #vk.18 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              qed
+            next
+              case c_h
+              solve( !KU( ~j ) @ #vk.19 )
+                case DBSend_case_1
+                solve( (¬(#vr.3 < #vr.19))  ∥ (¬(#vr.19 < #vr.4)) )
+                  case case_1
+                  solve( !KU( ~k.1 ) @ #vk.23 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                next
+                  case case_2
+                  solve( !KU( ~k.1 ) @ #vk.23 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              next
+                case DBSend_case_2
+                solve( !KU( ~k ) @ #vk.23 )
+                  case ShkRevealX
+                  by contradiction /* from formulas */
+                next
+                  case ShkRevealY
+                  by contradiction /* from formulas */
+                qed
+              next
+                case DBSend_case_3
+                solve( !KU( ~k ) @ #vk.23 )
+                  case ShkRevealX
+                  by contradiction /* from formulas */
+                next
+                  case ShkRevealY
+                  by contradiction /* from formulas */
+                qed
+              qed
+            qed
+          next
+            case case_2
+            solve( !KU( h(<~j, ~n1, $Y, s, n2>) ) @ #vk.6 )
+              case DBSend
+              solve( !KU( ~n2 ) @ #vk.9 )
+                case DBSend
+                solve( !KU( senc(<'2', ~j, ~n3, $Y, ~alpha, XOR(~alpha, ~s), ~n1>, ~k)
+                       ) @ #vk.8 )
+                  case DBSend
+                  solve( !KU( senc(<'1', ~n1, $Y, ~s, ~n1, ~j>, ~k) ) @ #vk.10 )
+                    case DBSend
+                    solve( !KU( XOR(~alpha, ~s) ) @ #vk.11 )
+                      case DBSend_case_1
+                      solve( !KU( ~alpha ) @ #vk.12 )
+                        case Reader2
+                        by contradiction /* cyclic */
+                      qed
+                    next
+                      case DBSend_case_2
+                      by contradiction /* cyclic */
+                    next
+                      case c_XOR
+                      solve( !KU( ~s ) @ #vk.16 )
+                        case DBSend_case_1
+                        solve( !KU( ~k ) @ #vk.17 )
+                          case ShkRevealX
+                          by contradiction /* from formulas */
+                        next
+                          case ShkRevealY
+                          by contradiction /* from formulas */
+                        qed
+                      next
+                        case DBSend_case_2
+                        solve( !KU( ~alpha ) @ #vk.13 )
+                          case Reader2
+                          by contradiction /* cyclic */
+                        qed
+                      next
+                        case DBSend_case_3
+                        by contradiction /* cyclic */
+                      next
+                        case Leak
+                        by contradiction /* from formulas */
+                      qed
+                    qed
+                  next
+                    case c_senc
+                    solve( !KU( ~k ) @ #vk.19 )
+                      case ShkRevealX
+                      by contradiction /* from formulas */
+                    next
+                      case ShkRevealY
+                      by contradiction /* from formulas */
+                    qed
+                  qed
+                next
+                  case c_senc
+                  solve( !KU( ~k ) @ #vk.18 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              qed
+            next
+              case c_h
+              solve( !KU( ~j ) @ #vk.19 )
+                case DBSend_case_1
+                solve( (¬(#vr.3 < #vr.19))  ∥ (¬(#vr.19 < #vr.4)) )
+                  case case_1
+                  solve( !KU( ~k.1 ) @ #vk.23 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                next
+                  case case_2
+                  solve( !KU( ~k.1 ) @ #vk.23 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              next
+                case DBSend_case_2
+                solve( !KU( ~k ) @ #vk.23 )
+                  case ShkRevealX
+                  by contradiction /* from formulas */
+                next
+                  case ShkRevealY
+                  by contradiction /* from formulas */
+                qed
+              next
+                case DBSend_case_3
+                solve( !KU( ~k ) @ #vk.23 )
+                  case ShkRevealX
+                  by contradiction /* from formulas */
+                next
+                  case ShkRevealY
+                  by contradiction /* from formulas */
+                qed
+              qed
+            qed
+          qed
+        next
+          case c_omega
+          solve( !KU( ~k ) @ #vk.16 )
+            case ShkRevealX
+            by contradiction /* from formulas */
+          next
+            case ShkRevealY
+            by contradiction /* from formulas */
+          qed
+        qed
+      qed
+    next
+      case c_senc
+      solve( !KU( ~k ) @ #vk.14 )
+        case ShkRevealX
+        by contradiction /* from formulas */
+      next
+        case ShkRevealY
+        by contradiction /* from formulas */
+      qed
+    qed
+  qed
+next
+  case Reader4_case_3
+  solve( !Shk( $X, $Y, k ) ▶₂ #l )
+    case ShkGen
+    solve( !KU( senc(<'3', j, n4, ('1'+$Y), n3, ~n1>, ~k) ) @ #vk.2 )
+      case DBSend
+      solve( (¬(#vr.3 < #vr.10))  ∥ (¬(#vr.10 < #vr.4)) )
+        case case_1
+        solve( !KU( omega(~k, ~j) ) @ #vk.4 )
+          case DBSend
+          solve( (¬(#vr.3 < #vr.17))  ∥ (¬(#vr.17 < #vr.4)) )
+            case case_1
+            solve( !KU( h(<~j, ~n1, $Y, s, n2>) ) @ #vk.6 )
+              case DBSend
+              solve( !KU( ~n2 ) @ #vk.9 )
+                case DBSend
+                solve( !KU( senc(<'2', ~j, ~n3, $Y, ~alpha, XOR(~alpha, ~s), ~n1>, ~k)
+                       ) @ #vk.8 )
+                  case DBSend
+                  solve( !KU( ~alpha ) @ #vk.12 )
+                    case Reader2
+                    by contradiction /* cyclic */
+                  qed
+                next
+                  case c_senc
+                  solve( !KU( ~k ) @ #vk.18 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              qed
+            next
+              case c_h
+              solve( !KU( ~j ) @ #vk.19 )
+                case DBSend_case_1
+                solve( (¬(#vr.3 < #vr.19))  ∥ (¬(#vr.19 < #vr.4)) )
+                  case case_1
+                  solve( !KU( ~k.1 ) @ #vk.23 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                next
+                  case case_2
+                  solve( !KU( ~k.1 ) @ #vk.23 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              next
+                case DBSend_case_2
+                solve( !KU( ~k ) @ #vk.23 )
+                  case ShkRevealX
+                  by contradiction /* from formulas */
+                next
+                  case ShkRevealY
+                  by contradiction /* from formulas */
+                qed
+              next
+                case DBSend_case_3
+                solve( !KU( ~k ) @ #vk.23 )
+                  case ShkRevealX
+                  by contradiction /* from formulas */
+                next
+                  case ShkRevealY
+                  by contradiction /* from formulas */
+                qed
+              qed
+            qed
+          next
+            case case_2
+            solve( !KU( h(<~j, ~n1, $Y, s, n2>) ) @ #vk.6 )
+              case DBSend
+              solve( !KU( ~n2 ) @ #vk.9 )
+                case DBSend
+                solve( !KU( senc(<'2', ~j, ~n3, $Y, ~alpha, XOR(~alpha, ~s), ~n1>, ~k)
+                       ) @ #vk.8 )
+                  case DBSend
+                  solve( !KU( ~alpha ) @ #vk.12 )
+                    case Reader2
+                    by contradiction /* cyclic */
+                  qed
+                next
+                  case c_senc
+                  solve( !KU( ~k ) @ #vk.18 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              qed
+            next
+              case c_h
+              solve( !KU( ~j ) @ #vk.19 )
+                case DBSend_case_1
+                solve( (¬(#vr.3 < #vr.19))  ∥ (¬(#vr.19 < #vr.4)) )
+                  case case_1
+                  solve( !KU( ~k.1 ) @ #vk.23 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                next
+                  case case_2
+                  solve( !KU( ~k.1 ) @ #vk.23 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              next
+                case DBSend_case_2
+                solve( !KU( ~k ) @ #vk.23 )
+                  case ShkRevealX
+                  by contradiction /* from formulas */
+                next
+                  case ShkRevealY
+                  by contradiction /* from formulas */
+                qed
+              next
+                case DBSend_case_3
+                solve( !KU( ~k ) @ #vk.23 )
+                  case ShkRevealX
+                  by contradiction /* from formulas */
+                next
+                  case ShkRevealY
+                  by contradiction /* from formulas */
+                qed
+              qed
+            qed
+          qed
+        next
+          case c_omega
+          solve( !KU( ~k ) @ #vk.16 )
+            case ShkRevealX
+            by contradiction /* from formulas */
+          next
+            case ShkRevealY
+            by contradiction /* from formulas */
+          qed
+        qed
+      next
+        case case_2
+        solve( !KU( omega(~k, ~j) ) @ #vk.4 )
+          case DBSend
+          solve( (¬(#vr.3 < #vr.17))  ∥ (¬(#vr.17 < #vr.4)) )
+            case case_1
+            solve( !KU( h(<~j, ~n1, $Y, s, n2>) ) @ #vk.6 )
+              case DBSend
+              solve( !KU( ~n2 ) @ #vk.9 )
+                case DBSend
+                solve( !KU( senc(<'2', ~j, ~n3, $Y, ~alpha, XOR(~alpha, ~s), ~n1>, ~k)
+                       ) @ #vk.8 )
+                  case DBSend
+                  solve( !KU( ~alpha ) @ #vk.12 )
+                    case Reader2
+                    by contradiction /* cyclic */
+                  qed
+                next
+                  case c_senc
+                  solve( !KU( ~k ) @ #vk.18 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              qed
+            next
+              case c_h
+              solve( !KU( ~j ) @ #vk.19 )
+                case DBSend_case_1
+                solve( (¬(#vr.3 < #vr.19))  ∥ (¬(#vr.19 < #vr.4)) )
+                  case case_1
+                  solve( !KU( ~k.1 ) @ #vk.23 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                next
+                  case case_2
+                  solve( !KU( ~k.1 ) @ #vk.23 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              next
+                case DBSend_case_2
+                solve( !KU( ~k ) @ #vk.23 )
+                  case ShkRevealX
+                  by contradiction /* from formulas */
+                next
+                  case ShkRevealY
+                  by contradiction /* from formulas */
+                qed
+              next
+                case DBSend_case_3
+                solve( !KU( ~k ) @ #vk.23 )
+                  case ShkRevealX
+                  by contradiction /* from formulas */
+                next
+                  case ShkRevealY
+                  by contradiction /* from formulas */
+                qed
+              qed
+            qed
+          next
+            case case_2
+            solve( !KU( h(<~j, ~n1, $Y, s, n2>) ) @ #vk.6 )
+              case DBSend
+              solve( !KU( ~n2 ) @ #vk.9 )
+                case DBSend
+                solve( !KU( senc(<'2', ~j, ~n3, $Y, ~alpha, XOR(~alpha, ~s), ~n1>, ~k)
+                       ) @ #vk.8 )
+                  case DBSend
+                  solve( !KU( senc(<'1', ~n1, $Y, ~s, ~n1, ~j>, ~k) ) @ #vk.10 )
+                    case DBSend
+                    solve( !KU( XOR(~alpha, ~s) ) @ #vk.11 )
+                      case DBSend_case_1
+                      solve( !KU( ~alpha ) @ #vk.12 )
+                        case Reader2
+                        by contradiction /* cyclic */
+                      qed
+                    next
+                      case DBSend_case_2
+                      by contradiction /* cyclic */
+                    next
+                      case c_XOR
+                      solve( !KU( ~s ) @ #vk.16 )
+                        case DBSend_case_1
+                        solve( !KU( ~k ) @ #vk.17 )
+                          case ShkRevealX
+                          by contradiction /* from formulas */
+                        next
+                          case ShkRevealY
+                          by contradiction /* from formulas */
+                        qed
+                      next
+                        case DBSend_case_2
+                        solve( !KU( ~alpha ) @ #vk.13 )
+                          case Reader2
+                          by contradiction /* cyclic */
+                        qed
+                      next
+                        case DBSend_case_3
+                        by contradiction /* cyclic */
+                      next
+                        case Leak
+                        by contradiction /* from formulas */
+                      qed
+                    qed
+                  next
+                    case c_senc
+                    solve( !KU( ~k ) @ #vk.19 )
+                      case ShkRevealX
+                      by contradiction /* from formulas */
+                    next
+                      case ShkRevealY
+                      by contradiction /* from formulas */
+                    qed
+                  qed
+                next
+                  case c_senc
+                  solve( !KU( ~k ) @ #vk.18 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              qed
+            next
+              case c_h
+              solve( !KU( ~j ) @ #vk.19 )
+                case DBSend_case_1
+                solve( (¬(#vr.3 < #vr.19))  ∥ (¬(#vr.19 < #vr.4)) )
+                  case case_1
+                  solve( !KU( ~k.1 ) @ #vk.23 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                next
+                  case case_2
+                  solve( !KU( ~k.1 ) @ #vk.23 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              next
+                case DBSend_case_2
+                solve( !KU( ~k ) @ #vk.23 )
+                  case ShkRevealX
+                  by contradiction /* from formulas */
+                next
+                  case ShkRevealY
+                  by contradiction /* from formulas */
+                qed
+              next
+                case DBSend_case_3
+                solve( !KU( ~k ) @ #vk.23 )
+                  case ShkRevealX
+                  by contradiction /* from formulas */
+                next
+                  case ShkRevealY
+                  by contradiction /* from formulas */
+                qed
+              qed
+            qed
+          qed
+        next
+          case c_omega
+          solve( !KU( ~k ) @ #vk.16 )
+            case ShkRevealX
+            by contradiction /* from formulas */
+          next
+            case ShkRevealY
+            by contradiction /* from formulas */
+          qed
+        qed
+      qed
+    next
+      case c_senc
+      solve( !KU( ~k ) @ #vk.14 )
+        case ShkRevealX
+        by contradiction /* from formulas */
+      next
+        case ShkRevealY
+        by contradiction /* from formulas */
+      qed
+    qed
+  qed
+next
+  case Reader4_case_4
+  solve( !Shk( $X, $Y, k ) ▶₂ #l )
+    case ShkGen
+    solve( !KU( senc(<'3', j, n4, ('1'+$Y), n3, ~n1>, ~k) ) @ #vk.2 )
+      case DBSend
+      solve( (¬(#vr.3 < #vr.10))  ∥ (¬(#vr.10 < #vr.4)) )
+        case case_1
+        solve( !KU( omega(~k, ~j) ) @ #vk.4 )
+          case DBSend
+          solve( (¬(#vr.3 < #vr.17))  ∥ (¬(#vr.17 < #vr.4)) )
+            case case_1
+            solve( !KU( h(<~j, ~n1, $Y, s, n2>) ) @ #vk.6 )
+              case DBSend
+              solve( !KU( ~n2 ) @ #vk.9 )
+                case DBSend
+                solve( !KU( senc(<'2', ~j, ~n3, $Y, ~alpha, XOR(~alpha, ~s), ~n1>, ~k)
+                       ) @ #vk.8 )
+                  case DBSend
+                  solve( !KU( ~alpha ) @ #vk.12 )
+                    case Reader2
+                    by contradiction /* cyclic */
+                  qed
+                next
+                  case c_senc
+                  solve( !KU( ~k ) @ #vk.18 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              qed
+            next
+              case c_h
+              solve( !KU( ~j ) @ #vk.19 )
+                case DBSend_case_1
+                solve( (¬(#vr.3 < #vr.19))  ∥ (¬(#vr.19 < #vr.4)) )
+                  case case_1
+                  solve( !KU( ~k.1 ) @ #vk.23 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                next
+                  case case_2
+                  solve( !KU( ~k.1 ) @ #vk.23 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              next
+                case DBSend_case_2
+                solve( !KU( ~k ) @ #vk.23 )
+                  case ShkRevealX
+                  by contradiction /* from formulas */
+                next
+                  case ShkRevealY
+                  by contradiction /* from formulas */
+                qed
+              next
+                case DBSend_case_3
+                solve( !KU( ~k ) @ #vk.23 )
+                  case ShkRevealX
+                  by contradiction /* from formulas */
+                next
+                  case ShkRevealY
+                  by contradiction /* from formulas */
+                qed
+              qed
+            qed
+          next
+            case case_2
+            solve( !KU( h(<~j, ~n1, $Y, s, n2>) ) @ #vk.6 )
+              case DBSend
+              solve( !KU( ~n2 ) @ #vk.9 )
+                case DBSend
+                solve( !KU( senc(<'2', ~j, ~n3, $Y, ~alpha, XOR(~alpha, ~s), ~n1>, ~k)
+                       ) @ #vk.8 )
+                  case DBSend
+                  solve( !KU( ~alpha ) @ #vk.12 )
+                    case Reader2
+                    by contradiction /* cyclic */
+                  qed
+                next
+                  case c_senc
+                  solve( !KU( ~k ) @ #vk.18 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              qed
+            next
+              case c_h
+              solve( !KU( ~j ) @ #vk.19 )
+                case DBSend_case_1
+                solve( (¬(#vr.3 < #vr.19))  ∥ (¬(#vr.19 < #vr.4)) )
+                  case case_1
+                  solve( !KU( ~k.1 ) @ #vk.23 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                next
+                  case case_2
+                  solve( !KU( ~k.1 ) @ #vk.23 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              next
+                case DBSend_case_2
+                solve( !KU( ~k ) @ #vk.23 )
+                  case ShkRevealX
+                  by contradiction /* from formulas */
+                next
+                  case ShkRevealY
+                  by contradiction /* from formulas */
+                qed
+              next
+                case DBSend_case_3
+                solve( !KU( ~k ) @ #vk.23 )
+                  case ShkRevealX
+                  by contradiction /* from formulas */
+                next
+                  case ShkRevealY
+                  by contradiction /* from formulas */
+                qed
+              qed
+            qed
+          qed
+        next
+          case c_omega
+          solve( !KU( ~k ) @ #vk.16 )
+            case ShkRevealX
+            by contradiction /* from formulas */
+          next
+            case ShkRevealY
+            by contradiction /* from formulas */
+          qed
+        qed
+      next
+        case case_2
+        solve( !KU( omega(~k, ~j) ) @ #vk.4 )
+          case DBSend
+          solve( (¬(#vr.3 < #vr.17))  ∥ (¬(#vr.17 < #vr.4)) )
+            case case_1
+            solve( !KU( h(<~j, ~n1, $Y, s, n2>) ) @ #vk.6 )
+              case DBSend
+              solve( !KU( ~n2 ) @ #vk.9 )
+                case DBSend
+                solve( !KU( senc(<'2', ~j, ~n3, $Y, ~alpha, XOR(~alpha, ~s), ~n1>, ~k)
+                       ) @ #vk.8 )
+                  case DBSend
+                  solve( !KU( ~alpha ) @ #vk.12 )
+                    case Reader2
+                    by contradiction /* cyclic */
+                  qed
+                next
+                  case c_senc
+                  solve( !KU( ~k ) @ #vk.18 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              qed
+            next
+              case c_h
+              solve( !KU( ~j ) @ #vk.19 )
+                case DBSend_case_1
+                solve( (¬(#vr.3 < #vr.19))  ∥ (¬(#vr.19 < #vr.4)) )
+                  case case_1
+                  solve( !KU( ~k.1 ) @ #vk.23 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                next
+                  case case_2
+                  solve( !KU( ~k.1 ) @ #vk.23 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              next
+                case DBSend_case_2
+                solve( !KU( ~k ) @ #vk.23 )
+                  case ShkRevealX
+                  by contradiction /* from formulas */
+                next
+                  case ShkRevealY
+                  by contradiction /* from formulas */
+                qed
+              next
+                case DBSend_case_3
+                solve( !KU( ~k ) @ #vk.23 )
+                  case ShkRevealX
+                  by contradiction /* from formulas */
+                next
+                  case ShkRevealY
+                  by contradiction /* from formulas */
+                qed
+              qed
+            qed
+          next
+            case case_2
+            solve( !KU( h(<~j, ~n1, $Y, s, n2>) ) @ #vk.6 )
+              case DBSend
+              solve( !KU( ~n2 ) @ #vk.9 )
+                case DBSend
+                solve( !KU( senc(<'2', ~j, ~n3, $Y, ~alpha, XOR(~alpha, ~s), ~n1>, ~k)
+                       ) @ #vk.8 )
+                  case DBSend
+                  solve( !KU( senc(<'1', ~n1, $Y, ~s, ~n1, ~j>, ~k) ) @ #vk.10 )
+                    case DBSend
+                    solve( !KU( XOR(~alpha, ~s) ) @ #vk.11 )
+                      case DBSend_case_1
+                      solve( !KU( ~alpha ) @ #vk.12 )
+                        case Reader2
+                        by contradiction /* cyclic */
+                      qed
+                    next
+                      case DBSend_case_2
+                      by contradiction /* cyclic */
+                    next
+                      case c_XOR
+                      solve( !KU( ~s ) @ #vk.16 )
+                        case DBSend_case_1
+                        solve( !KU( ~k ) @ #vk.17 )
+                          case ShkRevealX
+                          by contradiction /* from formulas */
+                        next
+                          case ShkRevealY
+                          by contradiction /* from formulas */
+                        qed
+                      next
+                        case DBSend_case_2
+                        solve( !KU( ~alpha ) @ #vk.13 )
+                          case Reader2
+                          by contradiction /* cyclic */
+                        qed
+                      next
+                        case DBSend_case_3
+                        by contradiction /* cyclic */
+                      next
+                        case Leak
+                        by contradiction /* from formulas */
+                      qed
+                    qed
+                  next
+                    case c_senc
+                    solve( !KU( ~k ) @ #vk.19 )
+                      case ShkRevealX
+                      by contradiction /* from formulas */
+                    next
+                      case ShkRevealY
+                      by contradiction /* from formulas */
+                    qed
+                  qed
+                next
+                  case c_senc
+                  solve( !KU( ~k ) @ #vk.18 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              qed
+            next
+              case c_h
+              solve( !KU( ~j ) @ #vk.19 )
+                case DBSend_case_1
+                solve( (¬(#vr.3 < #vr.19))  ∥ (¬(#vr.19 < #vr.4)) )
+                  case case_1
+                  solve( !KU( ~k.1 ) @ #vk.23 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                next
+                  case case_2
+                  solve( !KU( ~k.1 ) @ #vk.23 )
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              next
+                case DBSend_case_2
+                solve( !KU( ~k ) @ #vk.23 )
+                  case ShkRevealX
+                  by contradiction /* from formulas */
+                next
+                  case ShkRevealY
+                  by contradiction /* from formulas */
+                qed
+              next
+                case DBSend_case_3
+                solve( !KU( ~k ) @ #vk.23 )
+                  case ShkRevealX
+                  by contradiction /* from formulas */
+                next
+                  case ShkRevealY
+                  by contradiction /* from formulas */
+                qed
+              qed
+            qed
+          qed
+        next
+          case c_omega
+          solve( !KU( ~k ) @ #vk.16 )
+            case ShkRevealX
+            by contradiction /* from formulas */
+          next
+            case ShkRevealY
+            by contradiction /* from formulas */
+          qed
+        qed
+      qed
+    next
+      case c_senc
+      solve( !KU( ~k ) @ #vk.14 )
+        case ShkRevealX
+        by contradiction /* from formulas */
+      next
+        case ShkRevealY
+        by contradiction /* from formulas */
+      qed
+    qed
+  qed
+qed
+
+lemma dbsec_hnst_collusion:
+  all-traces
+  "∀ V P chal resp #l.
+    (DBSec( V, P, chal, resp ) @ #l) ⇒
+    (((∃ #i #j #k.
+        ((((Send( V, chal ) @ #i) ∧ (Action( P ) @ #j)) ∧
+          (Recv( V, resp ) @ #k)) ∧
+         (#i < #j)) ∧
+        (#j < #k)) ∨
+      (∃ #j. !Compromise( V ) @ #j)) ∨
+     (∃ #j. !Compromise( P ) @ #j))"
+/*
+guarded formula characterizing all counter-examples:
+"∃ V P chal resp #l.
+  (DBSec( V, P, chal, resp ) @ #l)
+ ∧
+  (∀ #i #j #k.
+    (Send( V, chal ) @ #i) ∧ (Action( P ) @ #j) ∧ (Recv( V, resp ) @ #k)
+   ⇒
+    ((¬(#i < #j)) ∨ (¬(#j < #k)))) ∧
+  (∀ #j. (!Compromise( V ) @ #j) ⇒ ⊥) ∧
+  (∀ #j. (!Compromise( P ) @ #j) ⇒ ⊥)"
+*/
+simplify
+solve( ReaderState4( V, P, chal, s, n1, n2, n3, j ) ▶₀ #l )
+  case Reader4_case_2
+  solve( !Shk( $X, $Y, k ) ▶₂ #l )
+    case ShkGen
+    solve( !KU( senc(<'3', j, n4, ('1'+$Y), n3, ~n1>, ~k) ) @ #vk.2 )
+      case DBSend
+      solve( (¬(#vr.3 < #vr.10))  ∥ (¬(#vr.10 < #vr.4)) )
+        case case_2
+        solve( !KU( omega(~k, ~j) ) @ #vk.4 )
+          case DBSend
+          solve( (¬(#vr.3 < #vr.17))  ∥ (¬(#vr.17 < #vr.4)) )
+            case case_2
+            solve( !KU( h(<~j, ~n1, $Y, s, n2>) ) @ #vk.6 )
+              case DBSend
+              solve( !KU( ~n2 ) @ #vk.9 )
+                case DBSend
+                solve( !KU( senc(<'2', ~j, ~n3, $Y, ~alpha, XOR(~alpha, ~s), ~n1>, ~k)
+                       ) @ #vk.8 )
+                  case DBSend
+                  solve( !KU( senc(<'1', ~n1, $Y, ~s, ~n1, ~j>, ~k) ) @ #vk.10 )
+                    case DBSend
+                    solve( !KU( XOR(~alpha, ~s) ) @ #vk.11 )
+                      case c_XOR
+                      solve( !KU( ~s ) @ #vk.16 )
+                        case Leak
+                        solve( !KU( ~n1 ) @ #vk.16 )
+                          case Reader1
+                          solve( !KU( ~n4 ) @ #vk.13 )
+                            case DBSend_case_1
+                            solve( !KU( ~alpha ) @ #vk.15 )
+                              case Reader2
+                              SOLVED // trace found
+                            qed
+                          qed
+                        qed
+                      qed
+                    qed
+                  qed
+                qed
+              qed
+            qed
+          qed
+        qed
+      qed
+    qed
+  qed
+qed
+
+lemma dbsec_hnst_star:
+  all-traces
+  "∀ V P chal resp #e #l.
+    (((DBSec( V, P, chal, resp ) @ #l) ∧ (Expiry( ) @ #e)) ∧ (#e < #l)) ⇒
+    (((∃ #i #j #k.
+        ((((Send( V, chal ) @ #i) ∧ (Action( P ) @ #j)) ∧
+          (Recv( V, resp ) @ #k)) ∧
+         (#i < #j)) ∧
+        (#j < #k)) ∨
+      (∃ #j. !Compromise( V ) @ #j)) ∨
+     (∃ #j. !Compromise( P ) @ #j))"
+/*
+guarded formula characterizing all counter-examples:
+"∃ V P chal resp #e #l.
+  (DBSec( V, P, chal, resp ) @ #l) ∧ (Expiry( ) @ #e)
+ ∧
+  (#e < #l) ∧
+  (∀ #i #j #k.
+    (Send( V, chal ) @ #i) ∧ (Action( P ) @ #j) ∧ (Recv( V, resp ) @ #k)
+   ⇒
+    ((¬(#i < #j)) ∨ (¬(#j < #k)))) ∧
+  (∀ #j. (!Compromise( V ) @ #j) ⇒ ⊥) ∧
+  (∀ #j. (!Compromise( P ) @ #j) ⇒ ⊥)"
+*/
+simplify
+solve( ReaderState4( V, P, chal, s, n1, n2, n3, j ) ▶₀ #l )
+  case Reader4_case_1
+  solve( (¬(#vr.5 < #e))  ∥ (∃ #j. (End( ~alpha ) @ #j) ∧ #j < #e) )
+    case case_1
+    solve( (¬(#vr.8 < #e))  ∥ (∃ #j. (End( ~s ) @ #j) ∧ #j < #e) )
+      case case_1
+      solve( !Shk( $X, $Y, k ) ▶₂ #l )
+        case ShkGen
+        solve( !KU( senc(<'3', j, n4, ('1'+$Y), n3, ~n1>, ~k) ) @ #vk.2 )
+          case DBSend
+          solve( (¬(#vr.3 < #vr.10))  ∥ (¬(#vr.10 < #vr.4)) )
+            case case_1
+            solve( (¬(#vr.15 < #e))  ∥ (∃ #j. (End( ~s.1 ) @ #j) ∧ #j < #e) )
+              case case_1
+              solve( !KU( omega(~k, ~j) ) @ #vk.4 )
+                case DBSend
+                solve( (¬(#vr.3 < #vr.17))  ∥ (¬(#vr.17 < #vr.4)) )
+                  case case_1
+                  solve( !KU( h(<~j, ~n1, $Y, ~s, n2>) ) @ #vk.6 )
+                    case DBSend
+                    solve( !KU( ~alpha ) @ #vk.11 )
+                      case Reader2
+                      by contradiction /* cyclic */
+                    qed
+                  next
+                    case c_h
+                    solve( !KU( ~j ) @ #vk.21 )
+                      case DBSend_case_1
+                      solve( (¬(#vr.3 < #vr.19))  ∥ (¬(#vr.19 < #vr.4)) )
+                        case case_1
+                        solve( !KU( ~s ) @ #vk.24 )
+                          case DBSend_case_1
+                          solve( !KU( ~k.1 ) @ #vk.25 )
+                            case ShkRevealX
+                            by contradiction /* from formulas */
+                          next
+                            case ShkRevealY
+                            by contradiction /* from formulas */
+                          qed
+                        next
+                          case DBSend_case_2
+                          solve( !KU( ~k.1 ) @ #vk.25 )
+                            case ShkRevealX
+                            by contradiction /* from formulas */
+                          next
+                            case ShkRevealY
+                            by contradiction /* from formulas */
+                          qed
+                        next
+                          case DBSend_case_3
+                          solve( !KU( ~k.1 ) @ #vk.25 )
+                            case ShkRevealX
+                            by contradiction /* from formulas */
+                          next
+                            case ShkRevealY
+                            by contradiction /* from formulas */
+                          qed
+                        next
+                          case Leak
+                          by contradiction /* cyclic */
+                        qed
+                      next
+                        case case_2
+                        solve( !KU( ~s ) @ #vk.24 )
+                          case DBSend_case_1
+                          solve( !KU( ~k.1 ) @ #vk.25 )
+                            case ShkRevealX
+                            by contradiction /* from formulas */
+                          next
+                            case ShkRevealY
+                            by contradiction /* from formulas */
+                          qed
+                        next
+                          case DBSend_case_2
+                          solve( !KU( ~k.1 ) @ #vk.25 )
+                            case ShkRevealX
+                            by contradiction /* from formulas */
+                          next
+                            case ShkRevealY
+                            by contradiction /* from formulas */
+                          qed
+                        next
+                          case DBSend_case_3
+                          solve( !KU( ~k.1 ) @ #vk.25 )
+                            case ShkRevealX
+                            by contradiction /* from formulas */
+                          next
+                            case ShkRevealY
+                            by contradiction /* from formulas */
+                          qed
+                        next
+                          case Leak
+                          by contradiction /* cyclic */
+                        qed
+                      qed
+                    next
+                      case DBSend_case_2
+                      solve( !KU( ~s ) @ #vk.24 )
+                        case DBSend_case_1
+                        solve( !KU( ~k ) @ #vk.25 )
+                          case ShkRevealX
+                          by contradiction /* from formulas */
+                        next
+                          case ShkRevealY
+                          by contradiction /* from formulas */
+                        qed
+                      next
+                        case DBSend_case_2
+                        solve( !KU( ~k ) @ #vk.25 )
+                          case ShkRevealX
+                          by contradiction /* from formulas */
+                        next
+                          case ShkRevealY
+                          by contradiction /* from formulas */
+                        qed
+                      next
+                        case DBSend_case_3
+                        solve( !KU( ~k ) @ #vk.25 )
+                          case ShkRevealX
+                          by contradiction /* from formulas */
+                        next
+                          case ShkRevealY
+                          by contradiction /* from formulas */
+                        qed
+                      next
+                        case Leak
+                        by contradiction /* cyclic */
+                      qed
+                    next
+                      case DBSend_case_3
+                      solve( !KU( ~s ) @ #vk.24 )
+                        case DBSend_case_1
+                        solve( !KU( ~k ) @ #vk.25 )
+                          case ShkRevealX
+                          by contradiction /* from formulas */
+                        next
+                          case ShkRevealY
+                          by contradiction /* from formulas */
+                        qed
+                      next
+                        case DBSend_case_2
+                        solve( !KU( ~k ) @ #vk.25 )
+                          case ShkRevealX
+                          by contradiction /* from formulas */
+                        next
+                          case ShkRevealY
+                          by contradiction /* from formulas */
+                        qed
+                      next
+                        case DBSend_case_3
+                        solve( !KU( ~k ) @ #vk.25 )
+                          case ShkRevealX
+                          by contradiction /* from formulas */
+                        next
+                          case ShkRevealY
+                          by contradiction /* from formulas */
+                        qed
+                      next
+                        case Leak
+                        by contradiction /* cyclic */
+                      qed
+                    qed
+                  qed
+                next
+                  case case_2
+                  solve( !KU( h(<~j, ~n1, $Y, ~s, n2>) ) @ #vk.6 )
+                    case DBSend
+                    solve( !KU( ~alpha ) @ #vk.11 )
+                      case Reader2
+                      by contradiction /* cyclic */
+                    qed
+                  next
+                    case c_h
+                    solve( !KU( ~j ) @ #vk.21 )
+                      case DBSend_case_1
+                      solve( (¬(#vr.3 < #vr.19))  ∥ (¬(#vr.19 < #vr.4)) )
+                        case case_1
+                        solve( !KU( ~s ) @ #vk.24 )
+                          case DBSend_case_1
+                          solve( !KU( ~k.1 ) @ #vk.25 )
+                            case ShkRevealX
+                            by contradiction /* from formulas */
+                          next
+                            case ShkRevealY
+                            by contradiction /* from formulas */
+                          qed
+                        next
+                          case DBSend_case_2
+                          solve( !KU( ~k.1 ) @ #vk.25 )
+                            case ShkRevealX
+                            by contradiction /* from formulas */
+                          next
+                            case ShkRevealY
+                            by contradiction /* from formulas */
+                          qed
+                        next
+                          case DBSend_case_3
+                          solve( !KU( ~k.1 ) @ #vk.25 )
+                            case ShkRevealX
+                            by contradiction /* from formulas */
+                          next
+                            case ShkRevealY
+                            by contradiction /* from formulas */
+                          qed
+                        next
+                          case Leak
+                          by contradiction /* cyclic */
+                        qed
+                      next
+                        case case_2
+                        solve( !KU( ~s ) @ #vk.24 )
+                          case DBSend_case_1
+                          solve( !KU( ~k.1 ) @ #vk.25 )
+                            case ShkRevealX
+                            by contradiction /* from formulas */
+                          next
+                            case ShkRevealY
+                            by contradiction /* from formulas */
+                          qed
+                        next
+                          case DBSend_case_2
+                          solve( !KU( ~k.1 ) @ #vk.25 )
+                            case ShkRevealX
+                            by contradiction /* from formulas */
+                          next
+                            case ShkRevealY
+                            by contradiction /* from formulas */
+                          qed
+                        next
+                          case DBSend_case_3
+                          solve( !KU( ~k.1 ) @ #vk.25 )
+                            case ShkRevealX
+                            by contradiction /* from formulas */
+                          next
+                            case ShkRevealY
+                            by contradiction /* from formulas */
+                          qed
+                        next
+                          case Leak
+                          by contradiction /* cyclic */
+                        qed
+                      qed
+                    next
+                      case DBSend_case_2
+                      solve( !KU( ~s ) @ #vk.24 )
+                        case DBSend_case_1
+                        solve( !KU( ~k ) @ #vk.25 )
+                          case ShkRevealX
+                          by contradiction /* from formulas */
+                        next
+                          case ShkRevealY
+                          by contradiction /* from formulas */
+                        qed
+                      next
+                        case DBSend_case_2
+                        solve( !KU( ~k ) @ #vk.25 )
+                          case ShkRevealX
+                          by contradiction /* from formulas */
+                        next
+                          case ShkRevealY
+                          by contradiction /* from formulas */
+                        qed
+                      next
+                        case DBSend_case_3
+                        solve( !KU( ~k ) @ #vk.25 )
+                          case ShkRevealX
+                          by contradiction /* from formulas */
+                        next
+                          case ShkRevealY
+                          by contradiction /* from formulas */
+                        qed
+                      next
+                        case Leak
+                        by contradiction /* cyclic */
+                      qed
+                    next
+                      case DBSend_case_3
+                      solve( !KU( ~s ) @ #vk.24 )
+                        case DBSend_case_1
+                        solve( !KU( ~k ) @ #vk.25 )
+                          case ShkRevealX
+                          by contradiction /* from formulas */
+                        next
+                          case ShkRevealY
+                          by contradiction /* from formulas */
+                        qed
+                      next
+                        case DBSend_case_2
+                        solve( !KU( ~k ) @ #vk.25 )
+                          case ShkRevealX
+                          by contradiction /* from formulas */
+                        next
+                          case ShkRevealY
+                          by contradiction /* from formulas */
+                        qed
+                      next
+                        case DBSend_case_3
+                        solve( !KU( ~k ) @ #vk.25 )
+                          case ShkRevealX
+                          by contradiction /* from formulas */
+                        next
+                          case ShkRevealY
+                          by contradiction /* from formulas */
+                        qed
+                      next
+                        case Leak
+                        by contradiction /* cyclic */
+                      qed
+                    qed
+                  qed
+                qed
+              next
+                case c_omega
+                solve( !KU( ~k ) @ #vk.18 )
+                  case ShkRevealX
+                  by contradiction /* from formulas */
+                next
+                  case ShkRevealY
+                  by contradiction /* from formulas */
+                qed
+              qed
+            next
+              case case_2
+              solve( End( ~s.1 ) @ #j.2 )
+                case Reader5
+                by solve( ReaderState4( R, T, ~s.1, s.2, n1.1, n2.1, n3.1, j.2
+                          ) ▶₀ #j.1 )
+              next
+                case Tag4
+                solve( TagState3( R, T, alpha.1, ~s.1, j.2, n1.1, n2.1, n3.1 ) ▶₀ #j.1 )
+                  case Tag3
+                  solve( !KU( ~n1 ) @ #vk.17 )
+                    case Reader1
+                    by contradiction /* cyclic */
+                  qed
+                qed
+              qed
+            qed
+          next
+            case case_2
+            solve( (¬(#vr.15 < #e))  ∥ (∃ #j. (End( ~s.1 ) @ #j) ∧ #j < #e) )
+              case case_1
+              solve( !KU( omega(~k, ~j) ) @ #vk.4 )
+                case DBSend
+                solve( (¬(#vr.3 < #vr.17))  ∥ (¬(#vr.17 < #vr.4)) )
+                  case case_1
+                  solve( !KU( h(<~j, ~n1, $Y, ~s, n2>) ) @ #vk.6 )
+                    case DBSend
+                    solve( !KU( ~alpha ) @ #vk.11 )
+                      case Reader2
+                      by contradiction /* cyclic */
+                    qed
+                  next
+                    case c_h
+                    solve( !KU( ~j ) @ #vk.21 )
+                      case DBSend_case_1
+                      solve( (¬(#vr.3 < #vr.19))  ∥ (¬(#vr.19 < #vr.4)) )
+                        case case_1
+                        solve( !KU( ~s ) @ #vk.24 )
+                          case DBSend_case_1
+                          solve( !KU( ~k.1 ) @ #vk.25 )
+                            case ShkRevealX
+                            by contradiction /* from formulas */
+                          next
+                            case ShkRevealY
+                            by contradiction /* from formulas */
+                          qed
+                        next
+                          case DBSend_case_2
+                          solve( !KU( ~k.1 ) @ #vk.25 )
+                            case ShkRevealX
+                            by contradiction /* from formulas */
+                          next
+                            case ShkRevealY
+                            by contradiction /* from formulas */
+                          qed
+                        next
+                          case DBSend_case_3
+                          solve( !KU( ~k.1 ) @ #vk.25 )
+                            case ShkRevealX
+                            by contradiction /* from formulas */
+                          next
+                            case ShkRevealY
+                            by contradiction /* from formulas */
+                          qed
+                        next
+                          case Leak
+                          by contradiction /* cyclic */
+                        qed
+                      next
+                        case case_2
+                        solve( !KU( ~s ) @ #vk.24 )
+                          case DBSend_case_1
+                          solve( !KU( ~k.1 ) @ #vk.25 )
+                            case ShkRevealX
+                            by contradiction /* from formulas */
+                          next
+                            case ShkRevealY
+                            by contradiction /* from formulas */
+                          qed
+                        next
+                          case DBSend_case_2
+                          solve( !KU( ~k.1 ) @ #vk.25 )
+                            case ShkRevealX
+                            by contradiction /* from formulas */
+                          next
+                            case ShkRevealY
+                            by contradiction /* from formulas */
+                          qed
+                        next
+                          case DBSend_case_3
+                          solve( !KU( ~k.1 ) @ #vk.25 )
+                            case ShkRevealX
+                            by contradiction /* from formulas */
+                          next
+                            case ShkRevealY
+                            by contradiction /* from formulas */
+                          qed
+                        next
+                          case Leak
+                          by contradiction /* cyclic */
+                        qed
+                      qed
+                    next
+                      case DBSend_case_2
+                      solve( !KU( ~s ) @ #vk.24 )
+                        case DBSend_case_1
+                        solve( !KU( ~k ) @ #vk.25 )
+                          case ShkRevealX
+                          by contradiction /* from formulas */
+                        next
+                          case ShkRevealY
+                          by contradiction /* from formulas */
+                        qed
+                      next
+                        case DBSend_case_2
+                        solve( !KU( ~k ) @ #vk.25 )
+                          case ShkRevealX
+                          by contradiction /* from formulas */
+                        next
+                          case ShkRevealY
+                          by contradiction /* from formulas */
+                        qed
+                      next
+                        case DBSend_case_3
+                        solve( !KU( ~k ) @ #vk.25 )
+                          case ShkRevealX
+                          by contradiction /* from formulas */
+                        next
+                          case ShkRevealY
+                          by contradiction /* from formulas */
+                        qed
+                      next
+                        case Leak
+                        by contradiction /* cyclic */
+                      qed
+                    next
+                      case DBSend_case_3
+                      solve( !KU( ~s ) @ #vk.24 )
+                        case DBSend_case_1
+                        solve( !KU( ~k ) @ #vk.25 )
+                          case ShkRevealX
+                          by contradiction /* from formulas */
+                        next
+                          case ShkRevealY
+                          by contradiction /* from formulas */
+                        qed
+                      next
+                        case DBSend_case_2
+                        solve( !KU( ~k ) @ #vk.25 )
+                          case ShkRevealX
+                          by contradiction /* from formulas */
+                        next
+                          case ShkRevealY
+                          by contradiction /* from formulas */
+                        qed
+                      next
+                        case DBSend_case_3
+                        solve( !KU( ~k ) @ #vk.25 )
+                          case ShkRevealX
+                          by contradiction /* from formulas */
+                        next
+                          case ShkRevealY
+                          by contradiction /* from formulas */
+                        qed
+                      next
+                        case Leak
+                        by contradiction /* cyclic */
+                      qed
+                    qed
+                  qed
+                next
+                  case case_2
+                  solve( !KU( h(<~j, ~n1, $Y, ~s, n2>) ) @ #vk.6 )
+                    case DBSend
+                    solve( !KU( ~alpha ) @ #vk.11 )
+                      case Reader2
+                      by contradiction /* cyclic */
+                    qed
+                  next
+                    case c_h
+                    solve( !KU( ~j ) @ #vk.21 )
+                      case DBSend_case_1
+                      solve( (¬(#vr.3 < #vr.19))  ∥ (¬(#vr.19 < #vr.4)) )
+                        case case_1
+                        solve( !KU( ~s ) @ #vk.24 )
+                          case DBSend_case_1
+                          solve( !KU( ~k.1 ) @ #vk.25 )
+                            case ShkRevealX
+                            by contradiction /* from formulas */
+                          next
+                            case ShkRevealY
+                            by contradiction /* from formulas */
+                          qed
+                        next
+                          case DBSend_case_2
+                          solve( !KU( ~k.1 ) @ #vk.25 )
+                            case ShkRevealX
+                            by contradiction /* from formulas */
+                          next
+                            case ShkRevealY
+                            by contradiction /* from formulas */
+                          qed
+                        next
+                          case DBSend_case_3
+                          solve( !KU( ~k.1 ) @ #vk.25 )
+                            case ShkRevealX
+                            by contradiction /* from formulas */
+                          next
+                            case ShkRevealY
+                            by contradiction /* from formulas */
+                          qed
+                        next
+                          case Leak
+                          by contradiction /* cyclic */
+                        qed
+                      next
+                        case case_2
+                        solve( !KU( ~s ) @ #vk.24 )
+                          case DBSend_case_1
+                          solve( !KU( ~k.1 ) @ #vk.25 )
+                            case ShkRevealX
+                            by contradiction /* from formulas */
+                          next
+                            case ShkRevealY
+                            by contradiction /* from formulas */
+                          qed
+                        next
+                          case DBSend_case_2
+                          solve( !KU( ~k.1 ) @ #vk.25 )
+                            case ShkRevealX
+                            by contradiction /* from formulas */
+                          next
+                            case ShkRevealY
+                            by contradiction /* from formulas */
+                          qed
+                        next
+                          case DBSend_case_3
+                          solve( !KU( ~k.1 ) @ #vk.25 )
+                            case ShkRevealX
+                            by contradiction /* from formulas */
+                          next
+                            case ShkRevealY
+                            by contradiction /* from formulas */
+                          qed
+                        next
+                          case Leak
+                          by contradiction /* cyclic */
+                        qed
+                      qed
+                    next
+                      case DBSend_case_2
+                      solve( !KU( ~s ) @ #vk.24 )
+                        case DBSend_case_1
+                        solve( !KU( ~k ) @ #vk.25 )
+                          case ShkRevealX
+                          by contradiction /* from formulas */
+                        next
+                          case ShkRevealY
+                          by contradiction /* from formulas */
+                        qed
+                      next
+                        case DBSend_case_2
+                        solve( !KU( ~k ) @ #vk.25 )
+                          case ShkRevealX
+                          by contradiction /* from formulas */
+                        next
+                          case ShkRevealY
+                          by contradiction /* from formulas */
+                        qed
+                      next
+                        case DBSend_case_3
+                        solve( !KU( ~k ) @ #vk.25 )
+                          case ShkRevealX
+                          by contradiction /* from formulas */
+                        next
+                          case ShkRevealY
+                          by contradiction /* from formulas */
+                        qed
+                      next
+                        case Leak
+                        by contradiction /* cyclic */
+                      qed
+                    next
+                      case DBSend_case_3
+                      solve( !KU( ~s ) @ #vk.24 )
+                        case DBSend_case_1
+                        solve( !KU( ~k ) @ #vk.25 )
+                          case ShkRevealX
+                          by contradiction /* from formulas */
+                        next
+                          case ShkRevealY
+                          by contradiction /* from formulas */
+                        qed
+                      next
+                        case DBSend_case_2
+                        solve( !KU( ~k ) @ #vk.25 )
+                          case ShkRevealX
+                          by contradiction /* from formulas */
+                        next
+                          case ShkRevealY
+                          by contradiction /* from formulas */
+                        qed
+                      next
+                        case DBSend_case_3
+                        solve( !KU( ~k ) @ #vk.25 )
+                          case ShkRevealX
+                          by contradiction /* from formulas */
+                        next
+                          case ShkRevealY
+                          by contradiction /* from formulas */
+                        qed
+                      next
+                        case Leak
+                        by contradiction /* cyclic */
+                      qed
+                    qed
+                  qed
+                qed
+              next
+                case c_omega
+                solve( !KU( ~k ) @ #vk.18 )
+                  case ShkRevealX
+                  by contradiction /* from formulas */
+                next
+                  case ShkRevealY
+                  by contradiction /* from formulas */
+                qed
+              qed
+            next
+              case case_2
+              solve( End( ~s.1 ) @ #j.2 )
+                case Reader5
+                by solve( ReaderState4( R, T, ~s.1, s.2, n1.1, n2.1, n3.1, j.2
+                          ) ▶₀ #j.1 )
+              next
+                case Tag4
+                solve( TagState3( R, T, alpha.1, ~s.1, j.2, n1.1, n2.1, n3.1 ) ▶₀ #j.1 )
+                  case Tag3
+                  solve( !KU( ~n1 ) @ #vk.17 )
+                    case Reader1
+                    by contradiction /* cyclic */
+                  qed
+                qed
+              qed
+            qed
+          qed
+        next
+          case c_senc
+          solve( !KU( ~k ) @ #vk.17 )
+            case ShkRevealX
+            by contradiction /* from formulas */
+          next
+            case ShkRevealY
+            by contradiction /* from formulas */
+          qed
+        qed
+      qed
+    next
+      case case_2
+      solve( !Shk( $X, $Y, k ) ▶₂ #l )
+        case ShkGen
+        solve( End( ~s ) @ #j.2 )
+          case Reader5
+          by solve( ReaderState4( R, T, ~s, s.1, n1.1, n2.1, n3.1, j.2 ) ▶₀ #j.1 )
+        next
+          case Tag4
+          solve( TagState3( R, T, alpha.1, ~s, j.2, n1.1, n2.1, n3.1 ) ▶₀ #j.1 )
+            case Tag3
+            solve( !Shk( $R, $X.1, k.1 ) ▶₂ #j.1 )
+              case ShkGen
+              solve( !KU( ~alpha ) @ #vk.11 )
+                case Reader2
+                by contradiction /* cyclic */
+              qed
+            qed
+          qed
+        qed
+      qed
+    qed
+  next
+    case case_2
+    solve( (¬(#vr.8 < #e))  ∥ (∃ #j. (End( ~s ) @ #j) ∧ #j < #e) )
+      case case_1
+      solve( !Shk( $X, $Y, k ) ▶₂ #l )
+        case ShkGen
+        solve( End( ~alpha ) @ #j.2 )
+          case Reader5
+          solve( ReaderState4( R, T, ~alpha, s.1, n1.1, n2.1, n3.1, j.2 ) ▶₀ #j.1 )
+            case Reader4
+            by contradiction /* cyclic */
+          qed
+        next
+          case Tag4
+          by solve( TagState3( R, T, alpha.1, ~alpha, j.2, n1.1, n2.1, n3.1
+                    ) ▶₀ #j.1 )
+        qed
+      qed
+    next
+      case case_2
+      solve( !Shk( $X, $Y, k ) ▶₂ #l )
+        case ShkGen
+        solve( End( ~alpha ) @ #j.2 )
+          case Reader5
+          solve( ReaderState4( R, T, ~alpha, s.1, n1.1, n2.1, n3.1, j.2 ) ▶₀ #j.1 )
+            case Reader4
+            by contradiction /* cyclic */
+          qed
+        next
+          case Tag4
+          by solve( TagState3( R, T, alpha.1, ~alpha, j.2, n1.1, n2.1, n3.1
+                    ) ▶₀ #j.1 )
+        qed
+      qed
+    qed
+  qed
+next
+  case Reader4_case_2
+  solve( (¬(#vr.5 < #e))  ∥ (∃ #j. (End( ~alpha ) @ #j) ∧ #j < #e) )
+    case case_1
+    solve( !Shk( $X, $Y, k ) ▶₂ #l )
+      case ShkGen
+      solve( !KU( senc(<'3', j, n4, ('1'+$Y), n3, ~n1>, ~k) ) @ #vk.2 )
+        case DBSend
+        solve( (¬(#vr.3 < #vr.10))  ∥ (¬(#vr.10 < #vr.4)) )
+          case case_1
+          solve( (¬(#vr.15 < #e))  ∥ (∃ #j. (End( ~s.1 ) @ #j) ∧ #j < #e) )
+            case case_1
+            solve( !KU( omega(~k, ~j) ) @ #vk.4 )
+              case DBSend
+              solve( (¬(#vr.3 < #vr.17))  ∥ (¬(#vr.17 < #vr.4)) )
+                case case_1
+                solve( !KU( h(<~j, ~n1, $Y, s, n2>) ) @ #vk.6 )
+                  case DBSend
+                  solve( !KU( ~n2 ) @ #vk.9 )
+                    case DBSend
+                    solve( !KU( senc(<'2', ~j, ~n3, $Y, ~alpha, XOR(~alpha, ~s), ~n1>, ~k)
+                           ) @ #vk.8 )
+                      case DBSend
+                      solve( !KU( ~alpha ) @ #vk.12 )
+                        case Reader2
+                        by contradiction /* cyclic */
+                      qed
+                    next
+                      case c_senc
+                      solve( !KU( ~k ) @ #vk.18 )
+                        case ShkRevealX
+                        by contradiction /* from formulas */
+                      next
+                        case ShkRevealY
+                        by contradiction /* from formulas */
+                      qed
+                    qed
+                  qed
+                next
+                  case c_h
+                  solve( !KU( ~j ) @ #vk.19 )
+                    case DBSend_case_1
+                    solve( (¬(#vr.3 < #vr.19))  ∥ (¬(#vr.19 < #vr.4)) )
+                      case case_1
+                      solve( !KU( ~k.1 ) @ #vk.23 )
+                        case ShkRevealX
+                        by contradiction /* from formulas */
+                      next
+                        case ShkRevealY
+                        by contradiction /* from formulas */
+                      qed
+                    next
+                      case case_2
+                      solve( !KU( ~k.1 ) @ #vk.23 )
+                        case ShkRevealX
+                        by contradiction /* from formulas */
+                      next
+                        case ShkRevealY
+                        by contradiction /* from formulas */
+                      qed
+                    qed
+                  next
+                    case DBSend_case_2
+                    solve( !KU( ~k ) @ #vk.23 )
+                      case ShkRevealX
+                      by contradiction /* from formulas */
+                    next
+                      case ShkRevealY
+                      by contradiction /* from formulas */
+                    qed
+                  next
+                    case DBSend_case_3
+                    solve( !KU( ~k ) @ #vk.23 )
+                      case ShkRevealX
+                      by contradiction /* from formulas */
+                    next
+                      case ShkRevealY
+                      by contradiction /* from formulas */
+                    qed
+                  qed
+                qed
+              next
+                case case_2
+                solve( !KU( h(<~j, ~n1, $Y, s, n2>) ) @ #vk.6 )
+                  case DBSend
+                  solve( !KU( ~n2 ) @ #vk.9 )
+                    case DBSend
+                    solve( !KU( senc(<'2', ~j, ~n3, $Y, ~alpha, XOR(~alpha, ~s), ~n1>, ~k)
+                           ) @ #vk.8 )
+                      case DBSend
+                      solve( !KU( ~alpha ) @ #vk.12 )
+                        case Reader2
+                        by contradiction /* cyclic */
+                      qed
+                    next
+                      case c_senc
+                      solve( !KU( ~k ) @ #vk.18 )
+                        case ShkRevealX
+                        by contradiction /* from formulas */
+                      next
+                        case ShkRevealY
+                        by contradiction /* from formulas */
+                      qed
+                    qed
+                  qed
+                next
+                  case c_h
+                  solve( !KU( ~j ) @ #vk.19 )
+                    case DBSend_case_1
+                    solve( (¬(#vr.3 < #vr.19))  ∥ (¬(#vr.19 < #vr.4)) )
+                      case case_1
+                      solve( !KU( ~k.1 ) @ #vk.23 )
+                        case ShkRevealX
+                        by contradiction /* from formulas */
+                      next
+                        case ShkRevealY
+                        by contradiction /* from formulas */
+                      qed
+                    next
+                      case case_2
+                      solve( !KU( ~k.1 ) @ #vk.23 )
+                        case ShkRevealX
+                        by contradiction /* from formulas */
+                      next
+                        case ShkRevealY
+                        by contradiction /* from formulas */
+                      qed
+                    qed
+                  next
+                    case DBSend_case_2
+                    solve( !KU( ~k ) @ #vk.23 )
+                      case ShkRevealX
+                      by contradiction /* from formulas */
+                    next
+                      case ShkRevealY
+                      by contradiction /* from formulas */
+                    qed
+                  next
+                    case DBSend_case_3
+                    solve( !KU( ~k ) @ #vk.23 )
+                      case ShkRevealX
+                      by contradiction /* from formulas */
+                    next
+                      case ShkRevealY
+                      by contradiction /* from formulas */
+                    qed
+                  qed
+                qed
+              qed
+            next
+              case c_omega
+              solve( !KU( ~k ) @ #vk.16 )
+                case ShkRevealX
+                by contradiction /* from formulas */
+              next
+                case ShkRevealY
+                by contradiction /* from formulas */
+              qed
+            qed
+          next
+            case case_2
+            solve( End( ~s.1 ) @ #j.1 )
+              case Reader5
+              by solve( ReaderState4( R, T, ~s.1, s.2, n1.1, n2.1, n3.1, j.2
+                        ) ▶₀ #j.1 )
+            next
+              case Tag4
+              solve( TagState3( R, T, alpha.1, ~s.1, j.2, n1.1, n2.1, n3.1 ) ▶₀ #j.1 )
+                case Tag3
+                solve( !KU( ~n1 ) @ #vk.15 )
+                  case Reader1
+                  by contradiction /* cyclic */
+                qed
+              qed
+            qed
+          qed
+        next
+          case case_2
+          solve( (¬(#vr.15 < #e))  ∥ (∃ #j. (End( ~s.1 ) @ #j) ∧ #j < #e) )
+            case case_1
+            solve( !KU( omega(~k, ~j) ) @ #vk.4 )
+              case DBSend
+              solve( (¬(#vr.3 < #vr.17))  ∥ (¬(#vr.17 < #vr.4)) )
+                case case_1
+                solve( !KU( h(<~j, ~n1, $Y, s, n2>) ) @ #vk.6 )
+                  case DBSend
+                  solve( !KU( ~n2 ) @ #vk.9 )
+                    case DBSend
+                    solve( !KU( senc(<'2', ~j, ~n3, $Y, ~alpha, XOR(~alpha, ~s), ~n1>, ~k)
+                           ) @ #vk.8 )
+                      case DBSend
+                      solve( !KU( ~alpha ) @ #vk.12 )
+                        case Reader2
+                        by contradiction /* cyclic */
+                      qed
+                    next
+                      case c_senc
+                      solve( !KU( ~k ) @ #vk.18 )
+                        case ShkRevealX
+                        by contradiction /* from formulas */
+                      next
+                        case ShkRevealY
+                        by contradiction /* from formulas */
+                      qed
+                    qed
+                  qed
+                next
+                  case c_h
+                  solve( !KU( ~j ) @ #vk.19 )
+                    case DBSend_case_1
+                    solve( (¬(#vr.3 < #vr.19))  ∥ (¬(#vr.19 < #vr.4)) )
+                      case case_1
+                      solve( !KU( ~k.1 ) @ #vk.23 )
+                        case ShkRevealX
+                        by contradiction /* from formulas */
+                      next
+                        case ShkRevealY
+                        by contradiction /* from formulas */
+                      qed
+                    next
+                      case case_2
+                      solve( !KU( ~k.1 ) @ #vk.23 )
+                        case ShkRevealX
+                        by contradiction /* from formulas */
+                      next
+                        case ShkRevealY
+                        by contradiction /* from formulas */
+                      qed
+                    qed
+                  next
+                    case DBSend_case_2
+                    solve( !KU( ~k ) @ #vk.23 )
+                      case ShkRevealX
+                      by contradiction /* from formulas */
+                    next
+                      case ShkRevealY
+                      by contradiction /* from formulas */
+                    qed
+                  next
+                    case DBSend_case_3
+                    solve( !KU( ~k ) @ #vk.23 )
+                      case ShkRevealX
+                      by contradiction /* from formulas */
+                    next
+                      case ShkRevealY
+                      by contradiction /* from formulas */
+                    qed
+                  qed
+                qed
+              next
+                case case_2
+                solve( !KU( h(<~j, ~n1, $Y, s, n2>) ) @ #vk.6 )
+                  case DBSend
+                  solve( !KU( ~n2 ) @ #vk.9 )
+                    case DBSend
+                    solve( !KU( senc(<'2', ~j, ~n3, $Y, ~alpha, XOR(~alpha, ~s), ~n1>, ~k)
+                           ) @ #vk.8 )
+                      case DBSend
+                      solve( !KU( senc(<'1', ~n1, $Y, ~s, ~n1, ~j>, ~k) ) @ #vk.10 )
+                        case DBSend
+                        solve( !KU( XOR(~alpha, ~s) ) @ #vk.11 )
+                          case DBSend_case_1
+                          solve( !KU( ~alpha ) @ #vk.12 )
+                            case Reader2
+                            by contradiction /* cyclic */
+                          qed
+                        next
+                          case DBSend_case_2
+                          by contradiction /* cyclic */
+                        next
+                          case c_XOR
+                          solve( !KU( ~s ) @ #vk.16 )
+                            case DBSend_case_1
+                            solve( !KU( ~k ) @ #vk.17 )
+                              case ShkRevealX
+                              by contradiction /* from formulas */
+                            next
+                              case ShkRevealY
+                              by contradiction /* from formulas */
+                            qed
+                          next
+                            case DBSend_case_2
+                            solve( !KU( ~alpha ) @ #vk.13 )
+                              case Reader2
+                              by contradiction /* cyclic */
+                            qed
+                          next
+                            case DBSend_case_3
+                            by contradiction /* cyclic */
+                          next
+                            case Leak
+                            by contradiction /* cyclic */
+                          qed
+                        qed
+                      next
+                        case c_senc
+                        solve( !KU( ~k ) @ #vk.19 )
+                          case ShkRevealX
+                          by contradiction /* from formulas */
+                        next
+                          case ShkRevealY
+                          by contradiction /* from formulas */
+                        qed
+                      qed
+                    next
+                      case c_senc
+                      solve( !KU( ~k ) @ #vk.18 )
+                        case ShkRevealX
+                        by contradiction /* from formulas */
+                      next
+                        case ShkRevealY
+                        by contradiction /* from formulas */
+                      qed
+                    qed
+                  qed
+                next
+                  case c_h
+                  solve( !KU( ~j ) @ #vk.19 )
+                    case DBSend_case_1
+                    solve( (¬(#vr.3 < #vr.19))  ∥ (¬(#vr.19 < #vr.4)) )
+                      case case_1
+                      solve( !KU( ~k.1 ) @ #vk.23 )
+                        case ShkRevealX
+                        by contradiction /* from formulas */
+                      next
+                        case ShkRevealY
+                        by contradiction /* from formulas */
+                      qed
+                    next
+                      case case_2
+                      solve( !KU( ~k.1 ) @ #vk.23 )
+                        case ShkRevealX
+                        by contradiction /* from formulas */
+                      next
+                        case ShkRevealY
+                        by contradiction /* from formulas */
+                      qed
+                    qed
+                  next
+                    case DBSend_case_2
+                    solve( !KU( ~k ) @ #vk.23 )
+                      case ShkRevealX
+                      by contradiction /* from formulas */
+                    next
+                      case ShkRevealY
+                      by contradiction /* from formulas */
+                    qed
+                  next
+                    case DBSend_case_3
+                    solve( !KU( ~k ) @ #vk.23 )
+                      case ShkRevealX
+                      by contradiction /* from formulas */
+                    next
+                      case ShkRevealY
+                      by contradiction /* from formulas */
+                    qed
+                  qed
+                qed
+              qed
+            next
+              case c_omega
+              solve( !KU( ~k ) @ #vk.16 )
+                case ShkRevealX
+                by contradiction /* from formulas */
+              next
+                case ShkRevealY
+                by contradiction /* from formulas */
+              qed
+            qed
+          next
+            case case_2
+            solve( End( ~s.1 ) @ #j.1 )
+              case Reader5
+              by solve( ReaderState4( R, T, ~s.1, s.2, n1.1, n2.1, n3.1, j.2
+                        ) ▶₀ #j.1 )
+            next
+              case Tag4
+              solve( TagState3( R, T, alpha.1, ~s.1, j.2, n1.1, n2.1, n3.1 ) ▶₀ #j.1 )
+                case Tag3
+                solve( !KU( ~n1 ) @ #vk.15 )
+                  case Reader1
+                  by contradiction /* cyclic */
+                qed
+              qed
+            qed
+          qed
+        qed
+      next
+        case c_senc
+        solve( !KU( ~k ) @ #vk.14 )
+          case ShkRevealX
+          by contradiction /* from formulas */
+        next
+          case ShkRevealY
+          by contradiction /* from formulas */
+        qed
+      qed
+    qed
+  next
+    case case_2
+    solve( !Shk( $X, $Y, k ) ▶₂ #l )
+      case ShkGen
+      solve( End( ~alpha ) @ #j.1 )
+        case Reader5
+        solve( ReaderState4( R, T, ~alpha, s.1, n1.1, n2.1, n3.1, j.2 ) ▶₀ #j.1 )
+          case Reader4
+          by contradiction /* cyclic */
+        qed
+      next
+        case Tag4
+        by solve( TagState3( R, T, alpha.1, ~alpha, j.2, n1.1, n2.1, n3.1
+                  ) ▶₀ #j.1 )
+      qed
+    qed
+  qed
+next
+  case Reader4_case_3
+  solve( (¬(#vr.5 < #e))  ∥ (∃ #j. (End( ~alpha ) @ #j) ∧ #j < #e) )
+    case case_1
+    solve( !Shk( $X, $Y, k ) ▶₂ #l )
+      case ShkGen
+      solve( !KU( senc(<'3', j, n4, ('1'+$Y), n3, ~n1>, ~k) ) @ #vk.2 )
+        case DBSend
+        solve( (¬(#vr.3 < #vr.10))  ∥ (¬(#vr.10 < #vr.4)) )
+          case case_1
+          solve( (¬(#vr.15 < #e))  ∥ (∃ #j. (End( ~s.1 ) @ #j) ∧ #j < #e) )
+            case case_1
+            solve( !KU( omega(~k, ~j) ) @ #vk.4 )
+              case DBSend
+              solve( (¬(#vr.3 < #vr.17))  ∥ (¬(#vr.17 < #vr.4)) )
+                case case_1
+                solve( !KU( h(<~j, ~n1, $Y, s, n2>) ) @ #vk.6 )
+                  case DBSend
+                  solve( !KU( ~n2 ) @ #vk.9 )
+                    case DBSend
+                    solve( !KU( senc(<'2', ~j, ~n3, $Y, ~alpha, XOR(~alpha, ~s), ~n1>, ~k)
+                           ) @ #vk.8 )
+                      case DBSend
+                      solve( !KU( ~alpha ) @ #vk.12 )
+                        case Reader2
+                        by contradiction /* cyclic */
+                      qed
+                    next
+                      case c_senc
+                      solve( !KU( ~k ) @ #vk.18 )
+                        case ShkRevealX
+                        by contradiction /* from formulas */
+                      next
+                        case ShkRevealY
+                        by contradiction /* from formulas */
+                      qed
+                    qed
+                  qed
+                next
+                  case c_h
+                  solve( !KU( ~j ) @ #vk.19 )
+                    case DBSend_case_1
+                    solve( (¬(#vr.3 < #vr.19))  ∥ (¬(#vr.19 < #vr.4)) )
+                      case case_1
+                      solve( !KU( ~k.1 ) @ #vk.23 )
+                        case ShkRevealX
+                        by contradiction /* from formulas */
+                      next
+                        case ShkRevealY
+                        by contradiction /* from formulas */
+                      qed
+                    next
+                      case case_2
+                      solve( !KU( ~k.1 ) @ #vk.23 )
+                        case ShkRevealX
+                        by contradiction /* from formulas */
+                      next
+                        case ShkRevealY
+                        by contradiction /* from formulas */
+                      qed
+                    qed
+                  next
+                    case DBSend_case_2
+                    solve( !KU( ~k ) @ #vk.23 )
+                      case ShkRevealX
+                      by contradiction /* from formulas */
+                    next
+                      case ShkRevealY
+                      by contradiction /* from formulas */
+                    qed
+                  next
+                    case DBSend_case_3
+                    solve( !KU( ~k ) @ #vk.23 )
+                      case ShkRevealX
+                      by contradiction /* from formulas */
+                    next
+                      case ShkRevealY
+                      by contradiction /* from formulas */
+                    qed
+                  qed
+                qed
+              next
+                case case_2
+                solve( !KU( h(<~j, ~n1, $Y, s, n2>) ) @ #vk.6 )
+                  case DBSend
+                  solve( !KU( ~n2 ) @ #vk.9 )
+                    case DBSend
+                    solve( !KU( senc(<'2', ~j, ~n3, $Y, ~alpha, XOR(~alpha, ~s), ~n1>, ~k)
+                           ) @ #vk.8 )
+                      case DBSend
+                      solve( !KU( ~alpha ) @ #vk.12 )
+                        case Reader2
+                        by contradiction /* cyclic */
+                      qed
+                    next
+                      case c_senc
+                      solve( !KU( ~k ) @ #vk.18 )
+                        case ShkRevealX
+                        by contradiction /* from formulas */
+                      next
+                        case ShkRevealY
+                        by contradiction /* from formulas */
+                      qed
+                    qed
+                  qed
+                next
+                  case c_h
+                  solve( !KU( ~j ) @ #vk.19 )
+                    case DBSend_case_1
+                    solve( (¬(#vr.3 < #vr.19))  ∥ (¬(#vr.19 < #vr.4)) )
+                      case case_1
+                      solve( !KU( ~k.1 ) @ #vk.23 )
+                        case ShkRevealX
+                        by contradiction /* from formulas */
+                      next
+                        case ShkRevealY
+                        by contradiction /* from formulas */
+                      qed
+                    next
+                      case case_2
+                      solve( !KU( ~k.1 ) @ #vk.23 )
+                        case ShkRevealX
+                        by contradiction /* from formulas */
+                      next
+                        case ShkRevealY
+                        by contradiction /* from formulas */
+                      qed
+                    qed
+                  next
+                    case DBSend_case_2
+                    solve( !KU( ~k ) @ #vk.23 )
+                      case ShkRevealX
+                      by contradiction /* from formulas */
+                    next
+                      case ShkRevealY
+                      by contradiction /* from formulas */
+                    qed
+                  next
+                    case DBSend_case_3
+                    solve( !KU( ~k ) @ #vk.23 )
+                      case ShkRevealX
+                      by contradiction /* from formulas */
+                    next
+                      case ShkRevealY
+                      by contradiction /* from formulas */
+                    qed
+                  qed
+                qed
+              qed
+            next
+              case c_omega
+              solve( !KU( ~k ) @ #vk.16 )
+                case ShkRevealX
+                by contradiction /* from formulas */
+              next
+                case ShkRevealY
+                by contradiction /* from formulas */
+              qed
+            qed
+          next
+            case case_2
+            solve( End( ~s.1 ) @ #j.1 )
+              case Reader5
+              by solve( ReaderState4( R, T, ~s.1, s.2, n1.1, n2.1, n3.1, j.2
+                        ) ▶₀ #j.1 )
+            next
+              case Tag4
+              solve( TagState3( R, T, alpha.1, ~s.1, j.2, n1.1, n2.1, n3.1 ) ▶₀ #j.1 )
+                case Tag3
+                solve( !KU( ~n1 ) @ #vk.15 )
+                  case Reader1
+                  by contradiction /* cyclic */
+                qed
+              qed
+            qed
+          qed
+        next
+          case case_2
+          solve( (¬(#vr.15 < #e))  ∥ (∃ #j. (End( ~s.1 ) @ #j) ∧ #j < #e) )
+            case case_1
+            solve( !KU( omega(~k, ~j) ) @ #vk.4 )
+              case DBSend
+              solve( (¬(#vr.3 < #vr.17))  ∥ (¬(#vr.17 < #vr.4)) )
+                case case_1
+                solve( !KU( h(<~j, ~n1, $Y, s, n2>) ) @ #vk.6 )
+                  case DBSend
+                  solve( !KU( ~n2 ) @ #vk.9 )
+                    case DBSend
+                    solve( !KU( senc(<'2', ~j, ~n3, $Y, ~alpha, XOR(~alpha, ~s), ~n1>, ~k)
+                           ) @ #vk.8 )
+                      case DBSend
+                      solve( !KU( ~alpha ) @ #vk.12 )
+                        case Reader2
+                        by contradiction /* cyclic */
+                      qed
+                    next
+                      case c_senc
+                      solve( !KU( ~k ) @ #vk.18 )
+                        case ShkRevealX
+                        by contradiction /* from formulas */
+                      next
+                        case ShkRevealY
+                        by contradiction /* from formulas */
+                      qed
+                    qed
+                  qed
+                next
+                  case c_h
+                  solve( !KU( ~j ) @ #vk.19 )
+                    case DBSend_case_1
+                    solve( (¬(#vr.3 < #vr.19))  ∥ (¬(#vr.19 < #vr.4)) )
+                      case case_1
+                      solve( !KU( ~k.1 ) @ #vk.23 )
+                        case ShkRevealX
+                        by contradiction /* from formulas */
+                      next
+                        case ShkRevealY
+                        by contradiction /* from formulas */
+                      qed
+                    next
+                      case case_2
+                      solve( !KU( ~k.1 ) @ #vk.23 )
+                        case ShkRevealX
+                        by contradiction /* from formulas */
+                      next
+                        case ShkRevealY
+                        by contradiction /* from formulas */
+                      qed
+                    qed
+                  next
+                    case DBSend_case_2
+                    solve( !KU( ~k ) @ #vk.23 )
+                      case ShkRevealX
+                      by contradiction /* from formulas */
+                    next
+                      case ShkRevealY
+                      by contradiction /* from formulas */
+                    qed
+                  next
+                    case DBSend_case_3
+                    solve( !KU( ~k ) @ #vk.23 )
+                      case ShkRevealX
+                      by contradiction /* from formulas */
+                    next
+                      case ShkRevealY
+                      by contradiction /* from formulas */
+                    qed
+                  qed
+                qed
+              next
+                case case_2
+                solve( !KU( h(<~j, ~n1, $Y, s, n2>) ) @ #vk.6 )
+                  case DBSend
+                  solve( !KU( ~n2 ) @ #vk.9 )
+                    case DBSend
+                    solve( !KU( senc(<'2', ~j, ~n3, $Y, ~alpha, XOR(~alpha, ~s), ~n1>, ~k)
+                           ) @ #vk.8 )
+                      case DBSend
+                      solve( !KU( senc(<'1', ~n1, $Y, ~s, ~n1, ~j>, ~k) ) @ #vk.10 )
+                        case DBSend
+                        solve( !KU( XOR(~alpha, ~s) ) @ #vk.11 )
+                          case DBSend_case_1
+                          solve( !KU( ~alpha ) @ #vk.12 )
+                            case Reader2
+                            by contradiction /* cyclic */
+                          qed
+                        next
+                          case DBSend_case_2
+                          by contradiction /* cyclic */
+                        next
+                          case c_XOR
+                          solve( !KU( ~s ) @ #vk.16 )
+                            case DBSend_case_1
+                            solve( !KU( ~k ) @ #vk.17 )
+                              case ShkRevealX
+                              by contradiction /* from formulas */
+                            next
+                              case ShkRevealY
+                              by contradiction /* from formulas */
+                            qed
+                          next
+                            case DBSend_case_2
+                            solve( !KU( ~alpha ) @ #vk.13 )
+                              case Reader2
+                              by contradiction /* cyclic */
+                            qed
+                          next
+                            case DBSend_case_3
+                            by contradiction /* cyclic */
+                          next
+                            case Leak
+                            by contradiction /* cyclic */
+                          qed
+                        qed
+                      next
+                        case c_senc
+                        solve( !KU( ~k ) @ #vk.19 )
+                          case ShkRevealX
+                          by contradiction /* from formulas */
+                        next
+                          case ShkRevealY
+                          by contradiction /* from formulas */
+                        qed
+                      qed
+                    next
+                      case c_senc
+                      solve( !KU( ~k ) @ #vk.18 )
+                        case ShkRevealX
+                        by contradiction /* from formulas */
+                      next
+                        case ShkRevealY
+                        by contradiction /* from formulas */
+                      qed
+                    qed
+                  qed
+                next
+                  case c_h
+                  solve( !KU( ~j ) @ #vk.19 )
+                    case DBSend_case_1
+                    solve( (¬(#vr.3 < #vr.19))  ∥ (¬(#vr.19 < #vr.4)) )
+                      case case_1
+                      solve( !KU( ~k.1 ) @ #vk.23 )
+                        case ShkRevealX
+                        by contradiction /* from formulas */
+                      next
+                        case ShkRevealY
+                        by contradiction /* from formulas */
+                      qed
+                    next
+                      case case_2
+                      solve( !KU( ~k.1 ) @ #vk.23 )
+                        case ShkRevealX
+                        by contradiction /* from formulas */
+                      next
+                        case ShkRevealY
+                        by contradiction /* from formulas */
+                      qed
+                    qed
+                  next
+                    case DBSend_case_2
+                    solve( !KU( ~k ) @ #vk.23 )
+                      case ShkRevealX
+                      by contradiction /* from formulas */
+                    next
+                      case ShkRevealY
+                      by contradiction /* from formulas */
+                    qed
+                  next
+                    case DBSend_case_3
+                    solve( !KU( ~k ) @ #vk.23 )
+                      case ShkRevealX
+                      by contradiction /* from formulas */
+                    next
+                      case ShkRevealY
+                      by contradiction /* from formulas */
+                    qed
+                  qed
+                qed
+              qed
+            next
+              case c_omega
+              solve( !KU( ~k ) @ #vk.16 )
+                case ShkRevealX
+                by contradiction /* from formulas */
+              next
+                case ShkRevealY
+                by contradiction /* from formulas */
+              qed
+            qed
+          next
+            case case_2
+            solve( End( ~s.1 ) @ #j.1 )
+              case Reader5
+              by solve( ReaderState4( R, T, ~s.1, s.2, n1.1, n2.1, n3.1, j.2
+                        ) ▶₀ #j.1 )
+            next
+              case Tag4
+              solve( TagState3( R, T, alpha.1, ~s.1, j.2, n1.1, n2.1, n3.1 ) ▶₀ #j.1 )
+                case Tag3
+                solve( !KU( ~n1 ) @ #vk.15 )
+                  case Reader1
+                  by contradiction /* cyclic */
+                qed
+              qed
+            qed
+          qed
+        qed
+      next
+        case c_senc
+        solve( !KU( ~k ) @ #vk.14 )
+          case ShkRevealX
+          by contradiction /* from formulas */
+        next
+          case ShkRevealY
+          by contradiction /* from formulas */
+        qed
+      qed
+    qed
+  next
+    case case_2
+    solve( !Shk( $X, $Y, k ) ▶₂ #l )
+      case ShkGen
+      solve( End( ~alpha ) @ #j.1 )
+        case Reader5
+        solve( ReaderState4( R, T, ~alpha, s.1, n1.1, n2.1, n3.1, j.2 ) ▶₀ #j.1 )
+          case Reader4
+          by contradiction /* cyclic */
+        qed
+      next
+        case Tag4
+        by solve( TagState3( R, T, alpha.1, ~alpha, j.2, n1.1, n2.1, n3.1
+                  ) ▶₀ #j.1 )
+      qed
+    qed
+  qed
+next
+  case Reader4_case_4
+  solve( (¬(#vr.5 < #e))  ∥ (∃ #j. (End( ~alpha ) @ #j) ∧ #j < #e) )
+    case case_1
+    solve( !Shk( $X, $Y, k ) ▶₂ #l )
+      case ShkGen
+      solve( !KU( senc(<'3', j, n4, ('1'+$Y), n3, ~n1>, ~k) ) @ #vk.2 )
+        case DBSend
+        solve( (¬(#vr.3 < #vr.10))  ∥ (¬(#vr.10 < #vr.4)) )
+          case case_1
+          solve( (¬(#vr.15 < #e))  ∥ (∃ #j. (End( ~s.1 ) @ #j) ∧ #j < #e) )
+            case case_1
+            solve( !KU( omega(~k, ~j) ) @ #vk.4 )
+              case DBSend
+              solve( (¬(#vr.3 < #vr.17))  ∥ (¬(#vr.17 < #vr.4)) )
+                case case_1
+                solve( !KU( h(<~j, ~n1, $Y, s, n2>) ) @ #vk.6 )
+                  case DBSend
+                  solve( !KU( ~n2 ) @ #vk.9 )
+                    case DBSend
+                    solve( !KU( senc(<'2', ~j, ~n3, $Y, ~alpha, XOR(~alpha, ~s), ~n1>, ~k)
+                           ) @ #vk.8 )
+                      case DBSend
+                      solve( !KU( ~alpha ) @ #vk.12 )
+                        case Reader2
+                        by contradiction /* cyclic */
+                      qed
+                    next
+                      case c_senc
+                      solve( !KU( ~k ) @ #vk.18 )
+                        case ShkRevealX
+                        by contradiction /* from formulas */
+                      next
+                        case ShkRevealY
+                        by contradiction /* from formulas */
+                      qed
+                    qed
+                  qed
+                next
+                  case c_h
+                  solve( !KU( ~j ) @ #vk.19 )
+                    case DBSend_case_1
+                    solve( (¬(#vr.3 < #vr.19))  ∥ (¬(#vr.19 < #vr.4)) )
+                      case case_1
+                      solve( !KU( ~k.1 ) @ #vk.23 )
+                        case ShkRevealX
+                        by contradiction /* from formulas */
+                      next
+                        case ShkRevealY
+                        by contradiction /* from formulas */
+                      qed
+                    next
+                      case case_2
+                      solve( !KU( ~k.1 ) @ #vk.23 )
+                        case ShkRevealX
+                        by contradiction /* from formulas */
+                      next
+                        case ShkRevealY
+                        by contradiction /* from formulas */
+                      qed
+                    qed
+                  next
+                    case DBSend_case_2
+                    solve( !KU( ~k ) @ #vk.23 )
+                      case ShkRevealX
+                      by contradiction /* from formulas */
+                    next
+                      case ShkRevealY
+                      by contradiction /* from formulas */
+                    qed
+                  next
+                    case DBSend_case_3
+                    solve( !KU( ~k ) @ #vk.23 )
+                      case ShkRevealX
+                      by contradiction /* from formulas */
+                    next
+                      case ShkRevealY
+                      by contradiction /* from formulas */
+                    qed
+                  qed
+                qed
+              next
+                case case_2
+                solve( !KU( h(<~j, ~n1, $Y, s, n2>) ) @ #vk.6 )
+                  case DBSend
+                  solve( !KU( ~n2 ) @ #vk.9 )
+                    case DBSend
+                    solve( !KU( senc(<'2', ~j, ~n3, $Y, ~alpha, XOR(~alpha, ~s), ~n1>, ~k)
+                           ) @ #vk.8 )
+                      case DBSend
+                      solve( !KU( ~alpha ) @ #vk.12 )
+                        case Reader2
+                        by contradiction /* cyclic */
+                      qed
+                    next
+                      case c_senc
+                      solve( !KU( ~k ) @ #vk.18 )
+                        case ShkRevealX
+                        by contradiction /* from formulas */
+                      next
+                        case ShkRevealY
+                        by contradiction /* from formulas */
+                      qed
+                    qed
+                  qed
+                next
+                  case c_h
+                  solve( !KU( ~j ) @ #vk.19 )
+                    case DBSend_case_1
+                    solve( (¬(#vr.3 < #vr.19))  ∥ (¬(#vr.19 < #vr.4)) )
+                      case case_1
+                      solve( !KU( ~k.1 ) @ #vk.23 )
+                        case ShkRevealX
+                        by contradiction /* from formulas */
+                      next
+                        case ShkRevealY
+                        by contradiction /* from formulas */
+                      qed
+                    next
+                      case case_2
+                      solve( !KU( ~k.1 ) @ #vk.23 )
+                        case ShkRevealX
+                        by contradiction /* from formulas */
+                      next
+                        case ShkRevealY
+                        by contradiction /* from formulas */
+                      qed
+                    qed
+                  next
+                    case DBSend_case_2
+                    solve( !KU( ~k ) @ #vk.23 )
+                      case ShkRevealX
+                      by contradiction /* from formulas */
+                    next
+                      case ShkRevealY
+                      by contradiction /* from formulas */
+                    qed
+                  next
+                    case DBSend_case_3
+                    solve( !KU( ~k ) @ #vk.23 )
+                      case ShkRevealX
+                      by contradiction /* from formulas */
+                    next
+                      case ShkRevealY
+                      by contradiction /* from formulas */
+                    qed
+                  qed
+                qed
+              qed
+            next
+              case c_omega
+              solve( !KU( ~k ) @ #vk.16 )
+                case ShkRevealX
+                by contradiction /* from formulas */
+              next
+                case ShkRevealY
+                by contradiction /* from formulas */
+              qed
+            qed
+          next
+            case case_2
+            solve( End( ~s.1 ) @ #j.1 )
+              case Reader5
+              by solve( ReaderState4( R, T, ~s.1, s.2, n1.1, n2.1, n3.1, j.2
+                        ) ▶₀ #j.1 )
+            next
+              case Tag4
+              solve( TagState3( R, T, alpha.1, ~s.1, j.2, n1.1, n2.1, n3.1 ) ▶₀ #j.1 )
+                case Tag3
+                solve( !KU( ~n1 ) @ #vk.15 )
+                  case Reader1
+                  by contradiction /* cyclic */
+                qed
+              qed
+            qed
+          qed
+        next
+          case case_2
+          solve( (¬(#vr.15 < #e))  ∥ (∃ #j. (End( ~s.1 ) @ #j) ∧ #j < #e) )
+            case case_1
+            solve( !KU( omega(~k, ~j) ) @ #vk.4 )
+              case DBSend
+              solve( (¬(#vr.3 < #vr.17))  ∥ (¬(#vr.17 < #vr.4)) )
+                case case_1
+                solve( !KU( h(<~j, ~n1, $Y, s, n2>) ) @ #vk.6 )
+                  case DBSend
+                  solve( !KU( ~n2 ) @ #vk.9 )
+                    case DBSend
+                    solve( !KU( senc(<'2', ~j, ~n3, $Y, ~alpha, XOR(~alpha, ~s), ~n1>, ~k)
+                           ) @ #vk.8 )
+                      case DBSend
+                      solve( !KU( ~alpha ) @ #vk.12 )
+                        case Reader2
+                        by contradiction /* cyclic */
+                      qed
+                    next
+                      case c_senc
+                      solve( !KU( ~k ) @ #vk.18 )
+                        case ShkRevealX
+                        by contradiction /* from formulas */
+                      next
+                        case ShkRevealY
+                        by contradiction /* from formulas */
+                      qed
+                    qed
+                  qed
+                next
+                  case c_h
+                  solve( !KU( ~j ) @ #vk.19 )
+                    case DBSend_case_1
+                    solve( (¬(#vr.3 < #vr.19))  ∥ (¬(#vr.19 < #vr.4)) )
+                      case case_1
+                      solve( !KU( ~k.1 ) @ #vk.23 )
+                        case ShkRevealX
+                        by contradiction /* from formulas */
+                      next
+                        case ShkRevealY
+                        by contradiction /* from formulas */
+                      qed
+                    next
+                      case case_2
+                      solve( !KU( ~k.1 ) @ #vk.23 )
+                        case ShkRevealX
+                        by contradiction /* from formulas */
+                      next
+                        case ShkRevealY
+                        by contradiction /* from formulas */
+                      qed
+                    qed
+                  next
+                    case DBSend_case_2
+                    solve( !KU( ~k ) @ #vk.23 )
+                      case ShkRevealX
+                      by contradiction /* from formulas */
+                    next
+                      case ShkRevealY
+                      by contradiction /* from formulas */
+                    qed
+                  next
+                    case DBSend_case_3
+                    solve( !KU( ~k ) @ #vk.23 )
+                      case ShkRevealX
+                      by contradiction /* from formulas */
+                    next
+                      case ShkRevealY
+                      by contradiction /* from formulas */
+                    qed
+                  qed
+                qed
+              next
+                case case_2
+                solve( !KU( h(<~j, ~n1, $Y, s, n2>) ) @ #vk.6 )
+                  case DBSend
+                  solve( !KU( ~n2 ) @ #vk.9 )
+                    case DBSend
+                    solve( !KU( senc(<'2', ~j, ~n3, $Y, ~alpha, XOR(~alpha, ~s), ~n1>, ~k)
+                           ) @ #vk.8 )
+                      case DBSend
+                      solve( !KU( senc(<'1', ~n1, $Y, ~s, ~n1, ~j>, ~k) ) @ #vk.10 )
+                        case DBSend
+                        solve( !KU( XOR(~alpha, ~s) ) @ #vk.11 )
+                          case DBSend_case_1
+                          solve( !KU( ~alpha ) @ #vk.12 )
+                            case Reader2
+                            by contradiction /* cyclic */
+                          qed
+                        next
+                          case DBSend_case_2
+                          by contradiction /* cyclic */
+                        next
+                          case c_XOR
+                          solve( !KU( ~s ) @ #vk.16 )
+                            case DBSend_case_1
+                            solve( !KU( ~k ) @ #vk.17 )
+                              case ShkRevealX
+                              by contradiction /* from formulas */
+                            next
+                              case ShkRevealY
+                              by contradiction /* from formulas */
+                            qed
+                          next
+                            case DBSend_case_2
+                            solve( !KU( ~alpha ) @ #vk.13 )
+                              case Reader2
+                              by contradiction /* cyclic */
+                            qed
+                          next
+                            case DBSend_case_3
+                            by contradiction /* cyclic */
+                          next
+                            case Leak
+                            by contradiction /* cyclic */
+                          qed
+                        qed
+                      next
+                        case c_senc
+                        solve( !KU( ~k ) @ #vk.19 )
+                          case ShkRevealX
+                          by contradiction /* from formulas */
+                        next
+                          case ShkRevealY
+                          by contradiction /* from formulas */
+                        qed
+                      qed
+                    next
+                      case c_senc
+                      solve( !KU( ~k ) @ #vk.18 )
+                        case ShkRevealX
+                        by contradiction /* from formulas */
+                      next
+                        case ShkRevealY
+                        by contradiction /* from formulas */
+                      qed
+                    qed
+                  qed
+                next
+                  case c_h
+                  solve( !KU( ~j ) @ #vk.19 )
+                    case DBSend_case_1
+                    solve( (¬(#vr.3 < #vr.19))  ∥ (¬(#vr.19 < #vr.4)) )
+                      case case_1
+                      solve( !KU( ~k.1 ) @ #vk.23 )
+                        case ShkRevealX
+                        by contradiction /* from formulas */
+                      next
+                        case ShkRevealY
+                        by contradiction /* from formulas */
+                      qed
+                    next
+                      case case_2
+                      solve( !KU( ~k.1 ) @ #vk.23 )
+                        case ShkRevealX
+                        by contradiction /* from formulas */
+                      next
+                        case ShkRevealY
+                        by contradiction /* from formulas */
+                      qed
+                    qed
+                  next
+                    case DBSend_case_2
+                    solve( !KU( ~k ) @ #vk.23 )
+                      case ShkRevealX
+                      by contradiction /* from formulas */
+                    next
+                      case ShkRevealY
+                      by contradiction /* from formulas */
+                    qed
+                  next
+                    case DBSend_case_3
+                    solve( !KU( ~k ) @ #vk.23 )
+                      case ShkRevealX
+                      by contradiction /* from formulas */
+                    next
+                      case ShkRevealY
+                      by contradiction /* from formulas */
+                    qed
+                  qed
+                qed
+              qed
+            next
+              case c_omega
+              solve( !KU( ~k ) @ #vk.16 )
+                case ShkRevealX
+                by contradiction /* from formulas */
+              next
+                case ShkRevealY
+                by contradiction /* from formulas */
+              qed
+            qed
+          next
+            case case_2
+            solve( End( ~s.1 ) @ #j.1 )
+              case Reader5
+              by solve( ReaderState4( R, T, ~s.1, s.2, n1.1, n2.1, n3.1, j.2
+                        ) ▶₀ #j.1 )
+            next
+              case Tag4
+              solve( TagState3( R, T, alpha.1, ~s.1, j.2, n1.1, n2.1, n3.1 ) ▶₀ #j.1 )
+                case Tag3
+                solve( !KU( ~n1 ) @ #vk.15 )
+                  case Reader1
+                  by contradiction /* cyclic */
+                qed
+              qed
+            qed
+          qed
+        qed
+      next
+        case c_senc
+        solve( !KU( ~k ) @ #vk.14 )
+          case ShkRevealX
+          by contradiction /* from formulas */
+        next
+          case ShkRevealY
+          by contradiction /* from formulas */
+        qed
+      qed
+    qed
+  next
+    case case_2
+    solve( !Shk( $X, $Y, k ) ▶₂ #l )
+      case ShkGen
+      solve( End( ~alpha ) @ #j.1 )
+        case Reader5
+        solve( ReaderState4( R, T, ~alpha, s.1, n1.1, n2.1, n3.1, j.2 ) ▶₀ #j.1 )
+          case Reader4
+          by contradiction /* cyclic */
+        qed
+      next
+        case Tag4
+        by solve( TagState3( R, T, alpha.1, ~alpha, j.2, n1.1, n2.1, n3.1
+                  ) ▶₀ #j.1 )
+      qed
+    qed
+  qed
+qed
+
+/* All well-formedness checks were successful. */
+
+end
+
+==============================================================================
+summary of summaries:
+
+analyzed: WSBC_DB.spthy
+
+  reachability (exists-trace): verified (18 steps)
+  unique_runid (all-traces): verified (14 steps)
+  end_after_start (all-traces): verified (9 steps)
+  fast_before_claim (all-traces): verified (6 steps)
+  dbsec (all-traces): falsified - found trace (15 steps)
+  dbsec_hnst (all-traces): verified (568 steps)
+  dbsec_hnst_collusion (all-traces): falsified - found trace (17 steps)
+  dbsec_hnst_star (all-traces): verified (654 steps)
+
+==============================================================================
+
+real	1m49.045s
+user	10m56.896s
+sys	0m54.199s

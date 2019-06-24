@@ -1,0 +1,658 @@
+theory UWB_MAC begin
+
+// Function signature and definition of the equational theory E
+
+functions: MAC/3, XOR/2, adec/2, aenc/2, f/2, fst/1, pair/2, pk/1,
+           sdec/2, senc/2, snd/1
+equations:
+    XOR(x, XOR(x, y)) = y,
+    adec(aenc(x.1, pk(x.2)), x.2) = x.1,
+    fst(<x.1, x.2>) = x.1,
+    sdec(senc(x.1, x.2), x.2) = x.1,
+    snd(<x.1, x.2>) = x.2
+
+
+
+rule (modulo E) Prov1:
+   [ Fr( ~s ), !Shk( $V, $P, k ) ]
+  --[ Start( ~s ) ]->
+   [
+   Send( $P, MAC('1', ~s, k) ), ProverState1( $V, $P, ~s ),
+   MayLeak( $P, ~s )
+   ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Ver1:
+   [ Fr( ~c ), In( MACed ) ]
+  --[ Start( ~c ), Send( $V, ~c ) ]->
+   [ Out( ~c ), VerifierState1( $V, ~c, MACed ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Prov2:
+   [ ProverState1( V, P, s ), In( c ) ]
+  -->
+   [ Send( P, XOR(c, s) ), ProverState2( V, P, s, c ) ]
+
+  /*
+  rule (modulo AC) Prov2:
+     [ ProverState1( V, P, s ), In( c ) ]
+    -->
+     [ Send( P, z ), ProverState2( V, P, s, c ) ]
+    variants (modulo AC)
+    1. c     = c.6
+       s     = s.6
+       z     = XOR(c.6, s.6)
+    
+    2. c     = x.6
+       s     = XOR(x.6, x.7)
+       z     = x.7
+  */
+
+rule (modulo E) Ver2:
+   [
+   VerifierState1( V, c, MAC('1', XOR(c, resp), k) ), Recv( V, resp ),
+   !Shk( V, $P, k )
+   ]
+  -->
+   [ VerifierState2( V, $P, XOR(c, resp), c ) ]
+
+  /*
+  rule (modulo AC) Ver2:
+     [
+     VerifierState1( V, c, MAC('1', z, k) ), Recv( V, resp ), !Shk( V, $P, k )
+     ]
+    -->
+     [ VerifierState2( V, $P, z, c ) ]
+    variants (modulo AC)
+    1. c     = c.9
+       resp  = resp.11
+       z     = XOR(c.9, resp.11)
+    
+    2. c     = c.11
+       resp  = XOR(c.11, z.15)
+       z     = z.15
+  */
+
+rule (modulo E) Prov3:
+   [ ProverState2( V, P, s, c ), !Shk( V, P, k ) ]
+  --[ End( s ) ]->
+   [ Send( P, MAC('2', c, k) ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Ver3:
+   [ VerifierState2( V, P, s, c ), In( MAC('2', c, k) ), !Shk( V, P, k ) ]
+  --[ DBSec( V, P, c, XOR(c, s) ), End( c ) ]->
+   [ ]
+
+  /*
+  rule (modulo AC) Ver3:
+     [ VerifierState2( V, P, s, c ), In( MAC('2', c, k) ), !Shk( V, P, k ) ]
+    --[ DBSec( V, P, c, z ), End( c ) ]->
+     [ ]
+    variants (modulo AC)
+    1. c     = c.9
+       s     = s.11
+       z     = XOR(c.9, s.11)
+    
+    2. c     = c.11
+       s     = XOR(c.11, z.15)
+       z     = z.15
+  */
+
+rule (modulo E) LtkGen:
+   [ Fr( ~k ) ]
+  --[ Once( $X ) ]->
+   [ !Ltk( $X, ~k ), !Pk( $X, pk(~k) ), Out( pk(~k) ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) ShkGen:
+   [ Fr( ~k ) ] --[ Once( <$X, $Y> ) ]-> [ !Shk( $X, $Y, ~k ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) LtkReveal:
+   [ !Ltk( $X, k ) ]
+  --[ !Compromise( $X ) ]->
+   [ Out( k ), !Compromise( $X ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) ShkRevealX:
+   [ !Shk( $X, $Y, k ) ]
+  --[ !Compromise( $X ) ]->
+   [ Out( k ), !Compromise( $X ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) ShkRevealY:
+   [ !Shk( $X, $Y, k ) ]
+  --[ !Compromise( $Y ) ]->
+   [ Out( k ), !Compromise( $Y ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) DBInject:
+   [ In( m ), !Compromise( $X ) ] --> [ Send( $X, m ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) DBSend:
+   [ Send( $X, m ) ]
+  --[ Send( $X, m ), Action( $X ) ]->
+   [ Net( m ), Out( m ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) DBRecv:
+   [ Net( m ) ] --[ Action( $Y ), Recv( $Y, m ) ]-> [ Recv( $Y, m ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Leak:
+   [ MayLeak( $X, m ) ] --[ Action( $X ), Collusion( ) ]-> [ Out( m ) ]
+
+  /* has exactly the trivial AC variant */
+
+lemma reachability:
+  exists-trace
+  "∃ V P chal resp #i #j #k #l.
+    ((((((((Send( V, chal ) @ #i) ∧ (Send( P, resp ) @ #j)) ∧
+          (Recv( V, resp ) @ #k)) ∧
+         (DBSec( V, P, chal, resp ) @ #l)) ∧
+        (#i < #j)) ∧
+       (#j < #k)) ∧
+      (#k < #l)) ∧
+     (¬(∃ C #r. !Compromise( C ) @ #r))) ∧
+    (¬(∃ #c. Collusion( ) @ #c))"
+/*
+guarded formula characterizing all satisfying traces:
+"∃ V P chal resp #i #j #k #l.
+  (Send( V, chal ) @ #i) ∧
+  (Send( P, resp ) @ #j) ∧
+  (Recv( V, resp ) @ #k) ∧
+  (DBSec( V, P, chal, resp ) @ #l)
+ ∧
+  (#i < #j) ∧
+  (#j < #k) ∧
+  (#k < #l) ∧
+  (∀ C #r. (!Compromise( C ) @ #r) ⇒ ⊥) ∧
+  (∀ #c. (Collusion( ) @ #c) ⇒ ⊥)"
+*/
+simplify
+solve( Net( resp ) ▶₀ #k )
+  case DBSend_case_2
+  solve( VerifierState2( $Y, P, s.1, chal ) ▶₀ #l )
+    case Ver2_case_1
+    solve( !Shk( $Y, $P, k.1 ) ▶₂ #l )
+      case ShkGen
+      solve( Send( $Y, ~c.1 ) @ #i )
+        case Ver1
+        solve( Send( $P, XOR(c.1, ~s.1) ) @ #j )
+          case DBSend
+          solve( Send( $P, XOR(c.1, ~s.1) ) ▶₀ #j )
+            case Prov2
+            solve( splitEqs(1) )
+              case split_case_1
+              solve( !KU( MAC('2', ~c, ~k) ) @ #vk )
+                case DBSend
+                solve( !KU( MAC('1', ~s, ~k) ) @ #vk.2 )
+                  case DBSend
+                  solve( !KU( ~c ) @ #vk.2 )
+                    case Ver1
+                    SOLVED // trace found
+                  qed
+                qed
+              qed
+            qed
+          qed
+        qed
+      qed
+    qed
+  qed
+qed
+
+lemma unique_runid:
+  all-traces
+  "∀ x #i #j. ((Start( x ) @ #i) ∧ (Start( x ) @ #j)) ⇒ (#i = #j)"
+/*
+guarded formula characterizing all counter-examples:
+"∃ x #i #j. (Start( x ) @ #i) ∧ (Start( x ) @ #j) ∧ ¬(#i = #j)"
+*/
+simplify
+solve( (#i < #j)  ∥ (#j < #i) )
+  case case_1
+  solve( Start( x ) @ #i )
+    case Prov1
+    solve( !Shk( $V, $P, k ) ▶₁ #i )
+      case ShkGen
+      solve( Start( ~s ) @ #j )
+        case Prov1
+        by contradiction /* cyclic */
+      qed
+    qed
+  next
+    case Ver1
+    solve( Start( ~c ) @ #j )
+      case Ver1
+      by contradiction /* cyclic */
+    qed
+  qed
+next
+  case case_2
+  solve( Start( x ) @ #i )
+    case Prov1
+    solve( !Shk( $V, $P, k ) ▶₁ #i )
+      case ShkGen
+      solve( Start( ~s ) @ #j )
+        case Prov1
+        by contradiction /* cyclic */
+      qed
+    qed
+  next
+    case Ver1
+    solve( Start( ~c ) @ #j )
+      case Ver1
+      by contradiction /* cyclic */
+    qed
+  qed
+qed
+
+lemma end_after_start:
+  all-traces
+  "∀ x #j.
+    (End( x ) @ #j) ⇒ (∃ #i. (Start( x ) @ #i) ∧ ((#i = #j) ∨ (#i < #j)))"
+/*
+guarded formula characterizing all counter-examples:
+"∃ x #j.
+  (End( x ) @ #j) ∧ ∀ #i. (Start( x ) @ #i) ⇒ (¬(#i = #j)) ∧ (¬(#i < #j))"
+*/
+simplify
+solve( End( x ) @ #j )
+  case Prov3
+  solve( ProverState2( V, P, x, c ) ▶₀ #j )
+    case Prov2
+    by contradiction /* from formulas */
+  qed
+next
+  case Ver3
+  solve( VerifierState2( V, P, s, x ) ▶₀ #j )
+    case Ver2_case_1
+    by contradiction /* from formulas */
+  next
+    case Ver2_case_2
+    by contradiction /* from formulas */
+  next
+    case Ver2_case_3
+    by contradiction /* from formulas */
+  next
+    case Ver2_case_4
+    by contradiction /* from formulas */
+  next
+    case Ver2_case_5
+    by contradiction /* from formulas */
+  next
+    case Ver2_case_6
+    by contradiction /* from formulas */
+  qed
+qed
+
+lemma fast_before_claim:
+  all-traces
+  "∀ V P chal resp #l.
+    (DBSec( V, P, chal, resp ) @ #l) ⇒
+    ((∃ #i #j.
+       (((Send( V, chal ) @ #i) ∧ (Recv( V, resp ) @ #j)) ∧ (#i < #l)) ∧
+       (#j < #l)) ∨
+     (∃ #j. !Compromise( V ) @ #j))"
+/*
+guarded formula characterizing all counter-examples:
+"∃ V P chal resp #l.
+  (DBSec( V, P, chal, resp ) @ #l)
+ ∧
+  (∀ #i #j.
+    (Send( V, chal ) @ #i) ∧ (Recv( V, resp ) @ #j)
+   ⇒
+    ((¬(#i < #l)) ∨ (¬(#j < #l)))) ∧
+  (∀ #j. (!Compromise( V ) @ #j) ⇒ ⊥)"
+*/
+simplify
+solve( VerifierState2( V, P, s, chal ) ▶₀ #l )
+  case Ver2_case_1
+  by contradiction /* from formulas */
+next
+  case Ver2_case_2
+  solve( !Shk( $V, $P, k ) ▶₂ #l )
+    case ShkGen
+    solve( splitEqs(0) )
+      case split_case_1
+      by contradiction /* from formulas */
+    next
+      case split_case_2
+      by contradiction /* from formulas */
+    qed
+  qed
+next
+  case Ver2_case_3
+  by contradiction /* from formulas */
+next
+  case Ver2_case_4
+  solve( !Shk( $V, $P, k ) ▶₂ #l )
+    case ShkGen
+    solve( splitEqs(0) )
+      case split_case_1
+      by contradiction /* from formulas */
+    next
+      case split_case_2
+      by contradiction /* from formulas */
+    qed
+  qed
+next
+  case Ver2_case_5
+  solve( !Shk( $V, $P, k ) ▶₂ #l )
+    case ShkGen
+    solve( splitEqs(0) )
+      case split_case_1
+      by contradiction /* from formulas */
+    next
+      case split_case_2
+      by contradiction /* from formulas */
+    qed
+  qed
+next
+  case Ver2_case_6
+  solve( !Shk( $V, $P, k ) ▶₂ #l )
+    case ShkGen
+    solve( splitEqs(0) )
+      case split_case_1
+      by contradiction /* from formulas */
+    next
+      case split_case_2
+      by contradiction /* from formulas */
+    qed
+  qed
+qed
+
+restriction once:
+  "∀ x #i #j. ((Once( x ) @ #i) ∧ (Once( x ) @ #j)) ⇒ (#i = #j)"
+  // safety formula
+
+rule (modulo E) SetExpiry:
+   [ ] --[ Expiry( ), Once( 'expiry' ) ]-> [ ]
+
+  /* has exactly the trivial AC variant */
+
+restriction no_collusion_after_expiry:
+  "∀ #i #j. ((Expiry( ) @ #i) ∧ (Collusion( ) @ #j)) ⇒ (#j < #i)"
+  // safety formula
+
+restriction sessions_complete_before_expiry:
+  "∀ x #i #e.
+    (((Start( x ) @ #i) ∧ (Expiry( ) @ #e)) ∧ (#i < #e)) ⇒
+    (∃ #j. (End( x ) @ #j) ∧ (#j < #e))"
+
+lemma dbsec:
+  all-traces
+  "∀ V P chal resp #l.
+    (DBSec( V, P, chal, resp ) @ #l) ⇒
+    ((((∃ #i #j #k.
+         ((((Send( V, chal ) @ #i) ∧ (Action( P ) @ #j)) ∧
+           (Recv( V, resp ) @ #k)) ∧
+          (#i < #j)) ∧
+         (#j < #k)) ∨
+       (∃ P2 #p #p2 #i #j #k.
+         ((((((!Compromise( P ) @ #p) ∧ (!Compromise( P2 ) @ #p2)) ∧
+             (Send( V, chal ) @ #i)) ∧
+            (Action( P2 ) @ #j)) ∧
+           (Recv( V, resp ) @ #k)) ∧
+          (#i < #j)) ∧
+         (#j < #k))) ∨
+      (∃ #j. !Compromise( V ) @ #j)) ∨
+     (∃ #j. Collusion( ) @ #j))"
+/*
+guarded formula characterizing all counter-examples:
+"∃ V P chal resp #l.
+  (DBSec( V, P, chal, resp ) @ #l)
+ ∧
+  (∀ #i #j #k.
+    (Send( V, chal ) @ #i) ∧ (Action( P ) @ #j) ∧ (Recv( V, resp ) @ #k)
+   ⇒
+    ((¬(#i < #j)) ∨ (¬(#j < #k)))) ∧
+  (∀ P2 #p #p2 #i #j #k.
+    (!Compromise( P ) @ #p) ∧
+    (!Compromise( P2 ) @ #p2) ∧
+    (Send( V, chal ) @ #i) ∧
+    (Action( P2 ) @ #j) ∧
+    (Recv( V, resp ) @ #k)
+   ⇒
+    ((¬(#i < #j)) ∨ (¬(#j < #k)))) ∧
+  (∀ #j. (!Compromise( V ) @ #j) ⇒ ⊥) ∧
+  (∀ #j. (Collusion( ) @ #j) ⇒ ⊥)"
+*/
+simplify
+solve( VerifierState2( V, P, s, chal ) ▶₀ #l )
+  case Ver2_case_4
+  solve( !Shk( $V, $P, k ) ▶₂ #l )
+    case ShkGen
+    solve( splitEqs(0) )
+      case split_case_2
+      solve( !KU( MAC('2', ~c, ~k) ) @ #vk )
+        case DBSend
+        solve( (¬(#vr.1 < #vr.8))  ∥ (¬(#vr.8 < #vr.2)) )
+          case case_2
+          solve( !KU( MAC('1', s, ~k) ) @ #vk.1 )
+            case DBSend
+            solve( !KU( XOR(~c, ~s) ) @ #vk.2 )
+              case c_XOR
+              solve( !KU( ~s ) @ #vk.4 )
+                case DBSend
+                solve( !KU( ~c ) @ #vk.4 )
+                  case Ver1
+                  SOLVED // trace found
+                qed
+              qed
+            qed
+          qed
+        qed
+      qed
+    qed
+  qed
+qed
+
+lemma dbsec_hnst:
+  all-traces
+  "∀ V P chal resp #l.
+    (DBSec( V, P, chal, resp ) @ #l) ⇒
+    ((((∃ #i #j #k.
+         ((((Send( V, chal ) @ #i) ∧ (Action( P ) @ #j)) ∧
+           (Recv( V, resp ) @ #k)) ∧
+          (#i < #j)) ∧
+         (#j < #k)) ∨
+       (∃ #j. !Compromise( V ) @ #j)) ∨
+      (∃ #j. !Compromise( P ) @ #j)) ∨
+     (∃ #j. Collusion( ) @ #j))"
+/*
+guarded formula characterizing all counter-examples:
+"∃ V P chal resp #l.
+  (DBSec( V, P, chal, resp ) @ #l)
+ ∧
+  (∀ #i #j #k.
+    (Send( V, chal ) @ #i) ∧ (Action( P ) @ #j) ∧ (Recv( V, resp ) @ #k)
+   ⇒
+    ((¬(#i < #j)) ∨ (¬(#j < #k)))) ∧
+  (∀ #j. (!Compromise( V ) @ #j) ⇒ ⊥) ∧
+  (∀ #j. (!Compromise( P ) @ #j) ⇒ ⊥) ∧
+  (∀ #j. (Collusion( ) @ #j) ⇒ ⊥)"
+*/
+simplify
+solve( VerifierState2( V, P, s, chal ) ▶₀ #l )
+  case Ver2_case_4
+  solve( !Shk( $V, $P, k ) ▶₂ #l )
+    case ShkGen
+    solve( splitEqs(0) )
+      case split_case_2
+      solve( !KU( MAC('2', ~c, ~k) ) @ #vk )
+        case DBSend
+        solve( (¬(#vr.1 < #vr.8))  ∥ (¬(#vr.8 < #vr.2)) )
+          case case_2
+          solve( !KU( MAC('1', s, ~k) ) @ #vk.1 )
+            case DBSend
+            solve( !KU( XOR(~c, ~s) ) @ #vk.2 )
+              case c_XOR
+              solve( !KU( ~s ) @ #vk.4 )
+                case DBSend
+                solve( !KU( ~c ) @ #vk.4 )
+                  case Ver1
+                  SOLVED // trace found
+                qed
+              qed
+            qed
+          qed
+        qed
+      qed
+    qed
+  qed
+qed
+
+lemma dbsec_hnst_collusion:
+  all-traces
+  "∀ V P chal resp #l.
+    (DBSec( V, P, chal, resp ) @ #l) ⇒
+    (((∃ #i #j #k.
+        ((((Send( V, chal ) @ #i) ∧ (Action( P ) @ #j)) ∧
+          (Recv( V, resp ) @ #k)) ∧
+         (#i < #j)) ∧
+        (#j < #k)) ∨
+      (∃ #j. !Compromise( V ) @ #j)) ∨
+     (∃ #j. !Compromise( P ) @ #j))"
+/*
+guarded formula characterizing all counter-examples:
+"∃ V P chal resp #l.
+  (DBSec( V, P, chal, resp ) @ #l)
+ ∧
+  (∀ #i #j #k.
+    (Send( V, chal ) @ #i) ∧ (Action( P ) @ #j) ∧ (Recv( V, resp ) @ #k)
+   ⇒
+    ((¬(#i < #j)) ∨ (¬(#j < #k)))) ∧
+  (∀ #j. (!Compromise( V ) @ #j) ⇒ ⊥) ∧
+  (∀ #j. (!Compromise( P ) @ #j) ⇒ ⊥)"
+*/
+simplify
+solve( VerifierState2( V, P, s, chal ) ▶₀ #l )
+  case Ver2_case_4
+  solve( !Shk( $V, $P, k ) ▶₂ #l )
+    case ShkGen
+    solve( splitEqs(0) )
+      case split_case_2
+      solve( !KU( MAC('2', ~c, ~k) ) @ #vk )
+        case DBSend
+        solve( (¬(#vr.1 < #vr.8))  ∥ (¬(#vr.8 < #vr.2)) )
+          case case_2
+          solve( !KU( MAC('1', s, ~k) ) @ #vk.1 )
+            case DBSend
+            solve( !KU( XOR(~c, ~s) ) @ #vk.2 )
+              case c_XOR
+              solve( !KU( ~s ) @ #vk.4 )
+                case DBSend
+                solve( !KU( ~c ) @ #vk.4 )
+                  case Ver1
+                  SOLVED // trace found
+                qed
+              qed
+            qed
+          qed
+        qed
+      qed
+    qed
+  qed
+qed
+
+lemma dbsec_hnst_star:
+  all-traces
+  "∀ V P chal resp #e #l.
+    (((DBSec( V, P, chal, resp ) @ #l) ∧ (Expiry( ) @ #e)) ∧ (#e < #l)) ⇒
+    (((∃ #i #j #k.
+        ((((Send( V, chal ) @ #i) ∧ (Action( P ) @ #j)) ∧
+          (Recv( V, resp ) @ #k)) ∧
+         (#i < #j)) ∧
+        (#j < #k)) ∨
+      (∃ #j. !Compromise( V ) @ #j)) ∨
+     (∃ #j. !Compromise( P ) @ #j))"
+/*
+guarded formula characterizing all counter-examples:
+"∃ V P chal resp #e #l.
+  (DBSec( V, P, chal, resp ) @ #l) ∧ (Expiry( ) @ #e)
+ ∧
+  (#e < #l) ∧
+  (∀ #i #j #k.
+    (Send( V, chal ) @ #i) ∧ (Action( P ) @ #j) ∧ (Recv( V, resp ) @ #k)
+   ⇒
+    ((¬(#i < #j)) ∨ (¬(#j < #k)))) ∧
+  (∀ #j. (!Compromise( V ) @ #j) ⇒ ⊥) ∧
+  (∀ #j. (!Compromise( P ) @ #j) ⇒ ⊥)"
+*/
+simplify
+solve( VerifierState2( V, P, s, chal ) ▶₀ #l )
+  case Ver2_case_4
+  solve( (¬(#vr.1 < #e))  ∥ (∃ #j. (End( ~c ) @ #j) ∧ #j < #e) )
+    case case_1
+    solve( !Shk( $V, $P, k ) ▶₂ #l )
+      case ShkGen
+      solve( splitEqs(1) )
+        case split_case_2
+        solve( !KU( MAC('2', ~c, ~k) ) @ #vk )
+          case DBSend
+          solve( (¬(#vr.11 < #e))  ∥ (∃ #j. (End( ~s.1 ) @ #j) ∧ #j < #e) )
+            case case_1
+            solve( (¬(#vr.1 < #vr.8))  ∥ (¬(#vr.8 < #vr.2)) )
+              case case_2
+              solve( !KU( MAC('1', s, ~k) ) @ #vk.1 )
+                case DBSend
+                solve( (¬(#vr.13 < #e))  ∥ (∃ #j. (End( ~s ) @ #j) ∧ #j < #e) )
+                  case case_1
+                  solve( !KU( XOR(~c, ~s) ) @ #vk.2 )
+                    case c_XOR
+                    solve( !KU( ~s ) @ #vk.4 )
+                      case DBSend
+                      solve( !KU( ~c ) @ #vk.4 )
+                        case Ver1
+                        SOLVED // trace found
+                      qed
+                    qed
+                  qed
+                qed
+              qed
+            qed
+          qed
+        qed
+      qed
+    qed
+  qed
+qed
+
+/* All well-formedness checks were successful. */
+
+end
+
+==============================================================================
+summary of summaries:
+
+analyzed: UWB_MAC.spthy
+
+  reachability (exists-trace): verified (12 steps)
+  unique_runid (all-traces): verified (14 steps)
+  end_after_start (all-traces): verified (11 steps)
+  fast_before_claim (all-traces): verified (20 steps)
+  dbsec (all-traces): falsified - found trace (11 steps)
+  dbsec_hnst (all-traces): falsified - found trace (11 steps)
+  dbsec_hnst_collusion (all-traces): falsified - found trace (11 steps)
+  dbsec_hnst_star (all-traces): falsified - found trace (14 steps)
+
+==============================================================================
+
+real	0m4.070s
+user	0m22.734s
+sys	0m1.994s

@@ -1,0 +1,203 @@
+free c.
+private fun getSharedKey/1.
+fun enc/2.
+reduc dec(k, enc(k, m)) = m.
+fun hash/1.
+data Ready/0.
+let Verifier =
+in(c, idV);
+new nonceV;
+out(c, nonceV);
+in(c, nonceR);
+phase 1;
+new b;
+out(c, b);
+in(c, responseHash);
+phase 2;
+if responseHash = hash((nonceV, nonceR, b, getSharedKey(idV))) then
+event Verified(idV).
+let Prover =
+out(c, idP);
+in(c, nonceV);
+new nonceR;
+out(c, nonceR);
+in(c, b);
+out(c, hash((nonceV, nonceR, b, getSharedKey(idP)))).
+let DishonestProver =
+out(c, (idP, getSharedKey(idP))).
+let DishonestTerroristProver =
+(in(c, encryptedMessage);
+let message = dec(getSharedKey(idP), encryptedMessage) in
+out(c, message))|((in(c, message);
+let encryptedMessage = enc(getSharedKey(idP), message) in
+out(c, encryptedMessage))|(out(c, idP))).
+query ev:Verified(id).
+
+
+(* New local process declarations *)
+
+let Verifier_L10 =
+in(c, idV);
+new nonceV;
+out(c, nonceV);
+in(c, nonceR);
+new b;
+out(c, b);
+in(c, responseHash);
+if responseHash = hash((nonceV, nonceR, b, getSharedKey(idV))) then
+0.
+
+let Verifier_L9 =
+in(c, idV);
+new nonceV;
+out(c, nonceV);
+in(c, nonceR);
+new b;
+out(c, b);
+phase 2;
+in(c, responseHash);
+if responseHash = hash((nonceV, nonceR, b, getSharedKey(idV))) then
+0.
+
+let Verifier_L8 =
+in(c, idV);
+new nonceV;
+out(c, nonceV);
+phase 2;
+in(c, nonceR);
+new b;
+out(c, b);
+in(c, responseHash);
+if responseHash = hash((nonceV, nonceR, b, getSharedKey(idV))) then
+0.
+
+let Verifier_L7 =
+phase 2;
+in(c, idV);
+new nonceV;
+out(c, nonceV);
+in(c, nonceR);
+new b;
+out(c, b);
+in(c, responseHash);
+if responseHash = hash((nonceV, nonceR, b, getSharedKey(idV))) then
+0.
+
+let Verifier_L6 =
+in(c, idV);
+new nonceV;
+out(c, nonceV);
+in(c, nonceR);
+new b;
+out(c, b);
+in(c, responseHash);
+if responseHash = hash((nonceV, nonceR, b, getSharedKey(idV))) then
+0.
+
+let Verifier_L5 =
+in(c, idV);
+new nonceV;
+out(c, nonceV);
+in(c, nonceR);
+new b;
+out(c, b);
+phase 1;
+in(c, responseHash);
+if responseHash = hash((nonceV, nonceR, b, getSharedKey(idV))) then
+0.
+
+let Verifier_L4 =
+in(c, idV);
+new nonceV;
+out(c, nonceV);
+phase 1;
+in(c, nonceR);
+new b;
+out(c, b);
+in(c, responseHash);
+if responseHash = hash((nonceV, nonceR, b, getSharedKey(idV))) then
+0.
+
+let Verifier_L3 =
+in(c, idV);
+new nonceV;
+out(c, nonceV);
+phase 1;
+in(c, nonceR);
+new b;
+out(c, b);
+phase 2;
+in(c, responseHash);
+if responseHash = hash((nonceV, nonceR, b, getSharedKey(idV))) then
+0.
+
+let Verifier_L2 =
+phase 1;
+in(c, idV);
+new nonceV;
+out(c, nonceV);
+in(c, nonceR);
+new b;
+out(c, b);
+in(c, responseHash);
+if responseHash = hash((nonceV, nonceR, b, getSharedKey(idV))) then
+0.
+
+let Verifier_L1 =
+phase 1;
+in(c, idV);
+new nonceV;
+out(c, nonceV);
+in(c, nonceR);
+new b;
+out(c, b);
+phase 2;
+in(c, responseHash);
+if responseHash = hash((nonceV, nonceR, b, getSharedKey(idV))) then
+0.
+
+let Verifier_L0 =
+phase 1;
+in(c, idV);
+new nonceV;
+out(c, nonceV);
+phase 2;
+in(c, nonceR);
+new b;
+out(c, b);
+in(c, responseHash);
+if responseHash = hash((nonceV, nonceR, b, getSharedKey(idV))) then
+0.
+
+(* New remote process declarations *)
+
+let Prover_R2 =
+out(c, idP);
+in(c, nonceV);
+new nonceR;
+out(c, nonceR);
+in(c, b);
+out(c, hash((nonceV, nonceR, b, getSharedKey(idP)))).
+
+let Prover_R1 =
+out(c, idP);
+in(c, nonceV);
+new nonceR;
+out(c, nonceR);
+phase 2;
+in(c, b);
+out(c, hash((nonceV, nonceR, b, getSharedKey(idP)))).
+
+let Prover_R0 =
+out(c, idP);
+phase 2;
+in(c, nonceV);
+new nonceR;
+out(c, nonceR);
+in(c, b);
+out(c, hash((nonceV, nonceR, b, getSharedKey(idP)))).
+
+process
+(!(Verifier_L0)|((Verifier_L1)|((Verifier_L2)|((Verifier_L3)|((Verifier_L4)|((Verifier_L5)|((Verifier_L6)|((Verifier_L7)|((Verifier_L8)|((Verifier_L9)|((Verifier_L10)|(Verifier))))))))))))|(!new id;
+let idP = id in
+!(Prover_R0)|((Prover_R1)|(Prover_R2)))

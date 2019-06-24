@@ -1,0 +1,2200 @@
+theory Hitomi begin
+
+// Function signature and definition of the equational theory E
+
+builtins: xor
+functions: adec/2, aenc/2, f/2, fst/1, g/2, pair/2, pk/1, snd/1
+equations:
+    adec(aenc(x.1, pk(x.2)), x.2) = x.1,
+    fst(<x.1, x.2>) = x.1,
+    snd(<x.1, x.2>) = x.2
+
+
+
+rule (modulo E) Verif1:
+   [ Fr( ~nr ) ] --[ Start( ~nr ) ]-> [ VerifState1( ~nr ), Out( ~nr ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Prover1:
+   [ In( nr ), Fr( ~nt1 ), Fr( ~nt2 ), Fr( ~nt3 ), !Shk( $V, $P, x ) ]
+  --[ Start( ~nt1 ) ]->
+   [
+   Send( $P, <~nt1, ~nt2, ~nt3> ),
+   ProverState1( $V, $P, nr, ~nt1, ~nt2, ~nt3 ),
+   MayLeak( $P, <f(x, <nr, ~nt1, 'w'>), (x⊕f(x, <~nt2, ~nt3, 'w2'>))> )
+   ]
+
+  /*
+  rule (modulo AC) Prover1:
+     [ In( nr ), Fr( ~nt1 ), Fr( ~nt2 ), Fr( ~nt3 ), !Shk( $V, $P, x ) ]
+    --[ Start( ~nt1 ) ]->
+     [
+     Send( $P, <~nt1, ~nt2, ~nt3> ),
+     ProverState1( $V, $P, nr, ~nt1, ~nt2, ~nt3 ),
+     MayLeak( $P, <f(x, <nr, ~nt1, 'w'>), z> )
+     ]
+    variants (modulo AC)
+    1. ~nt2  = ~nt2.11
+       ~nt3  = ~nt3.12
+       x     = x.14
+       z     = (x.14⊕f(x.14, <~nt2.11, ~nt3.12, 'w2'>))
+    
+    2. ~nt2  = ~nt2.11
+       ~nt3  = ~nt3.12
+       x     = zero
+       z     = f(zero, <~nt2.11, ~nt3.12, 'w2'>)
+  */
+
+rule (modulo E) Verif2:
+   [ VerifState1( nr ), In( <nt1, nt2, nt3> ), Fr( ~c ) ]
+  --[ Send( $V, ~c ) ]->
+   [ VerifState2( $V, nr, nt1, nt2, nt3, ~c ), Out( ~c ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Prover2:
+   [ ProverState1( V, P, nr, nt1, nt2, nt3 ), In( c ), !Shk( V, P, x ) ]
+  -->
+   [
+   Send( P, g(c, <f(x, <nr, nt1, 'w'>), (x⊕f(x, <nt2, nt3, 'w2'>))>) ),
+   ProverState2( V, P, nr, nt1, nt2, nt3, c,
+                 g(c, <f(x, <nr, nt1, 'w'>), (x⊕f(x, <nt2, nt3, 'w2'>))>)
+   )
+   ]
+
+  /*
+  rule (modulo AC) Prover2:
+     [ ProverState1( V, P, nr, nt1, nt2, nt3 ), In( c ), !Shk( V, P, x ) ]
+    -->
+     [
+     Send( P, g(c, <f(x, <nr, nt1, 'w'>), z>) ),
+     ProverState2( V, P, nr, nt1, nt2, nt3, c, g(c, <f(x, <nr, nt1, 'w'>), z>)
+     )
+     ]
+    variants (modulo AC)
+    1. nt2   = nt2.12
+       nt3   = nt3.13
+       x     = x.14
+       z     = (x.14⊕f(x.14, <nt2.12, nt3.13, 'w2'>))
+    
+    2. nt2   = nt2.12
+       nt3   = nt3.13
+       x     = zero
+       z     = f(zero, <nt2.12, nt3.13, 'w2'>)
+  */
+
+rule (modulo E) Verif3:
+   [
+   VerifState2( V, nr, nt1, nt2, nt3, c ), !Shk( V, $P, x ),
+   Recv( V, g(c, <f(x, <nr, nt1, 'w'>), (x⊕f(x, <nt2, nt3, 'w2'>))>) )
+   ]
+  -->
+   [
+   VerifState3( V, $P, nr, nt1, nt2, nt3, c,
+                g(c, <f(x, <nr, nt1, 'w'>), (x⊕f(x, <nt2, nt3, 'w2'>))>)
+   )
+   ]
+
+  /*
+  rule (modulo AC) Verif3:
+     [
+     VerifState2( V, nr, nt1, nt2, nt3, c ), !Shk( V, $P, x ),
+     Recv( V, g(c, <f(x, <nr, nt1, 'w'>), z>) )
+     ]
+    -->
+     [
+     VerifState3( V, $P, nr, nt1, nt2, nt3, c, g(c, <f(x, <nr, nt1, 'w'>), z>)
+     )
+     ]
+    variants (modulo AC)
+    1. nt2   = nt2.12
+       nt3   = nt3.13
+       x     = x.14
+       z     = (x.14⊕f(x.14, <nt2.12, nt3.13, 'w2'>))
+    
+    2. nt2   = nt2.12
+       nt3   = nt3.13
+       x     = zero
+       z     = f(zero, <nt2.12, nt3.13, 'w2'>)
+  */
+
+rule (modulo E) Prover3:
+   [ ProverState2( V, P, nr, nt1, nt2, nt3, c, resp ), !Shk( V, P, x ) ]
+  -->
+   [
+   Send( P, <f(x, <<c, resp>, P, nt1, nt2, nt3>), c, resp> ),
+   ProverState3( V, P, nr, nt1, nt2, nt3, c, resp )
+   ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Verif4:
+   [
+   VerifState3( V, P, nr, nt1, nt2, nt3, c, resp ),
+   In( <f(x, <<c, resp>, P, nt1, nt2, nt3>), c, resp> ), !Shk( V, P, x )
+   ]
+  --[ DBSec( V, P, c, resp ), End( nr ) ]->
+   [ Out( f(x, <nr, f(x, <nt2, nt3, 'w2'>)>) ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Prover4:
+   [
+   ProverState3( V, P, nr, nt1, nt2, nt3, c, resp ), !Shk( V, P, x ),
+   In( f(x, <nr, f(x, <nt2, nt3, 'w2'>)>) )
+   ]
+  --[ End( nt1 ) ]->
+   [ ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) LtkGen:
+   [ Fr( ~k ) ]
+  --[ Once( $X ) ]->
+   [ !Ltk( $X, ~k ), !Pk( $X, pk(~k) ), Out( pk(~k) ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) ShkGen:
+   [ Fr( ~k ) ] --[ Once( <$X, $Y> ) ]-> [ !Shk( $X, $Y, ~k ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) LtkReveal:
+   [ !Ltk( $X, k ) ]
+  --[ !Compromise( $X ) ]->
+   [ Out( k ), !Compromise( $X ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) ShkRevealX:
+   [ !Shk( $X, $Y, k ) ]
+  --[ !Compromise( $X ) ]->
+   [ Out( k ), !Compromise( $X ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) ShkRevealY:
+   [ !Shk( $X, $Y, k ) ]
+  --[ !Compromise( $Y ) ]->
+   [ Out( k ), !Compromise( $Y ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) DBInject:
+   [ In( m ), !Compromise( $X ) ] --> [ Send( $X, m ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) DBSend:
+   [ Send( $X, m ) ]
+  --[ Send( $X, m ), Action( $X ) ]->
+   [ Net( m ), Out( m ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) DBRecv:
+   [ Net( m ) ] --[ Action( $Y ), Recv( $Y, m ) ]-> [ Recv( $Y, m ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Leak:
+   [ MayLeak( $X, m ) ] --[ Action( $X ), Collusion( ) ]-> [ Out( m ) ]
+
+  /* has exactly the trivial AC variant */
+
+lemma reachability:
+  exists-trace
+  "∃ V P chal resp #i #j #k #l.
+    ((((((((Send( V, chal ) @ #i) ∧ (Send( P, resp ) @ #j)) ∧
+          (Recv( V, resp ) @ #k)) ∧
+         (DBSec( V, P, chal, resp ) @ #l)) ∧
+        (#i < #j)) ∧
+       (#j < #k)) ∧
+      (#k < #l)) ∧
+     (¬(∃ C #r. !Compromise( C ) @ #r))) ∧
+    (¬(∃ #c. Collusion( ) @ #c))"
+/*
+guarded formula characterizing all satisfying traces:
+"∃ V P chal resp #i #j #k #l.
+  (Send( V, chal ) @ #i) ∧
+  (Send( P, resp ) @ #j) ∧
+  (Recv( V, resp ) @ #k) ∧
+  (DBSec( V, P, chal, resp ) @ #l)
+ ∧
+  (#i < #j) ∧
+  (#j < #k) ∧
+  (#k < #l) ∧
+  (∀ C #r. (!Compromise( C ) @ #r) ⇒ ⊥) ∧
+  (∀ #c. (Collusion( ) @ #c) ⇒ ⊥)"
+*/
+simplify
+solve( Net( resp ) ▶₀ #k )
+  case DBSend_case_2
+  solve( VerifState3( $Y, P, nr.1, nt1.1, nt2.1, nt3.1, chal,
+                      g(c, <f(~k.1, <nr, ~nt1, 'w'>), (~k.1⊕f(~k.1, <~nt2, ~nt3, 'w2'>))>)
+         ) ▶₀ #l )
+    case Verif3_case_1
+    solve( !Shk( $V, $X, x ) ▶₂ #l )
+      case ShkGen
+      solve( Send( $V, ~c ) @ #i )
+        case Verif2
+        solve( Send( $X,
+                     g(~c, <f(~k.1, <~nr, ~nt1, 'w'>), (~k.1⊕f(~k.1, <~nt2, ~nt3, 'w2'>))>)
+               ) @ #j )
+          case DBSend
+          solve( Send( $X,
+                       g(~c, <f(~k, <~nr, ~nt1, 'w'>), (~k⊕f(~k, <~nt2, ~nt3, 'w2'>))>)
+                 ) ▶₀ #j )
+            case Prover2
+            solve( !KU( ~nt1 ) @ #vk.7 )
+              case DBSend
+              solve( !KU( f(~k,
+                            <<~c, g(~c, <f(~k, <~nr, ~nt1, 'w'>), (~k⊕f(~k, <~nt2, ~nt3, 'w2'>))>)>, 
+                             $X, ~nt1, ~nt2, ~nt3>)
+                     ) @ #vk.2 )
+                case DBSend
+                solve( !KU( ~nt2 ) @ #vk.9 )
+                  case DBSend
+                  solve( !KU( ~nt3 ) @ #vk.10 )
+                    case DBSend
+                    solve( !KU( ~c ) @ #vk.8 )
+                      case Verif2
+                      solve( !KU( ~nr ) @ #vk.10 )
+                        case Verif1
+                        solve( !KU( g(~c,
+                                      <f(~k, <~nr, ~nt1, 'w'>), (~k⊕f(~k, <~nt2, ~nt3, 'w2'>))>)
+                               ) @ #vk.10 )
+                          case DBSend_case_1
+                          SOLVED // trace found
+                        qed
+                      qed
+                    qed
+                  qed
+                qed
+              qed
+            qed
+          qed
+        qed
+      qed
+    qed
+  qed
+qed
+
+lemma unique_runid:
+  all-traces
+  "∀ x #i #j. ((Start( x ) @ #i) ∧ (Start( x ) @ #j)) ⇒ (#i = #j)"
+/*
+guarded formula characterizing all counter-examples:
+"∃ x #i #j. (Start( x ) @ #i) ∧ (Start( x ) @ #j) ∧ ¬(#i = #j)"
+*/
+simplify
+solve( (#i < #j)  ∥ (#j < #i) )
+  case case_1
+  solve( Start( x ) @ #i )
+    case Prover1
+    solve( !Shk( $V, $P, x ) ▶₄ #i )
+      case ShkGen
+      solve( Start( ~nt1 ) @ #j )
+        case Prover1
+        by contradiction /* cyclic */
+      qed
+    qed
+  next
+    case Verif1
+    solve( Start( ~nr ) @ #j )
+      case Verif1
+      by contradiction /* cyclic */
+    qed
+  qed
+next
+  case case_2
+  solve( Start( x ) @ #i )
+    case Prover1
+    solve( !Shk( $V, $P, x ) ▶₄ #i )
+      case ShkGen
+      solve( Start( ~nt1 ) @ #j )
+        case Prover1
+        by contradiction /* cyclic */
+      qed
+    qed
+  next
+    case Verif1
+    solve( Start( ~nr ) @ #j )
+      case Verif1
+      by contradiction /* cyclic */
+    qed
+  qed
+qed
+
+lemma end_after_start:
+  all-traces
+  "∀ x #j.
+    (End( x ) @ #j) ⇒ (∃ #i. (Start( x ) @ #i) ∧ ((#i = #j) ∨ (#i < #j)))"
+/*
+guarded formula characterizing all counter-examples:
+"∃ x #j.
+  (End( x ) @ #j) ∧ ∀ #i. (Start( x ) @ #i) ⇒ (¬(#i = #j)) ∧ (¬(#i < #j))"
+*/
+simplify
+solve( End( x ) @ #j )
+  case Prover4
+  solve( ProverState3( V, P, nr, x, nt2, nt3, c, resp ) ▶₀ #j )
+    case Prover3
+    by contradiction /* from formulas */
+  qed
+next
+  case Verif4
+  solve( VerifState3( V, P, x, nt1, nt2, nt3, c, resp ) ▶₀ #j )
+    case Verif3_case_1
+    by contradiction /* from formulas */
+  next
+    case Verif3_case_2
+    by contradiction /* from formulas */
+  next
+    case Verif3_case_3
+    by contradiction /* from formulas */
+  next
+    case Verif3_case_4
+    by contradiction /* from formulas */
+  qed
+qed
+
+lemma fast_before_claim:
+  all-traces
+  "∀ V P chal resp #l.
+    (DBSec( V, P, chal, resp ) @ #l) ⇒
+    ((∃ #i #j.
+       (((Send( V, chal ) @ #i) ∧ (Recv( V, resp ) @ #j)) ∧ (#i < #l)) ∧
+       (#j < #l)) ∨
+     (∃ #j. !Compromise( V ) @ #j))"
+/*
+guarded formula characterizing all counter-examples:
+"∃ V P chal resp #l.
+  (DBSec( V, P, chal, resp ) @ #l)
+ ∧
+  (∀ #i #j.
+    (Send( V, chal ) @ #i) ∧ (Recv( V, resp ) @ #j)
+   ⇒
+    ((¬(#i < #l)) ∨ (¬(#j < #l)))) ∧
+  (∀ #j. (!Compromise( V ) @ #j) ⇒ ⊥)"
+*/
+simplify
+solve( VerifState3( V, P, nr, nt1, nt2, nt3, chal, resp ) ▶₀ #l )
+  case Verif3_case_1
+  by contradiction /* from formulas */
+next
+  case Verif3_case_2
+  by contradiction /* from formulas */
+next
+  case Verif3_case_3
+  by contradiction /* from formulas */
+next
+  case Verif3_case_4
+  by contradiction /* from formulas */
+qed
+
+restriction once:
+  "∀ x #i #j. ((Once( x ) @ #i) ∧ (Once( x ) @ #j)) ⇒ (#i = #j)"
+  // safety formula
+
+rule (modulo E) SetExpiry:
+   [ ] --[ Expiry( ), Once( 'expiry' ) ]-> [ ]
+
+  /* has exactly the trivial AC variant */
+
+restriction no_collusion_after_expiry:
+  "∀ #i #j. ((Expiry( ) @ #i) ∧ (Collusion( ) @ #j)) ⇒ (#j < #i)"
+  // safety formula
+
+restriction sessions_complete_before_expiry:
+  "∀ x #i #e.
+    (((Start( x ) @ #i) ∧ (Expiry( ) @ #e)) ∧ (#i < #e)) ⇒
+    (∃ #j. (End( x ) @ #j) ∧ (#j < #e))"
+
+lemma dbsec:
+  all-traces
+  "∀ V P chal resp #l.
+    (DBSec( V, P, chal, resp ) @ #l) ⇒
+    ((((∃ #i #j #k.
+         ((((Send( V, chal ) @ #i) ∧ (Action( P ) @ #j)) ∧
+           (Recv( V, resp ) @ #k)) ∧
+          (#i < #j)) ∧
+         (#j < #k)) ∨
+       (∃ P2 #p #p2 #i #j #k.
+         ((((((!Compromise( P ) @ #p) ∧ (!Compromise( P2 ) @ #p2)) ∧
+             (Send( V, chal ) @ #i)) ∧
+            (Action( P2 ) @ #j)) ∧
+           (Recv( V, resp ) @ #k)) ∧
+          (#i < #j)) ∧
+         (#j < #k))) ∨
+      (∃ #j. !Compromise( V ) @ #j)) ∨
+     (∃ #j. Collusion( ) @ #j))"
+/*
+guarded formula characterizing all counter-examples:
+"∃ V P chal resp #l.
+  (DBSec( V, P, chal, resp ) @ #l)
+ ∧
+  (∀ #i #j #k.
+    (Send( V, chal ) @ #i) ∧ (Action( P ) @ #j) ∧ (Recv( V, resp ) @ #k)
+   ⇒
+    ((¬(#i < #j)) ∨ (¬(#j < #k)))) ∧
+  (∀ P2 #p #p2 #i #j #k.
+    (!Compromise( P ) @ #p) ∧
+    (!Compromise( P2 ) @ #p2) ∧
+    (Send( V, chal ) @ #i) ∧
+    (Action( P2 ) @ #j) ∧
+    (Recv( V, resp ) @ #k)
+   ⇒
+    ((¬(#i < #j)) ∨ (¬(#j < #k)))) ∧
+  (∀ #j. (!Compromise( V ) @ #j) ⇒ ⊥) ∧
+  (∀ #j. (Collusion( ) @ #j) ⇒ ⊥)"
+*/
+simplify
+solve( VerifState3( V, P, nr, nt1, nt2, nt3, chal, resp ) ▶₀ #l )
+  case Verif3_case_1
+  solve( !Shk( $V, $P, x ) ▶₂ #l )
+    case ShkGen
+    solve( !KU( ~nt1 ) @ #vk.6 )
+      case DBSend
+      solve( !KU( ~c ) @ #vk.4 )
+        case Verif2
+        by contradiction /* cyclic */
+      qed
+    qed
+  qed
+next
+  case Verif3_case_2
+  solve( !Shk( $V, $P, x ) ▶₂ #l )
+    case ShkGen
+    solve( !KU( f(~k,
+                  <<~c, g(~c, <f(~k, <~nr, nt1, 'w'>), (~k⊕f(~k, <nt2, nt3, 'w2'>))>)>, 
+                   $P, nt1, nt2, nt3>)
+           ) @ #vk.1 )
+      case DBSend
+      solve( (¬(#vr.1 < #vr.9))  ∥ (¬(#vr.9 < #vr.3)) )
+        case case_1
+        solve( !KU( ~c ) @ #vk.3 )
+          case Verif2
+          by contradiction /* cyclic */
+        qed
+      next
+        case case_2
+        solve( !KU( ~nt1 ) @ #vk.6 )
+          case DBSend
+          solve( !KU( g(~c,
+                        <f(~k, <~nr, ~nt1, 'w'>), (~k⊕f(~k, <~nt2, ~nt3, 'w2'>))>)
+                 ) @ #vk.5 )
+            case DBSend_case_1
+            solve( !KU( ~c ) @ #vk.6 )
+              case Verif2
+              by contradiction /* cyclic */
+            qed
+          next
+            case DBSend_case_2
+            by contradiction /* cyclic */
+          next
+            case c_g
+            solve( !KU( f(~k, <~nr, ~nt1, 'w'>) ) @ #vk.12 )
+              case Leak
+              by contradiction /* from formulas */
+            next
+              case c_f
+              solve( !KU( ~k ) @ #vk.16 )
+                case Leak
+                by contradiction /* from formulas */
+              next
+                case ShkRevealX
+                by contradiction /* from formulas */
+              next
+                case ShkRevealY
+                solve( !KU( ~c ) @ #vk.11 )
+                  case Verif2
+                  by contradiction /* cyclic */
+                qed
+              qed
+            qed
+          qed
+        qed
+      qed
+    next
+      case c_f
+      solve( !KU( ~k ) @ #vk.12 )
+        case Leak
+        by contradiction /* from formulas */
+      next
+        case ShkRevealX
+        by contradiction /* from formulas */
+      next
+        case ShkRevealY
+        solve( !KU( g(~c, <f(~k, <~nr, nt1, 'w'>), (~k⊕f(~k, <nt2, nt3, 'w2'>))>)
+               ) @ #vk.6 )
+          case DBSend_case_1
+          solve( !KU( ~c ) @ #vk.6 )
+            case Verif2
+            by contradiction /* cyclic */
+          qed
+        next
+          case DBSend_case_2
+          solve( !KU( ~c ) @ #vk.6 )
+            case Verif2
+            by contradiction /* cyclic */
+          qed
+        next
+          case c_g
+          solve( !KU( ~c ) @ #vk.6 )
+            case Verif2
+            by contradiction /* cyclic */
+          qed
+        qed
+      qed
+    qed
+  qed
+next
+  case Verif3_case_3
+  solve( !Shk( $V, $P, x ) ▶₂ #l )
+    case ShkGen
+    solve( !KU( f(~k,
+                  <<~c, g(~c, <f(~k, <~nr, nt1, 'w'>), (~k⊕f(~k, <nt2, nt3, 'w2'>))>)>, 
+                   $P, nt1, nt2, nt3>)
+           ) @ #vk.1 )
+      case DBSend
+      solve( (¬(#vr.1 < #vr.9))  ∥ (¬(#vr.9 < #vr.3)) )
+        case case_1
+        solve( !KU( ~c ) @ #vk.3 )
+          case Verif2
+          by contradiction /* cyclic */
+        qed
+      next
+        case case_2
+        solve( !KU( ~nt1 ) @ #vk.6 )
+          case DBSend
+          solve( !KU( g(~c,
+                        <f(~k, <~nr, ~nt1, 'w'>), (~k⊕f(~k, <~nt2, ~nt3, 'w2'>))>)
+                 ) @ #vk.5 )
+            case DBSend_case_1
+            solve( !KU( ~c ) @ #vk.6 )
+              case Verif2
+              by contradiction /* cyclic */
+            qed
+          next
+            case DBSend_case_2
+            by contradiction /* cyclic */
+          next
+            case c_g
+            solve( !KU( f(~k, <~nr, ~nt1, 'w'>) ) @ #vk.12 )
+              case Leak
+              by contradiction /* from formulas */
+            next
+              case c_f
+              solve( !KU( ~k ) @ #vk.16 )
+                case Leak
+                by contradiction /* from formulas */
+              next
+                case ShkRevealX
+                by contradiction /* from formulas */
+              next
+                case ShkRevealY
+                solve( !KU( ~c ) @ #vk.11 )
+                  case Verif2
+                  by contradiction /* cyclic */
+                qed
+              qed
+            qed
+          qed
+        qed
+      qed
+    next
+      case c_f
+      solve( !KU( ~k ) @ #vk.12 )
+        case Leak
+        by contradiction /* from formulas */
+      next
+        case ShkRevealX
+        by contradiction /* from formulas */
+      next
+        case ShkRevealY
+        solve( !KU( g(~c, <f(~k, <~nr, nt1, 'w'>), (~k⊕f(~k, <nt2, nt3, 'w2'>))>)
+               ) @ #vk.6 )
+          case DBSend_case_1
+          solve( !KU( ~c ) @ #vk.6 )
+            case Verif2
+            by contradiction /* cyclic */
+          qed
+        next
+          case DBSend_case_2
+          solve( !KU( ~c ) @ #vk.6 )
+            case Verif2
+            by contradiction /* cyclic */
+          qed
+        next
+          case c_g
+          solve( !KU( ~c ) @ #vk.6 )
+            case Verif2
+            by contradiction /* cyclic */
+          qed
+        qed
+      qed
+    qed
+  qed
+next
+  case Verif3_case_4
+  solve( !Shk( $V, $P, x ) ▶₂ #l )
+    case ShkGen
+    solve( !KU( f(~k,
+                  <<~c, g(~c, <f(~k, <~nr, nt1, 'w'>), (~k⊕f(~k, <nt2, nt3, 'w2'>))>)>, 
+                   $P, nt1, nt2, nt3>)
+           ) @ #vk.1 )
+      case DBSend
+      solve( (¬(#vr.1 < #vr.9))  ∥ (¬(#vr.9 < #vr.3)) )
+        case case_1
+        solve( !KU( ~c ) @ #vk.3 )
+          case Verif2
+          by contradiction /* cyclic */
+        qed
+      next
+        case case_2
+        solve( !KU( ~nt1 ) @ #vk.6 )
+          case DBSend
+          solve( !KU( g(~c,
+                        <f(~k, <~nr, ~nt1, 'w'>), (~k⊕f(~k, <~nt2, ~nt3, 'w2'>))>)
+                 ) @ #vk.5 )
+            case DBSend_case_1
+            solve( !KU( ~c ) @ #vk.6 )
+              case Verif2
+              by contradiction /* cyclic */
+            qed
+          next
+            case DBSend_case_2
+            by contradiction /* cyclic */
+          next
+            case c_g
+            solve( !KU( f(~k, <~nr, ~nt1, 'w'>) ) @ #vk.12 )
+              case Leak
+              by contradiction /* from formulas */
+            next
+              case c_f
+              solve( !KU( ~k ) @ #vk.16 )
+                case Leak
+                by contradiction /* from formulas */
+              next
+                case ShkRevealX
+                by contradiction /* from formulas */
+              next
+                case ShkRevealY
+                solve( !KU( ~c ) @ #vk.11 )
+                  case Verif2
+                  by contradiction /* cyclic */
+                qed
+              qed
+            qed
+          qed
+        qed
+      qed
+    next
+      case c_f
+      solve( !KU( ~k ) @ #vk.12 )
+        case Leak
+        by contradiction /* from formulas */
+      next
+        case ShkRevealX
+        by contradiction /* from formulas */
+      next
+        case ShkRevealY
+        solve( !KU( g(~c, <f(~k, <~nr, nt1, 'w'>), (~k⊕f(~k, <nt2, nt3, 'w2'>))>)
+               ) @ #vk.6 )
+          case DBSend_case_1
+          solve( !KU( ~c ) @ #vk.6 )
+            case Verif2
+            by contradiction /* cyclic */
+          qed
+        next
+          case DBSend_case_2
+          solve( !KU( ~c ) @ #vk.6 )
+            case Verif2
+            by contradiction /* cyclic */
+          qed
+        next
+          case c_g
+          solve( !KU( ~c ) @ #vk.6 )
+            case Verif2
+            by contradiction /* cyclic */
+          qed
+        qed
+      qed
+    qed
+  qed
+qed
+
+lemma dbsec_hnst:
+  all-traces
+  "∀ V P chal resp #l.
+    (DBSec( V, P, chal, resp ) @ #l) ⇒
+    ((((∃ #i #j #k.
+         ((((Send( V, chal ) @ #i) ∧ (Action( P ) @ #j)) ∧
+           (Recv( V, resp ) @ #k)) ∧
+          (#i < #j)) ∧
+         (#j < #k)) ∨
+       (∃ #j. !Compromise( V ) @ #j)) ∨
+      (∃ #j. !Compromise( P ) @ #j)) ∨
+     (∃ #j. Collusion( ) @ #j))"
+/*
+guarded formula characterizing all counter-examples:
+"∃ V P chal resp #l.
+  (DBSec( V, P, chal, resp ) @ #l)
+ ∧
+  (∀ #i #j #k.
+    (Send( V, chal ) @ #i) ∧ (Action( P ) @ #j) ∧ (Recv( V, resp ) @ #k)
+   ⇒
+    ((¬(#i < #j)) ∨ (¬(#j < #k)))) ∧
+  (∀ #j. (!Compromise( V ) @ #j) ⇒ ⊥) ∧
+  (∀ #j. (!Compromise( P ) @ #j) ⇒ ⊥) ∧
+  (∀ #j. (Collusion( ) @ #j) ⇒ ⊥)"
+*/
+simplify
+solve( VerifState3( V, P, nr, nt1, nt2, nt3, chal, resp ) ▶₀ #l )
+  case Verif3_case_1
+  solve( !Shk( $V, $P, x ) ▶₂ #l )
+    case ShkGen
+    solve( !KU( ~nt1 ) @ #vk.6 )
+      case DBSend
+      solve( !KU( ~c ) @ #vk.4 )
+        case Verif2
+        by contradiction /* cyclic */
+      qed
+    qed
+  qed
+next
+  case Verif3_case_2
+  solve( !Shk( $V, $P, x ) ▶₂ #l )
+    case ShkGen
+    solve( !KU( f(~k,
+                  <<~c, g(~c, <f(~k, <~nr, nt1, 'w'>), (~k⊕f(~k, <nt2, nt3, 'w2'>))>)>, 
+                   $P, nt1, nt2, nt3>)
+           ) @ #vk.1 )
+      case DBSend
+      solve( (¬(#vr.1 < #vr.9))  ∥ (¬(#vr.9 < #vr.3)) )
+        case case_1
+        solve( !KU( ~c ) @ #vk.3 )
+          case Verif2
+          by contradiction /* cyclic */
+        qed
+      next
+        case case_2
+        solve( !KU( ~nt1 ) @ #vk.6 )
+          case DBSend
+          solve( !KU( g(~c,
+                        <f(~k, <~nr, ~nt1, 'w'>), (~k⊕f(~k, <~nt2, ~nt3, 'w2'>))>)
+                 ) @ #vk.5 )
+            case DBSend_case_1
+            solve( !KU( ~c ) @ #vk.6 )
+              case Verif2
+              by contradiction /* cyclic */
+            qed
+          next
+            case DBSend_case_2
+            by contradiction /* cyclic */
+          next
+            case c_g
+            solve( !KU( f(~k, <~nr, ~nt1, 'w'>) ) @ #vk.12 )
+              case Leak
+              by contradiction /* from formulas */
+            next
+              case c_f
+              solve( !KU( ~k ) @ #vk.16 )
+                case Leak
+                by contradiction /* from formulas */
+              next
+                case ShkRevealX
+                by contradiction /* from formulas */
+              next
+                case ShkRevealY
+                by contradiction /* from formulas */
+              qed
+            qed
+          qed
+        qed
+      qed
+    next
+      case c_f
+      solve( !KU( ~k ) @ #vk.12 )
+        case Leak
+        by contradiction /* from formulas */
+      next
+        case ShkRevealX
+        by contradiction /* from formulas */
+      next
+        case ShkRevealY
+        by contradiction /* from formulas */
+      qed
+    qed
+  qed
+next
+  case Verif3_case_3
+  solve( !Shk( $V, $P, x ) ▶₂ #l )
+    case ShkGen
+    solve( !KU( f(~k,
+                  <<~c, g(~c, <f(~k, <~nr, nt1, 'w'>), (~k⊕f(~k, <nt2, nt3, 'w2'>))>)>, 
+                   $P, nt1, nt2, nt3>)
+           ) @ #vk.1 )
+      case DBSend
+      solve( (¬(#vr.1 < #vr.9))  ∥ (¬(#vr.9 < #vr.3)) )
+        case case_1
+        solve( !KU( ~c ) @ #vk.3 )
+          case Verif2
+          by contradiction /* cyclic */
+        qed
+      next
+        case case_2
+        solve( !KU( ~nt1 ) @ #vk.6 )
+          case DBSend
+          solve( !KU( g(~c,
+                        <f(~k, <~nr, ~nt1, 'w'>), (~k⊕f(~k, <~nt2, ~nt3, 'w2'>))>)
+                 ) @ #vk.5 )
+            case DBSend_case_1
+            solve( !KU( ~c ) @ #vk.6 )
+              case Verif2
+              by contradiction /* cyclic */
+            qed
+          next
+            case DBSend_case_2
+            by contradiction /* cyclic */
+          next
+            case c_g
+            solve( !KU( f(~k, <~nr, ~nt1, 'w'>) ) @ #vk.12 )
+              case Leak
+              by contradiction /* from formulas */
+            next
+              case c_f
+              solve( !KU( ~k ) @ #vk.16 )
+                case Leak
+                by contradiction /* from formulas */
+              next
+                case ShkRevealX
+                by contradiction /* from formulas */
+              next
+                case ShkRevealY
+                by contradiction /* from formulas */
+              qed
+            qed
+          qed
+        qed
+      qed
+    next
+      case c_f
+      solve( !KU( ~k ) @ #vk.12 )
+        case Leak
+        by contradiction /* from formulas */
+      next
+        case ShkRevealX
+        by contradiction /* from formulas */
+      next
+        case ShkRevealY
+        by contradiction /* from formulas */
+      qed
+    qed
+  qed
+next
+  case Verif3_case_4
+  solve( !Shk( $V, $P, x ) ▶₂ #l )
+    case ShkGen
+    solve( !KU( f(~k,
+                  <<~c, g(~c, <f(~k, <~nr, nt1, 'w'>), (~k⊕f(~k, <nt2, nt3, 'w2'>))>)>, 
+                   $P, nt1, nt2, nt3>)
+           ) @ #vk.1 )
+      case DBSend
+      solve( (¬(#vr.1 < #vr.9))  ∥ (¬(#vr.9 < #vr.3)) )
+        case case_1
+        solve( !KU( ~c ) @ #vk.3 )
+          case Verif2
+          by contradiction /* cyclic */
+        qed
+      next
+        case case_2
+        solve( !KU( ~nt1 ) @ #vk.6 )
+          case DBSend
+          solve( !KU( g(~c,
+                        <f(~k, <~nr, ~nt1, 'w'>), (~k⊕f(~k, <~nt2, ~nt3, 'w2'>))>)
+                 ) @ #vk.5 )
+            case DBSend_case_1
+            solve( !KU( ~c ) @ #vk.6 )
+              case Verif2
+              by contradiction /* cyclic */
+            qed
+          next
+            case DBSend_case_2
+            by contradiction /* cyclic */
+          next
+            case c_g
+            solve( !KU( f(~k, <~nr, ~nt1, 'w'>) ) @ #vk.12 )
+              case Leak
+              by contradiction /* from formulas */
+            next
+              case c_f
+              solve( !KU( ~k ) @ #vk.16 )
+                case Leak
+                by contradiction /* from formulas */
+              next
+                case ShkRevealX
+                by contradiction /* from formulas */
+              next
+                case ShkRevealY
+                by contradiction /* from formulas */
+              qed
+            qed
+          qed
+        qed
+      qed
+    next
+      case c_f
+      solve( !KU( ~k ) @ #vk.12 )
+        case Leak
+        by contradiction /* from formulas */
+      next
+        case ShkRevealX
+        by contradiction /* from formulas */
+      next
+        case ShkRevealY
+        by contradiction /* from formulas */
+      qed
+    qed
+  qed
+qed
+
+lemma dbsec_hnst_collusion:
+  all-traces
+  "∀ V P chal resp #l.
+    (DBSec( V, P, chal, resp ) @ #l) ⇒
+    (((∃ #i #j #k.
+        ((((Send( V, chal ) @ #i) ∧ (Action( P ) @ #j)) ∧
+          (Recv( V, resp ) @ #k)) ∧
+         (#i < #j)) ∧
+        (#j < #k)) ∨
+      (∃ #j. !Compromise( V ) @ #j)) ∨
+     (∃ #j. !Compromise( P ) @ #j))"
+/*
+guarded formula characterizing all counter-examples:
+"∃ V P chal resp #l.
+  (DBSec( V, P, chal, resp ) @ #l)
+ ∧
+  (∀ #i #j #k.
+    (Send( V, chal ) @ #i) ∧ (Action( P ) @ #j) ∧ (Recv( V, resp ) @ #k)
+   ⇒
+    ((¬(#i < #j)) ∨ (¬(#j < #k)))) ∧
+  (∀ #j. (!Compromise( V ) @ #j) ⇒ ⊥) ∧
+  (∀ #j. (!Compromise( P ) @ #j) ⇒ ⊥)"
+*/
+simplify
+solve( VerifState3( V, P, nr, nt1, nt2, nt3, chal, resp ) ▶₀ #l )
+  case Verif3_case_2
+  solve( !Shk( $V, $P, x ) ▶₂ #l )
+    case ShkGen
+    solve( !KU( f(~k,
+                  <<~c, g(~c, <f(~k, <~nr, nt1, 'w'>), (~k⊕f(~k, <nt2, nt3, 'w2'>))>)>, 
+                   $P, nt1, nt2, nt3>)
+           ) @ #vk.1 )
+      case DBSend
+      solve( (¬(#vr.1 < #vr.9))  ∥ (¬(#vr.9 < #vr.3)) )
+        case case_2
+        solve( !KU( ~nt1 ) @ #vk.6 )
+          case DBSend
+          solve( !KU( g(~c,
+                        <f(~k, <~nr, ~nt1, 'w'>), (~k⊕f(~k, <~nt2, ~nt3, 'w2'>))>)
+                 ) @ #vk.5 )
+            case c_g
+            solve( !KU( f(~k, <~nr, ~nt1, 'w'>) ) @ #vk.12 )
+              case Leak
+              solve( !KU( ~c ) @ #vk.7 )
+                case Verif2
+                solve( !KU( ~nr ) @ #vk.12 )
+                  case Verif1
+                  solve( !KU( ~nt2 ) @ #vk.11 )
+                    case DBSend
+                    solve( !KU( ~nt3 ) @ #vk.12 )
+                      case DBSend
+                      solve( !KU( (~k⊕f(~k, <~nt2, ~nt3, 'w2'>)) ) @ #vk.13 )
+                        case coerce
+                        solve( !KD( (~k⊕f(~k, <~nt2, ~nt3, 'w2'>)) ) ▶₀ #vk.8 )
+                          case Leak
+                          solve( MayLeak( $X.1, t ) ▶₀ #vr.21 )
+                            case Prover1
+                            solve( (#vl.5, 0) ~~> (#vk.8, 0) )
+                              case d_0_snd
+                              solve( (#vr.24, 0) ~~> (#vk.8, 0) )
+                                case Xor
+                                SOLVED // trace found
+                              qed
+                            qed
+                          qed
+                        qed
+                      qed
+                    qed
+                  qed
+                qed
+              qed
+            qed
+          qed
+        qed
+      qed
+    qed
+  qed
+qed
+
+lemma dbsec_hnst_star:
+  all-traces
+  "∀ V P chal resp #e #l.
+    (((DBSec( V, P, chal, resp ) @ #l) ∧ (Expiry( ) @ #e)) ∧ (#e < #l)) ⇒
+    (((∃ #i #j #k.
+        ((((Send( V, chal ) @ #i) ∧ (Action( P ) @ #j)) ∧
+          (Recv( V, resp ) @ #k)) ∧
+         (#i < #j)) ∧
+        (#j < #k)) ∨
+      (∃ #j. !Compromise( V ) @ #j)) ∨
+     (∃ #j. !Compromise( P ) @ #j))"
+/*
+guarded formula characterizing all counter-examples:
+"∃ V P chal resp #e #l.
+  (DBSec( V, P, chal, resp ) @ #l) ∧ (Expiry( ) @ #e)
+ ∧
+  (#e < #l) ∧
+  (∀ #i #j #k.
+    (Send( V, chal ) @ #i) ∧ (Action( P ) @ #j) ∧ (Recv( V, resp ) @ #k)
+   ⇒
+    ((¬(#i < #j)) ∨ (¬(#j < #k)))) ∧
+  (∀ #j. (!Compromise( V ) @ #j) ⇒ ⊥) ∧
+  (∀ #j. (!Compromise( P ) @ #j) ⇒ ⊥)"
+*/
+simplify
+solve( VerifState3( V, P, nr, nt1, nt2, nt3, chal, resp ) ▶₀ #l )
+  case Verif3_case_1
+  solve( (¬(#vr.4 < #e))  ∥ (∃ #j. (End( ~nr ) @ #j) ∧ #j < #e) )
+    case case_1
+    solve( (¬(#vr.7 < #e))  ∥ (∃ #j. (End( ~nt1 ) @ #j) ∧ #j < #e) )
+      case case_1
+      solve( !Shk( $V, $P, x ) ▶₂ #l )
+        case ShkGen
+        solve( !KU( ~nt1 ) @ #vk.6 )
+          case DBSend
+          solve( !KU( ~c ) @ #vk.4 )
+            case Verif2
+            by contradiction /* cyclic */
+          qed
+        qed
+      qed
+    next
+      case case_2
+      solve( !Shk( $V, $P, x ) ▶₂ #l )
+        case ShkGen
+        solve( End( ~nt1 ) @ #j )
+          case Prover4
+          solve( ProverState3( V, P, nr, ~nt1, nt2, nt3, c, resp ) ▶₀ #j )
+            case Prover3
+            solve( !Shk( $V, $P, x ) ▶₁ #j )
+              case ShkGen
+              solve( !KU( ~nt1 ) @ #vk.6 )
+                case DBSend
+                solve( !KU( ~c ) @ #vk.4 )
+                  case Verif2
+                  by contradiction /* cyclic */
+                qed
+              qed
+            qed
+          qed
+        next
+          case Verif4
+          by solve( VerifState3( V, P, ~nt1, nt1.1, nt2, nt3, c, resp ) ▶₀ #j )
+        qed
+      qed
+    qed
+  next
+    case case_2
+    solve( (¬(#vr.7 < #e))  ∥ (∃ #j. (End( ~nt1 ) @ #j) ∧ #j < #e) )
+      case case_1
+      solve( !Shk( $V, $P, x ) ▶₂ #l )
+        case ShkGen
+        solve( End( ~nr ) @ #j )
+          case Prover4
+          by solve( ProverState3( V, P, nr, ~nr.1, nt2, nt3, c, resp ) ▶₀ #j )
+        next
+          case Verif4
+          solve( VerifState3( V, P, ~nr, nt1, nt2, nt3, c, resp ) ▶₀ #j )
+            case Verif3
+            by contradiction /* cyclic */
+          qed
+        qed
+      qed
+    next
+      case case_2
+      solve( !Shk( $V, $P, x ) ▶₂ #l )
+        case ShkGen
+        solve( End( ~nr ) @ #j )
+          case Prover4
+          by solve( ProverState3( V, P, nr, ~nr.1, nt2, nt3, c, resp ) ▶₀ #j )
+        next
+          case Verif4
+          solve( VerifState3( V, P, ~nr, nt1, nt2, nt3, c, resp ) ▶₀ #j )
+            case Verif3
+            by contradiction /* cyclic */
+          qed
+        qed
+      qed
+    qed
+  qed
+next
+  case Verif3_case_2
+  solve( (¬(#vr.4 < #e))  ∥ (∃ #j. (End( ~nr ) @ #j) ∧ #j < #e) )
+    case case_1
+    solve( !Shk( $V, $P, x ) ▶₂ #l )
+      case ShkGen
+      solve( !KU( f(~k,
+                    <<~c, g(~c, <f(~k, <~nr, nt1, 'w'>), (~k⊕f(~k, <nt2, nt3, 'w2'>))>)>, 
+                     $P, nt1, nt2, nt3>)
+             ) @ #vk.1 )
+        case DBSend
+        solve( (¬(#vr.1 < #vr.9))  ∥ (¬(#vr.9 < #vr.3)) )
+          case case_1
+          solve( (¬(#vr.13 < #e))  ∥ (∃ #j. (End( ~nt1 ) @ #j) ∧ #j < #e) )
+            case case_1
+            solve( !KU( ~c ) @ #vk.3 )
+              case Verif2
+              by contradiction /* cyclic */
+            qed
+          next
+            case case_2
+            solve( End( ~nt1 ) @ #j )
+              case Prover4
+              solve( ProverState3( V, P, nr, ~nt1, nt2, nt3, c, resp ) ▶₀ #j )
+                case Prover3
+                solve( !Shk( $V, $P, x ) ▶₁ #j )
+                  case ShkGen
+                  solve( !KU( ~c ) @ #vk.3 )
+                    case Verif2
+                    by contradiction /* cyclic */
+                  qed
+                qed
+              qed
+            next
+              case Verif4
+              by solve( VerifState3( V, P, ~nt1, nt1.1, nt2, nt3, c, resp ) ▶₀ #j )
+            qed
+          qed
+        next
+          case case_2
+          solve( (¬(#vr.13 < #e))  ∥ (∃ #j. (End( ~nt1 ) @ #j) ∧ #j < #e) )
+            case case_1
+            solve( !KU( ~nt1 ) @ #vk.6 )
+              case DBSend
+              solve( !KU( g(~c,
+                            <f(~k, <~nr, ~nt1, 'w'>), (~k⊕f(~k, <~nt2, ~nt3, 'w2'>))>)
+                     ) @ #vk.5 )
+                case DBSend_case_1
+                solve( !KU( ~c ) @ #vk.6 )
+                  case Verif2
+                  by contradiction /* cyclic */
+                qed
+              next
+                case DBSend_case_2
+                by contradiction /* cyclic */
+              next
+                case c_g
+                solve( !KU( f(~k, <~nr, ~nt1, 'w'>) ) @ #vk.12 )
+                  case Leak
+                  by contradiction /* cyclic */
+                next
+                  case c_f
+                  solve( !KU( ~k ) @ #vk.16 )
+                    case Leak
+                    solve( End( ~nt1.1 ) @ #j )
+                      case Prover4
+                      solve( ProverState3( V, P, nr, ~nt1, nt2, nt3, c, resp ) ▶₀ #j )
+                        case Prover3
+                        solve( !Shk( $V, $P, x ) ▶₁ #j )
+                          case ShkGen
+                          solve( !KU( (~k⊕f(~k, <~nt2.1, ~nt3.1, 'w2'>)) ) @ #vk.16 )
+                            case c_xor
+                            solve( !KU( f(~k, <~nt2, ~nt3, 'w2'>) ) @ #vk.19 )
+                              case Leak
+                              by contradiction /* cyclic */
+                            next
+                              case c_f
+                              by contradiction /* cyclic */
+                            qed
+                          next
+                            case coerce
+                            solve( !KD( (~k⊕f(~k, <~nt2.1, ~nt3.1, 'w2'>)) ) ▶₀ #vk.5 )
+                              case DBSend
+                              solve( Send( $X.1, t ) ▶₀ #vr.22 )
+                                case DBInject_case_1
+                                by contradiction /* cyclic */
+                              next
+                                case DBInject_case_2
+                                by contradiction /* cyclic */
+                              next
+                                case DBInject_case_3
+                                by contradiction /* cyclic */
+                              next
+                                case Prover1
+                                by contradiction /* impossible chain */
+                              next
+                                case Prover2
+                                by solve( (#vl.3, 0) ~~> (#vk.5, 0) )
+                              next
+                                case Prover3
+                                solve( (#vl.3, 0) ~~> (#vk.5, 0) )
+                                  case d_0_fst
+                                  by solve( (#vr.27, 0) ~~> (#vk.5, 0) )
+                                next
+                                  case d_0_snd
+                                  solve( (#vr.27, 0) ~~> (#vk.5, 0) )
+                                    case d_0_fst
+                                    by contradiction /* cyclic */
+                                  next
+                                    case d_0_snd
+                                    by solve( (#vr.28, 0) ~~> (#vk.5, 0) )
+                                  qed
+                                qed
+                              qed
+                            next
+                              case Leak
+                              solve( MayLeak( $X.1, t ) ▶₀ #vr.22 )
+                                case Prover1
+                                solve( (#vl.3, 0) ~~> (#vk.5, 0) )
+                                  case d_0_fst
+                                  by solve( (#vr.25, 0) ~~> (#vk.5, 0) )
+                                next
+                                  case d_0_snd
+                                  solve( (#vr.25, 0) ~~> (#vk.5, 0) )
+                                    case Xor
+                                    by contradiction /* cyclic */
+                                  next
+                                    case d_xor_case_1
+                                    solve( (#vr.26, 0) ~~> (#vk.5, 0) )
+                                      case Xor
+                                      solve( End( ~nt1.2 ) @ #j.1 )
+                                        case Prover4
+                                        solve( ProverState3( V.1, P.1, nr.2, ~nt1.2, nt2.2, nt3.2, c.2, resp
+                                               ) ▶₀ #j.1 )
+                                          case Prover3
+                                          solve( !Shk( $V, $P, x ) ▶₁ #j.1 )
+                                            case ShkGen
+                                            solve( !KU( f(~k, <~nt2, ~nt3, 'w2'>) ) @ #vk.19 )
+                                              case Leak
+                                              by contradiction /* cyclic */
+                                            next
+                                              case c_f
+                                              by contradiction /* cyclic */
+                                            qed
+                                          qed
+                                        qed
+                                      next
+                                        case Verif4
+                                        by solve( VerifState3( V.1, P.1, ~nt1.2, nt1.3, nt2.2, nt3.2, c.2,
+                                                               resp
+                                                  ) ▶₀ #j.1 )
+                                      qed
+                                    qed
+                                  next
+                                    case d_xor_case_2
+                                    by solve( (#vr.26, 0) ~~> (#vk.5, 0) )
+                                  next
+                                    case d_xor_case_3
+                                    by contradiction /* impossible chain */
+                                  next
+                                    case d_xor_case_4
+                                    by contradiction /* impossible chain */
+                                  qed
+                                qed
+                              qed
+                            next
+                              case LtkGen
+                              by contradiction /* impossible chain */
+                            next
+                              case LtkReveal
+                              solve( !Ltk( $X.1, t ) ▶₀ #vr.22 )
+                                case LtkGen
+                                by contradiction /* impossible chain */
+                              qed
+                            next
+                              case ShkRevealX
+                              solve( !Shk( $X.1, $Y, t ) ▶₀ #vr.22 )
+                                case ShkGen
+                                by contradiction /* impossible chain */
+                              qed
+                            next
+                              case ShkRevealY
+                              solve( !Shk( $X.1, $Y, t ) ▶₀ #vr.22 )
+                                case ShkGen
+                                by contradiction /* impossible chain */
+                              qed
+                            next
+                              case Verif1
+                              by contradiction /* impossible chain */
+                            next
+                              case Verif2
+                              by contradiction /* impossible chain */
+                            next
+                              case Verif4
+                              by solve( (#vl.3, 0) ~~> (#vk.5, 0) )
+                            qed
+                          qed
+                        qed
+                      qed
+                    next
+                      case Verif4
+                      by solve( VerifState3( V, P, ~nt1, nt1.1, nt2, nt3, c, resp ) ▶₀ #j )
+                    qed
+                  next
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              qed
+            qed
+          next
+            case case_2
+            solve( End( ~nt1 ) @ #j )
+              case Prover4
+              solve( ProverState3( V, P, nr, ~nt1, nt2, nt3, c, resp ) ▶₀ #j )
+                case Prover3
+                solve( !Shk( $V, $P, x ) ▶₁ #j )
+                  case ShkGen
+                  solve( !KU( ~c ) @ #vk.3 )
+                    case Verif2
+                    by contradiction /* cyclic */
+                  qed
+                qed
+              qed
+            next
+              case Verif4
+              by solve( VerifState3( V, P, ~nt1, nt1.1, nt2, nt3, c, resp ) ▶₀ #j )
+            qed
+          qed
+        qed
+      next
+        case c_f
+        solve( !KU( ~k ) @ #vk.12 )
+          case Leak
+          solve( End( ~nt1.1 ) @ #j )
+            case Prover4
+            solve( ProverState3( V, P, nr, ~nt1, nt2, nt3, c, resp ) ▶₀ #j )
+              case Prover3
+              solve( !Shk( $V, $P, x ) ▶₁ #j )
+                case ShkGen
+                solve( !KU( g(~c.1,
+                              <f(~k, <~nr.1, nt1.1, 'w'>), (~k⊕f(~k, <nt2.1, nt3.1, 'w2'>))>)
+                       ) @ #vk.6 )
+                  case DBSend_case_1
+                  solve( (¬(#vr.17 < #e))  ∥ (∃ #j. (End( ~nt1.1 ) @ #j) ∧ #j < #e) )
+                    case case_1
+                    solve( !KU( ~c.1 ) @ #vk.6 )
+                      case Verif2
+                      by contradiction /* cyclic */
+                    qed
+                  next
+                    case case_2
+                    solve( End( ~nt1.1 ) @ #j.1 )
+                      case Prover4
+                      solve( ProverState3( V.1, P.1, nr.2, ~nt1.1, nt2.2, nt3.2, c.2, resp
+                             ) ▶₀ #j.1 )
+                        case Prover3
+                        solve( !Shk( $V, $P, x ) ▶₁ #j.1 )
+                          case ShkGen
+                          solve( !KU( ~c.1 ) @ #vk.6 )
+                            case Verif2
+                            by contradiction /* cyclic */
+                          qed
+                        qed
+                      qed
+                    next
+                      case Verif4
+                      by solve( VerifState3( V.1, P.1, ~nt1.1, nt1.2, nt2.2, nt3.2, c.2, resp
+                                ) ▶₀ #j.1 )
+                    qed
+                  qed
+                next
+                  case DBSend_case_2
+                  solve( (¬(#vr.20 < #e))  ∥ (∃ #j. (End( ~nt1.1 ) @ #j) ∧ #j < #e) )
+                    case case_1
+                    solve( !KU( ~c.1 ) @ #vk.6 )
+                      case Verif2
+                      by contradiction /* cyclic */
+                    qed
+                  next
+                    case case_2
+                    solve( End( ~nt1.1 ) @ #j.1 )
+                      case Prover4
+                      solve( ProverState3( V.1, P.1, nr.2, ~nt1.1, nt2.2, nt3.2, c.2, resp
+                             ) ▶₀ #j.1 )
+                        case Prover3
+                        solve( !Shk( $V, $P, x ) ▶₁ #j.1 )
+                          case ShkGen
+                          solve( !KU( ~c.1 ) @ #vk.6 )
+                            case Verif2
+                            by contradiction /* cyclic */
+                          qed
+                        qed
+                      qed
+                    next
+                      case Verif4
+                      by solve( VerifState3( V.1, P.1, ~nt1.1, nt1.2, nt2.2, nt3.2, c.2, resp
+                                ) ▶₀ #j.1 )
+                    qed
+                  qed
+                next
+                  case c_g
+                  solve( !KU( f(~k, <~nt2, ~nt3, 'w2'>) ) @ #vk.15 )
+                    case Leak
+                    by contradiction /* cyclic */
+                  next
+                    case c_f
+                    by contradiction /* cyclic */
+                  qed
+                qed
+              qed
+            qed
+          next
+            case Verif4
+            by solve( VerifState3( V, P, ~nt1, nt1.1, nt2, nt3, c, resp ) ▶₀ #j )
+          qed
+        next
+          case ShkRevealX
+          by contradiction /* from formulas */
+        next
+          case ShkRevealY
+          by contradiction /* from formulas */
+        qed
+      qed
+    qed
+  next
+    case case_2
+    solve( !Shk( $V, $P, x ) ▶₂ #l )
+      case ShkGen
+      solve( End( ~nr ) @ #j )
+        case Prover4
+        by solve( ProverState3( V, P, nr, ~nr.1, nt2, nt3, c, resp ) ▶₀ #j )
+      next
+        case Verif4
+        solve( VerifState3( V, P, ~nr, nt1, nt2, nt3, c, resp ) ▶₀ #j )
+          case Verif3
+          by contradiction /* cyclic */
+        qed
+      qed
+    qed
+  qed
+next
+  case Verif3_case_3
+  solve( (¬(#vr.4 < #e))  ∥ (∃ #j. (End( ~nr ) @ #j) ∧ #j < #e) )
+    case case_1
+    solve( !Shk( $V, $P, x ) ▶₂ #l )
+      case ShkGen
+      solve( !KU( f(~k,
+                    <<~c, g(~c, <f(~k, <~nr, nt1, 'w'>), (~k⊕f(~k, <nt2, nt3, 'w2'>))>)>, 
+                     $P, nt1, nt2, nt3>)
+             ) @ #vk.1 )
+        case DBSend
+        solve( (¬(#vr.1 < #vr.9))  ∥ (¬(#vr.9 < #vr.3)) )
+          case case_1
+          solve( (¬(#vr.13 < #e))  ∥ (∃ #j. (End( ~nt1 ) @ #j) ∧ #j < #e) )
+            case case_1
+            solve( !KU( ~c ) @ #vk.3 )
+              case Verif2
+              by contradiction /* cyclic */
+            qed
+          next
+            case case_2
+            solve( End( ~nt1 ) @ #j )
+              case Prover4
+              solve( ProverState3( V, P, nr, ~nt1, nt2, nt3, c, resp ) ▶₀ #j )
+                case Prover3
+                solve( !Shk( $V, $P, x ) ▶₁ #j )
+                  case ShkGen
+                  solve( !KU( ~c ) @ #vk.3 )
+                    case Verif2
+                    by contradiction /* cyclic */
+                  qed
+                qed
+              qed
+            next
+              case Verif4
+              by solve( VerifState3( V, P, ~nt1, nt1.1, nt2, nt3, c, resp ) ▶₀ #j )
+            qed
+          qed
+        next
+          case case_2
+          solve( (¬(#vr.13 < #e))  ∥ (∃ #j. (End( ~nt1 ) @ #j) ∧ #j < #e) )
+            case case_1
+            solve( !KU( ~nt1 ) @ #vk.6 )
+              case DBSend
+              solve( !KU( g(~c,
+                            <f(~k, <~nr, ~nt1, 'w'>), (~k⊕f(~k, <~nt2, ~nt3, 'w2'>))>)
+                     ) @ #vk.5 )
+                case DBSend_case_1
+                solve( !KU( ~c ) @ #vk.6 )
+                  case Verif2
+                  by contradiction /* cyclic */
+                qed
+              next
+                case DBSend_case_2
+                by contradiction /* cyclic */
+              next
+                case c_g
+                solve( !KU( f(~k, <~nr, ~nt1, 'w'>) ) @ #vk.12 )
+                  case Leak
+                  by contradiction /* cyclic */
+                next
+                  case c_f
+                  solve( !KU( ~k ) @ #vk.16 )
+                    case Leak
+                    solve( End( ~nt1.1 ) @ #j )
+                      case Prover4
+                      solve( ProverState3( V, P, nr, ~nt1, nt2, nt3, c, resp ) ▶₀ #j )
+                        case Prover3
+                        solve( !Shk( $V, $P, x ) ▶₁ #j )
+                          case ShkGen
+                          solve( !KU( (~k⊕f(~k, <~nt2.1, ~nt3.1, 'w2'>)) ) @ #vk.16 )
+                            case c_xor
+                            solve( !KU( f(~k, <~nt2, ~nt3, 'w2'>) ) @ #vk.19 )
+                              case Leak
+                              by contradiction /* cyclic */
+                            next
+                              case c_f
+                              by contradiction /* cyclic */
+                            qed
+                          next
+                            case coerce
+                            solve( !KD( (~k⊕f(~k, <~nt2.1, ~nt3.1, 'w2'>)) ) ▶₀ #vk.5 )
+                              case DBSend
+                              solve( Send( $X.1, t ) ▶₀ #vr.22 )
+                                case DBInject_case_1
+                                by contradiction /* cyclic */
+                              next
+                                case DBInject_case_2
+                                by contradiction /* cyclic */
+                              next
+                                case DBInject_case_3
+                                by contradiction /* cyclic */
+                              next
+                                case Prover1
+                                by contradiction /* impossible chain */
+                              next
+                                case Prover2
+                                by solve( (#vl.3, 0) ~~> (#vk.5, 0) )
+                              next
+                                case Prover3
+                                solve( (#vl.3, 0) ~~> (#vk.5, 0) )
+                                  case d_0_fst
+                                  by solve( (#vr.27, 0) ~~> (#vk.5, 0) )
+                                next
+                                  case d_0_snd
+                                  solve( (#vr.27, 0) ~~> (#vk.5, 0) )
+                                    case d_0_fst
+                                    by contradiction /* cyclic */
+                                  next
+                                    case d_0_snd
+                                    by solve( (#vr.28, 0) ~~> (#vk.5, 0) )
+                                  qed
+                                qed
+                              qed
+                            next
+                              case Leak
+                              solve( MayLeak( $X.1, t ) ▶₀ #vr.22 )
+                                case Prover1
+                                solve( (#vl.3, 0) ~~> (#vk.5, 0) )
+                                  case d_0_fst
+                                  by solve( (#vr.25, 0) ~~> (#vk.5, 0) )
+                                next
+                                  case d_0_snd
+                                  solve( (#vr.25, 0) ~~> (#vk.5, 0) )
+                                    case Xor
+                                    by contradiction /* cyclic */
+                                  next
+                                    case d_xor_case_1
+                                    solve( (#vr.26, 0) ~~> (#vk.5, 0) )
+                                      case Xor
+                                      solve( End( ~nt1.2 ) @ #j.1 )
+                                        case Prover4
+                                        solve( ProverState3( V.1, P.1, nr.2, ~nt1.2, nt2.2, nt3.2, c.2, resp
+                                               ) ▶₀ #j.1 )
+                                          case Prover3
+                                          solve( !Shk( $V, $P, x ) ▶₁ #j.1 )
+                                            case ShkGen
+                                            solve( !KU( f(~k, <~nt2, ~nt3, 'w2'>) ) @ #vk.19 )
+                                              case Leak
+                                              by contradiction /* cyclic */
+                                            next
+                                              case c_f
+                                              by contradiction /* cyclic */
+                                            qed
+                                          qed
+                                        qed
+                                      next
+                                        case Verif4
+                                        by solve( VerifState3( V.1, P.1, ~nt1.2, nt1.3, nt2.2, nt3.2, c.2,
+                                                               resp
+                                                  ) ▶₀ #j.1 )
+                                      qed
+                                    qed
+                                  next
+                                    case d_xor_case_2
+                                    by solve( (#vr.26, 0) ~~> (#vk.5, 0) )
+                                  next
+                                    case d_xor_case_3
+                                    by contradiction /* impossible chain */
+                                  next
+                                    case d_xor_case_4
+                                    by contradiction /* impossible chain */
+                                  qed
+                                qed
+                              qed
+                            next
+                              case LtkGen
+                              by contradiction /* impossible chain */
+                            next
+                              case LtkReveal
+                              solve( !Ltk( $X.1, t ) ▶₀ #vr.22 )
+                                case LtkGen
+                                by contradiction /* impossible chain */
+                              qed
+                            next
+                              case ShkRevealX
+                              solve( !Shk( $X.1, $Y.1, t ) ▶₀ #vr.22 )
+                                case ShkGen
+                                by contradiction /* impossible chain */
+                              qed
+                            next
+                              case ShkRevealY
+                              solve( !Shk( $X.1, $Y.1, t ) ▶₀ #vr.22 )
+                                case ShkGen
+                                by contradiction /* impossible chain */
+                              qed
+                            next
+                              case Verif1
+                              by contradiction /* impossible chain */
+                            next
+                              case Verif2
+                              by contradiction /* impossible chain */
+                            next
+                              case Verif4
+                              by solve( (#vl.3, 0) ~~> (#vk.5, 0) )
+                            qed
+                          qed
+                        qed
+                      qed
+                    next
+                      case Verif4
+                      by solve( VerifState3( V, P, ~nt1, nt1.1, nt2, nt3, c, resp ) ▶₀ #j )
+                    qed
+                  next
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              qed
+            qed
+          next
+            case case_2
+            solve( End( ~nt1 ) @ #j )
+              case Prover4
+              solve( ProverState3( V, P, nr, ~nt1, nt2, nt3, c, resp ) ▶₀ #j )
+                case Prover3
+                solve( !Shk( $V, $P, x ) ▶₁ #j )
+                  case ShkGen
+                  solve( !KU( ~c ) @ #vk.3 )
+                    case Verif2
+                    by contradiction /* cyclic */
+                  qed
+                qed
+              qed
+            next
+              case Verif4
+              by solve( VerifState3( V, P, ~nt1, nt1.1, nt2, nt3, c, resp ) ▶₀ #j )
+            qed
+          qed
+        qed
+      next
+        case c_f
+        solve( !KU( ~k ) @ #vk.12 )
+          case Leak
+          solve( End( ~nt1.1 ) @ #j )
+            case Prover4
+            solve( ProverState3( V, P, nr, ~nt1, nt2, nt3, c, resp ) ▶₀ #j )
+              case Prover3
+              solve( !Shk( $V, $P, x ) ▶₁ #j )
+                case ShkGen
+                solve( !KU( g(~c.1,
+                              <f(~k, <~nr.1, nt1.1, 'w'>), (~k⊕f(~k, <nt2.1, nt3.1, 'w2'>))>)
+                       ) @ #vk.6 )
+                  case DBSend_case_1
+                  solve( (¬(#vr.17 < #e))  ∥ (∃ #j. (End( ~nt1.1 ) @ #j) ∧ #j < #e) )
+                    case case_1
+                    solve( !KU( ~c.1 ) @ #vk.6 )
+                      case Verif2
+                      by contradiction /* cyclic */
+                    qed
+                  next
+                    case case_2
+                    solve( End( ~nt1.1 ) @ #j.1 )
+                      case Prover4
+                      solve( ProverState3( V.1, P.1, nr.2, ~nt1.1, nt2.2, nt3.2, c.2, resp
+                             ) ▶₀ #j.1 )
+                        case Prover3
+                        solve( !Shk( $V, $P, x ) ▶₁ #j.1 )
+                          case ShkGen
+                          solve( !KU( ~c.1 ) @ #vk.6 )
+                            case Verif2
+                            by contradiction /* cyclic */
+                          qed
+                        qed
+                      qed
+                    next
+                      case Verif4
+                      by solve( VerifState3( V.1, P.1, ~nt1.1, nt1.2, nt2.2, nt3.2, c.2, resp
+                                ) ▶₀ #j.1 )
+                    qed
+                  qed
+                next
+                  case DBSend_case_2
+                  solve( (¬(#vr.20 < #e))  ∥ (∃ #j. (End( ~nt1.1 ) @ #j) ∧ #j < #e) )
+                    case case_1
+                    solve( !KU( ~c.1 ) @ #vk.6 )
+                      case Verif2
+                      by contradiction /* cyclic */
+                    qed
+                  next
+                    case case_2
+                    solve( End( ~nt1.1 ) @ #j.1 )
+                      case Prover4
+                      solve( ProverState3( V.1, P.1, nr.2, ~nt1.1, nt2.2, nt3.2, c.2, resp
+                             ) ▶₀ #j.1 )
+                        case Prover3
+                        solve( !Shk( $V, $P, x ) ▶₁ #j.1 )
+                          case ShkGen
+                          solve( !KU( ~c.1 ) @ #vk.6 )
+                            case Verif2
+                            by contradiction /* cyclic */
+                          qed
+                        qed
+                      qed
+                    next
+                      case Verif4
+                      by solve( VerifState3( V.1, P.1, ~nt1.1, nt1.2, nt2.2, nt3.2, c.2, resp
+                                ) ▶₀ #j.1 )
+                    qed
+                  qed
+                next
+                  case c_g
+                  solve( !KU( f(~k, <~nt2, ~nt3, 'w2'>) ) @ #vk.15 )
+                    case Leak
+                    by contradiction /* cyclic */
+                  next
+                    case c_f
+                    by contradiction /* cyclic */
+                  qed
+                qed
+              qed
+            qed
+          next
+            case Verif4
+            by solve( VerifState3( V, P, ~nt1, nt1.1, nt2, nt3, c, resp ) ▶₀ #j )
+          qed
+        next
+          case ShkRevealX
+          by contradiction /* from formulas */
+        next
+          case ShkRevealY
+          by contradiction /* from formulas */
+        qed
+      qed
+    qed
+  next
+    case case_2
+    solve( !Shk( $V, $P, x ) ▶₂ #l )
+      case ShkGen
+      solve( End( ~nr ) @ #j )
+        case Prover4
+        by solve( ProverState3( V, P, nr, ~nr.1, nt2, nt3, c, resp ) ▶₀ #j )
+      next
+        case Verif4
+        solve( VerifState3( V, P, ~nr, nt1, nt2, nt3, c, resp ) ▶₀ #j )
+          case Verif3
+          by contradiction /* cyclic */
+        qed
+      qed
+    qed
+  qed
+next
+  case Verif3_case_4
+  solve( (¬(#vr.4 < #e))  ∥ (∃ #j. (End( ~nr ) @ #j) ∧ #j < #e) )
+    case case_1
+    solve( !Shk( $V, $P, x ) ▶₂ #l )
+      case ShkGen
+      solve( !KU( f(~k,
+                    <<~c, g(~c, <f(~k, <~nr, nt1, 'w'>), (~k⊕f(~k, <nt2, nt3, 'w2'>))>)>, 
+                     $P, nt1, nt2, nt3>)
+             ) @ #vk.1 )
+        case DBSend
+        solve( (¬(#vr.1 < #vr.9))  ∥ (¬(#vr.9 < #vr.3)) )
+          case case_1
+          solve( (¬(#vr.13 < #e))  ∥ (∃ #j. (End( ~nt1 ) @ #j) ∧ #j < #e) )
+            case case_1
+            solve( !KU( ~c ) @ #vk.3 )
+              case Verif2
+              by contradiction /* cyclic */
+            qed
+          next
+            case case_2
+            solve( End( ~nt1 ) @ #j )
+              case Prover4
+              solve( ProverState3( V, P, nr, ~nt1, nt2, nt3, c, resp ) ▶₀ #j )
+                case Prover3
+                solve( !Shk( $V, $P, x ) ▶₁ #j )
+                  case ShkGen
+                  solve( !KU( ~c ) @ #vk.3 )
+                    case Verif2
+                    by contradiction /* cyclic */
+                  qed
+                qed
+              qed
+            next
+              case Verif4
+              by solve( VerifState3( V, P, ~nt1, nt1.1, nt2, nt3, c, resp ) ▶₀ #j )
+            qed
+          qed
+        next
+          case case_2
+          solve( (¬(#vr.13 < #e))  ∥ (∃ #j. (End( ~nt1 ) @ #j) ∧ #j < #e) )
+            case case_1
+            solve( !KU( ~nt1 ) @ #vk.6 )
+              case DBSend
+              solve( !KU( g(~c,
+                            <f(~k, <~nr, ~nt1, 'w'>), (~k⊕f(~k, <~nt2, ~nt3, 'w2'>))>)
+                     ) @ #vk.5 )
+                case DBSend_case_1
+                solve( !KU( ~c ) @ #vk.6 )
+                  case Verif2
+                  by contradiction /* cyclic */
+                qed
+              next
+                case DBSend_case_2
+                by contradiction /* cyclic */
+              next
+                case c_g
+                solve( !KU( f(~k, <~nr, ~nt1, 'w'>) ) @ #vk.12 )
+                  case Leak
+                  by contradiction /* cyclic */
+                next
+                  case c_f
+                  solve( !KU( ~k ) @ #vk.16 )
+                    case Leak
+                    solve( End( ~nt1.1 ) @ #j )
+                      case Prover4
+                      solve( ProverState3( V, P, nr, ~nt1, nt2, nt3, c, resp ) ▶₀ #j )
+                        case Prover3
+                        solve( !Shk( $V, $P, x ) ▶₁ #j )
+                          case ShkGen
+                          solve( !KU( (~k⊕f(~k, <~nt2.1, ~nt3.1, 'w2'>)) ) @ #vk.16 )
+                            case c_xor
+                            solve( !KU( f(~k, <~nt2, ~nt3, 'w2'>) ) @ #vk.19 )
+                              case Leak
+                              by contradiction /* cyclic */
+                            next
+                              case c_f
+                              by contradiction /* cyclic */
+                            qed
+                          next
+                            case coerce
+                            solve( !KD( (~k⊕f(~k, <~nt2.1, ~nt3.1, 'w2'>)) ) ▶₀ #vk.5 )
+                              case DBSend
+                              solve( Send( $X.2, t ) ▶₀ #vr.22 )
+                                case DBInject_case_1
+                                by contradiction /* cyclic */
+                              next
+                                case DBInject_case_2
+                                by contradiction /* cyclic */
+                              next
+                                case DBInject_case_3
+                                by contradiction /* cyclic */
+                              next
+                                case Prover1
+                                by contradiction /* impossible chain */
+                              next
+                                case Prover2
+                                by solve( (#vl.3, 0) ~~> (#vk.5, 0) )
+                              next
+                                case Prover3
+                                solve( (#vl.3, 0) ~~> (#vk.5, 0) )
+                                  case d_0_fst
+                                  by solve( (#vr.27, 0) ~~> (#vk.5, 0) )
+                                next
+                                  case d_0_snd
+                                  solve( (#vr.27, 0) ~~> (#vk.5, 0) )
+                                    case d_0_fst
+                                    by contradiction /* cyclic */
+                                  next
+                                    case d_0_snd
+                                    by solve( (#vr.28, 0) ~~> (#vk.5, 0) )
+                                  qed
+                                qed
+                              qed
+                            next
+                              case Leak
+                              solve( MayLeak( $X.2, t ) ▶₀ #vr.22 )
+                                case Prover1
+                                solve( (#vl.3, 0) ~~> (#vk.5, 0) )
+                                  case d_0_fst
+                                  by solve( (#vr.25, 0) ~~> (#vk.5, 0) )
+                                next
+                                  case d_0_snd
+                                  solve( (#vr.25, 0) ~~> (#vk.5, 0) )
+                                    case Xor
+                                    by contradiction /* cyclic */
+                                  next
+                                    case d_xor_case_1
+                                    solve( (#vr.26, 0) ~~> (#vk.5, 0) )
+                                      case Xor
+                                      solve( End( ~nt1.2 ) @ #j.1 )
+                                        case Prover4
+                                        solve( ProverState3( V.1, P.1, nr.2, ~nt1.2, nt2.2, nt3.2, c.2, resp
+                                               ) ▶₀ #j.1 )
+                                          case Prover3
+                                          solve( !Shk( $V, $P, x ) ▶₁ #j.1 )
+                                            case ShkGen
+                                            solve( !KU( f(~k, <~nt2, ~nt3, 'w2'>) ) @ #vk.19 )
+                                              case Leak
+                                              by contradiction /* cyclic */
+                                            next
+                                              case c_f
+                                              by contradiction /* cyclic */
+                                            qed
+                                          qed
+                                        qed
+                                      next
+                                        case Verif4
+                                        by solve( VerifState3( V.1, P.1, ~nt1.2, nt1.3, nt2.2, nt3.2, c.2,
+                                                               resp
+                                                  ) ▶₀ #j.1 )
+                                      qed
+                                    qed
+                                  next
+                                    case d_xor_case_2
+                                    by solve( (#vr.26, 0) ~~> (#vk.5, 0) )
+                                  next
+                                    case d_xor_case_3
+                                    by contradiction /* impossible chain */
+                                  next
+                                    case d_xor_case_4
+                                    by contradiction /* impossible chain */
+                                  qed
+                                qed
+                              qed
+                            next
+                              case LtkGen
+                              by contradiction /* impossible chain */
+                            next
+                              case LtkReveal
+                              solve( !Ltk( $X.2, t ) ▶₀ #vr.22 )
+                                case LtkGen
+                                by contradiction /* impossible chain */
+                              qed
+                            next
+                              case ShkRevealX
+                              solve( !Shk( $X.2, $Y, t ) ▶₀ #vr.22 )
+                                case ShkGen
+                                by contradiction /* impossible chain */
+                              qed
+                            next
+                              case ShkRevealY
+                              solve( !Shk( $X.2, $Y, t ) ▶₀ #vr.22 )
+                                case ShkGen
+                                by contradiction /* impossible chain */
+                              qed
+                            next
+                              case Verif1
+                              by contradiction /* impossible chain */
+                            next
+                              case Verif2
+                              by contradiction /* impossible chain */
+                            next
+                              case Verif4
+                              by solve( (#vl.3, 0) ~~> (#vk.5, 0) )
+                            qed
+                          qed
+                        qed
+                      qed
+                    next
+                      case Verif4
+                      by solve( VerifState3( V, P, ~nt1, nt1.1, nt2, nt3, c, resp ) ▶₀ #j )
+                    qed
+                  next
+                    case ShkRevealX
+                    by contradiction /* from formulas */
+                  next
+                    case ShkRevealY
+                    by contradiction /* from formulas */
+                  qed
+                qed
+              qed
+            qed
+          next
+            case case_2
+            solve( End( ~nt1 ) @ #j )
+              case Prover4
+              solve( ProverState3( V, P, nr, ~nt1, nt2, nt3, c, resp ) ▶₀ #j )
+                case Prover3
+                solve( !Shk( $V, $P, x ) ▶₁ #j )
+                  case ShkGen
+                  solve( !KU( ~c ) @ #vk.3 )
+                    case Verif2
+                    by contradiction /* cyclic */
+                  qed
+                qed
+              qed
+            next
+              case Verif4
+              by solve( VerifState3( V, P, ~nt1, nt1.1, nt2, nt3, c, resp ) ▶₀ #j )
+            qed
+          qed
+        qed
+      next
+        case c_f
+        solve( !KU( ~k ) @ #vk.12 )
+          case Leak
+          solve( End( ~nt1.1 ) @ #j )
+            case Prover4
+            solve( ProverState3( V, P, nr, ~nt1, nt2, nt3, c, resp ) ▶₀ #j )
+              case Prover3
+              solve( !Shk( $V, $P, x ) ▶₁ #j )
+                case ShkGen
+                solve( !KU( g(~c.1,
+                              <f(~k, <~nr.1, nt1.1, 'w'>), (~k⊕f(~k, <nt2.1, nt3.1, 'w2'>))>)
+                       ) @ #vk.6 )
+                  case DBSend_case_1
+                  solve( (¬(#vr.17 < #e))  ∥ (∃ #j. (End( ~nt1.1 ) @ #j) ∧ #j < #e) )
+                    case case_1
+                    solve( !KU( ~c.1 ) @ #vk.6 )
+                      case Verif2
+                      by contradiction /* cyclic */
+                    qed
+                  next
+                    case case_2
+                    solve( End( ~nt1.1 ) @ #j.1 )
+                      case Prover4
+                      solve( ProverState3( V.1, P.1, nr.2, ~nt1.1, nt2.2, nt3.2, c.2, resp
+                             ) ▶₀ #j.1 )
+                        case Prover3
+                        solve( !Shk( $V, $P, x ) ▶₁ #j.1 )
+                          case ShkGen
+                          solve( !KU( ~c.1 ) @ #vk.6 )
+                            case Verif2
+                            by contradiction /* cyclic */
+                          qed
+                        qed
+                      qed
+                    next
+                      case Verif4
+                      by solve( VerifState3( V.1, P.1, ~nt1.1, nt1.2, nt2.2, nt3.2, c.2, resp
+                                ) ▶₀ #j.1 )
+                    qed
+                  qed
+                next
+                  case DBSend_case_2
+                  solve( (¬(#vr.20 < #e))  ∥ (∃ #j. (End( ~nt1.1 ) @ #j) ∧ #j < #e) )
+                    case case_1
+                    solve( !KU( ~c.1 ) @ #vk.6 )
+                      case Verif2
+                      by contradiction /* cyclic */
+                    qed
+                  next
+                    case case_2
+                    solve( End( ~nt1.1 ) @ #j.1 )
+                      case Prover4
+                      solve( ProverState3( V.1, P.1, nr.2, ~nt1.1, nt2.2, nt3.2, c.2, resp
+                             ) ▶₀ #j.1 )
+                        case Prover3
+                        solve( !Shk( $V, $P, x ) ▶₁ #j.1 )
+                          case ShkGen
+                          solve( !KU( ~c.1 ) @ #vk.6 )
+                            case Verif2
+                            by contradiction /* cyclic */
+                          qed
+                        qed
+                      qed
+                    next
+                      case Verif4
+                      by solve( VerifState3( V.1, P.1, ~nt1.1, nt1.2, nt2.2, nt3.2, c.2, resp
+                                ) ▶₀ #j.1 )
+                    qed
+                  qed
+                next
+                  case c_g
+                  solve( !KU( f(~k, <~nt2, ~nt3, 'w2'>) ) @ #vk.15 )
+                    case Leak
+                    by contradiction /* cyclic */
+                  next
+                    case c_f
+                    by contradiction /* cyclic */
+                  qed
+                qed
+              qed
+            qed
+          next
+            case Verif4
+            by solve( VerifState3( V, P, ~nt1, nt1.1, nt2, nt3, c, resp ) ▶₀ #j )
+          qed
+        next
+          case ShkRevealX
+          by contradiction /* from formulas */
+        next
+          case ShkRevealY
+          by contradiction /* from formulas */
+        qed
+      qed
+    qed
+  next
+    case case_2
+    solve( !Shk( $V, $P, x ) ▶₂ #l )
+      case ShkGen
+      solve( End( ~nr ) @ #j )
+        case Prover4
+        by solve( ProverState3( V, P, nr, ~nr.1, nt2, nt3, c, resp ) ▶₀ #j )
+      next
+        case Verif4
+        solve( VerifState3( V, P, ~nr, nt1, nt2, nt3, c, resp ) ▶₀ #j )
+          case Verif3
+          by contradiction /* cyclic */
+        qed
+      qed
+    qed
+  qed
+qed
+
+/* All well-formedness checks were successful. */
+
+end
+
+==============================================================================
+summary of summaries:
+
+analyzed: Hitomi.spthy
+
+  reachability (exists-trace): verified (15 steps)
+  unique_runid (all-traces): verified (14 steps)
+  end_after_start (all-traces): verified (9 steps)
+  fast_before_claim (all-traces): verified (6 steps)
+  dbsec (all-traces): verified (87 steps)
+  dbsec_hnst (all-traces): verified (66 steps)
+  dbsec_hnst_collusion (all-traces): falsified - found trace (18 steps)
+  dbsec_hnst_star (all-traces): verified (357 steps)
+
+==============================================================================
+
+real	0m10.822s
+user	1m0.275s
+sys	0m5.827s

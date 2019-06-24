@@ -1,0 +1,171 @@
+/*
+		Alice & Bob notation:
+			I, R 		: know secret k
+			I 			: fresh ni
+			I -> R 	: {ni}k
+			R 			: fresh nr
+			R -> I 	: {nr}ni
+			I -> R 	: h(nr)
+			R 			: agree with I on <ni, nr>
+*/
+
+theory Toy
+
+begin
+
+builtins: symmetric-encryption, hashing
+
+// -------------------- Key Rules -------------------- //
+rule KeyGen:
+	  [ Fr(~k) ]-->[ !Shk($I, $R, ~k) ]
+
+rule KeyRevI:
+	  [ !Shk($I, $R, k) ]--[ !KeyComp($I) ]->[ Out(k) ]
+
+rule KeyRevR:
+	  [ !Shk($I, $R, k) ]--[ !KeyComp($R) ]->[ Out(k) ]
+
+// -------------------- Protocol Rules -------------------- //
+rule Init1:
+		[ Fr(~ni),
+			!Shk($I, $R, k) ]
+	--[ Start(~ni) ]->
+	  [ InitSt1($I, $R, ~ni),
+			Out (senc{~ni}k),
+			MayLeak($I, ~ni) ]
+
+rule Resp1:
+		[ Fr(~nr),
+			!Shk($I, $R, k),
+			In (senc{ni}k) ]
+	--[ Start(~nr) ]->
+	  [ Out (senc{~nr}ni),
+	  	RespSt1($I, $R, ni, ~nr) ]
+
+rule Init2:
+		[ InitSt1(I, R, ni),
+	  	In (senc{nr}ni) ]
+	--[ Running(I, R,<'I', 'R', ni, nr>),
+			End(ni) ]->
+	  [ Out (h(nr)) ]
+
+rule Resp2:
+		[ RespSt1(I, R, ni, nr),
+			In (h(nr)) ]
+	--[ Commit(R, I,<'I', 'R', ni, nr>),
+			End(nr) ]->
+		[ ]
+
+// -------------------- Collusion Rules ---------------------------- //
+
+//use one collusion rule at a time
+rule Leak:
+	[ MayLeak($X, m) ]--[ Collusion() ]->[ Out(m) ]
+
+/*
+rule EncryptOracle:
+	[ In(m), !Shk($I, $R, k) ]--[ Collusion() ]-> [ Out(senc{m}k) ]
+*/
+
+// -------------------- Collusion Expiry  --------------------------//
+/*
+	Next rule and restrictions are for post-collusion security.
+	The rule places a fact Expiry() anywhere but just once.
+	The first restriction guarantees that no collusion will occur after Expiry().
+	The second one guarantees all runs initated before Expiry() are complete.
+*/
+
+rule SetExpiry:
+	[ ]--[ Expiry(), Once('expiry') ]->[ ]
+
+restriction no_collusion_after_expiry:
+  "All #i #j. (Expiry()@i & Collusion()@j) ==> j<i"
+
+restriction sessions_complete_before_expiry:
+  "All x #i #e. (Start(x)@i & Expiry()@e & i<e) ==> Ex #j. (End(x)@j & j<e)"
+
+
+// --------------- Sanity Check & Restrictions ------------- //
+//	Each run id is unique
+lemma unique_runid:
+	"
+	All x #i #j. (Start(x)@i & Start(x)@j) ==> #i=#j
+	"
+
+//	Each run ends after it starts
+lemma end_after_start:
+	"
+	All x #j. End(x)@j ==> Ex #i. Start(x)@i & (#i=#j|i<j)
+	"
+
+//	Only traces where Once(x) happened once
+restriction once:
+	"
+	All x #i #j. (Once(x)@i & Once(x)@j) ==> #i=#j
+	"
+
+/*
+//	Runs can always be completed
+restriction completion:
+	"
+	All run #i. Start(run)@i ==> Ex #j. End(run)@j
+	"
+*/
+
+// ------------------- Reachability check ------------------ //
+lemma reachability:
+	exists-trace
+	"
+	Ex I R ni nr #t1 #t2 #t3 #t4.
+		
+		Start(ni)@t1 &
+		Start(nr)@t2 &
+		Running(I, R,<'I', 'R', ni, nr>)@t3 &
+		End(ni)@t3 &
+		Commit(R, I,<'I', 'R', ni, nr>)@t4 &
+		End(nr)@t4 &
+
+		t1<t2 & t2<t3 & t3<t4 &
+
+		not (Ex #c C. !KeyComp(C)@c) &
+		not (Ex #c. Collusion()@c)
+	"
+
+///////////////////////////////////////////////////////////
+// ----------------- Security Lemmas ------------------- //
+///////////////////////////////////////////////////////////
+
+/*
+	In the first lemma, traces in which collusion occurs are discarded.
+	This is simply to verify only the protocol without collusion rules.
+*/
+lemma ni_agreement:
+  "
+  All A B m #i. Commit(A, B, m)@i ==> 
+  	(Ex #j. Running(B, A, m)@j) |
+  	(Ex #j. !KeyComp(A)@j) | (Ex #j. !KeyComp(B)@j) |
+  	(Ex #j. Collusion()@j) //drop traces with collusion
+  "
+/*
+	The next lemma is as ni_agreement but it does not discard
+	traces with collusion. This is to verify that indeed
+	collusion breaks ni_agreement.
+*/
+lemma ni_agreement_collusion:
+  "
+  All A B m #i. Commit(A, B, m)@i ==> 
+  	(Ex #j. Running(B, A, m)@j) |
+  	(Ex #j. !KeyComp(A)@j) | (Ex #j. !KeyComp(B)@j)
+  "
+
+/*
+	The post-collusion security lemma.
+*/
+lemma ni_agreement_star:
+	"
+	All A B m #i #e. 
+		(Commit(A, B, m)@i & Expiry()@e & e<i) ==>
+	  	(Ex #j. Running(B, A, m)@j) |
+			(Ex #j. !KeyComp(A)@j) | (Ex #j. !KeyComp(B)@j)
+  "
+end

@@ -1,94 +1,94 @@
 # DBVerify
 
-This repository contains [Tamarin](https://tamarin-prover.github.io/)-based symbolic models for a number of **distance bounding protocols**. These are cryptogrphic protocols that, in addition to authentication, are meant to guarantee physical proximity between the participants.
+This repository contains a set of [Tamarin](https://tamarin-prover.github.io) models and (in)security proofs of a number of distance-bounding protocols. The verification accounts for the sophisiticated **terrorist fraud** attack by reasoning on **post-collusion security**.
 
-For further details see our **IEEE S\&P'18** paper [Distance-Bounding Protocols: Verification without Time and Location](https://jorgetp.github.io/files/papers/SP18-preprint.pdf).
+This is the complementary material for our papers *Distance-Bounding Protocols: Verification without Time and Location*, published at [S&P'18](https://www.ieee-security.org/TC/SP2018/), and *Post-Collusion Security and Distance Bounding*, to be published at [CCS'19](https://www.sigsac.org/ccs/CCS2019/). If you were directed here because of the first paper, simply ignore the lemmas `dbsec_hnst_collusion` and `dbsec_hnst_star` as they're to do with post-collusion security and terrorist fraud.
+
+For the sake of presentation, we recommend you use **2**-space tab indent in your editor when viewing our Tamarin code.
 
 ## Folder layout
-* [msc](/msc/) contains the message sequence charts of the protocols
-* [model](/model/) contains:
-  * Tamarin models: ```.spthy``` files
-  * Tamarin proofs: ```.proof``` files
-  * ```generic```: the generic Tamarin code (includes the security lemmas)
-  * ```Makefile```: to verify all protocols in this folder
-  * ```collect.py```: a Python script to collect the results of the verification
-  * ```results.html```: the ouput of the Python script
-* ```README.md```: this readme
+* [/msc/](/msc/) contains
+  * `*.pdf` files which are the *message sequence chart* representations of the protocols
+* [/tamarin/](/tamarin/) contains
+  * `*.spthy` files which are the Tamarin models
+  * `*.proof` files which are Tamarin proofs
+  * `*.flag` files which are the \[optional\] Tamarin verification flags
+  * `generic.txt` which contains the generic Tamarin code
+  * `Makefile` to verify all protocols in this folder
+  * `collect.py` which is a Python script to collect the results of the verification
+  * `results.html` which is the ouput of the Python script
+* [/xtras/](/xtras/) contains the folders
+  * [/toy/](/xtras/toy/) contains Tamarin model for the `Toy` protocol
+  * [/chothia/](/xtras/chothia/) contains the ProVerif models and proofs of some protocols, as per Chothia et al.'s [framework](http://www.cs.bham.ac.uk/~tpc/distance-bounding-protocols/)
 
-## How to DBVerify
-Execute the ```Makefile``` which does the following:
+## How to verify
 
-* Writes the content of ```generic``` right after the line
-```
-//GENERIC CODE AFTER THIS LINE
-```
-in each one of the ```.spthy``` files. **\[Warning\] this overrides whatever is thereafter!!!**.
+Follow the steps:
 
-* Writes the Tamarin proof into the corresponding ```.proof``` file.
+1. Open a terminal at [/tamarin/](/tamarin/).
 
-## DBVerify your own protocol
+1. Run `make` which does the following, for each outdated target `protocol.proof`:
+   * Writes the content of `generic.txt` into `protocol.spthy` right after the line `//GENERIC CODE AFTER THIS LINE`. **WARNING: this overrides whatever is thereafter!!!**
+   * Runs
+     ```
+     tamarin-prover FLAGS protocol.spthy --prove
+     ```
+     where `FLAGS` are the Tamarin execution flags located in `protocol.flag` if this file exists, or `FLAGS` equals the empty string otherwise. This can be used for Tamarin heuritics or oracles. See e.g. `SwissKnife.flag`.
+   * Writes the Tamarin proof along with the verfication time in `protocol.proof`.
 
-You can code down your own Tamarin model for a given protocol. Take into account that this verification framework is generic and consequently for it to work, the following requirements must be met:
-
-* No protocol rule (other than those in ```generic```) models adversary actions, or the network, or long-term keys registering.
-* Every **prover rule** is of the form
-  ```
-  [...]-[..., Action(P), ...]->[...]
-  ```
-  where ```P``` is the prover's name.
-* Every **prover rule** that models a **sending event** is of the form
-  ```
-  [...]-[...]->[..., Send(P, m), ...]
-  ```
-  where ```P``` is the prover's name and ```m``` is the message being sent.
-* Every **verifier rule** that models a **sending event during the fast phase** is of the form
-   ```
-   [...]-[..., Send(V, m), ...]->[...]
-   ```
-   where ```V``` is the verifier's name and ```m``` is the message being sent.
-* Every **verifier rule** that models a **receive event during the fast phase** is of the form
-   ```
-   [..., Recv(V, m), ...]-[...]->[...]
-   ```
-   where ```V``` is the verifier's name and ```m``` is the message being received.
-   
-* Every **verifier rule** that models a **secure distance-bounding** claim is of the form
-  ```
-  [...]-[..., DBSec(V, P, ch, rp), ...]->[...]
-  ```
-  where ```V``` is the verifier's name, ```P``` is the prover's name, ```ch``` is the challenge, and ```rp``` is the response.
-
-Once you have coded your protocol, say into ```my_protocol.spthy```, add the line ```//GENERIC CODE AFTER THIS LINE``` right before ```end```. Then run ```Makefile``` which outputs the proof in ```my_protocol.proof```. Finally, run ```python collect.py``` to gather the results in ```results.html```. 
+1. Run `python collect.py` to gather the results in `results.html`.
 
 ## Read the results
 
-To identify the type of attack(s) against a protocol, say ```my_protocol.spthy```, see next 2 alternatives:
+Each `.proof` file has a row in `results.html`. The columns are composed of the lemmas `generic.txt`, the (individual) lemmas in the `*.spthy` files, the number of lines of Tamarin code `LoC`, and the verification time `Time`. This last one corresponds to the **real** time as per the Unix-command `time`.
 
-* Run Tamarin in interactive mode 
-  ```
-  tamarin-prover interactive my_protocol.spthy
-  ```
-  and inspect the trace that invalidates ```dbsec```. Be aware that Tamarin gives you just one attack trace, so with this approach you might miss valid attacks.
+To identify the type of attack(s), if any, against a given protocol, locate the protocol's entry in the table and follow the hints:
+  * If lemma `dbsec_hnst` fails, then a **mafia fraud** exists.
+  * If lemma `dbsec_hnst` holds and `dbsec` does not, then likely\* a **distance fraud** exists, or a **distance hijacking**, or both.
+  * If lemma `dbsec_hnst_collusion` fails and `dbsec_hnst_star` holds, then a **terrorist fraud** exists.
 
-* Each lemma in ```generic``` has a column in the table depicted in ```results.html```. So, locate the entry for ```my_protocol.spthy``` and follow the (independent) observations:
-  * If lemma ```dbsec``` holds then there's **no** attack.
-  * If lemma ```dbsec_on_honest_prover``` fails then there is a **mafia fraud**.
-  * If lemma ```dbsec_on_compromised_prover``` fails then there is a **distance fraud**, or a **distance hijacking**, or both.
+Alternatively, you can run Tamarin in interactive mode
+```
+tamarin-prover interactive protocol.spthy
+```
+and inspect the trace that falsifies the desired lemma (`dbsec` is recommended). *Be aware that Tamarin gives you the first attack trace it finds, thus this might not be the only attack*.
 
-## On exclusive-OR operations
+## Verify your own protocol
 
-To deal with exclusive-OR operations, we recommend you use the built-in ```xor``` that comes with Tamarin version 1.4.0 or later (see releases [here](https://github.com/tamarin-prover/tamarin-prover/releases)).
+Follow the steps:
 
-## Presentation
+1. Code down the Tamarin model for your protocol, say into `protocol.spthy` (inside the folder [/tamarin/](/tamarin/)). Your model must meet the following requirements:
+   * No protocol rule, other than those in `generic.txt`, models adversary actions, or the network, or long-term key registering.
+   * The **transmission** of a message `msg` by a prover `P` is modeled with a rule of the form
+     ```
+     [...]-[...]->[..., Send(P, msg), ...]
+     ```
+   * The **fast-phase transmission** of a message `msg` by a verifier `V` is modeled with a rule of the form
+     ```
+     [...]-[..., Send(V, msg), ...]->[ ... ]
+     ```
+   * The **fast-phase reception** of a message `msg` by a verifier `V` is modeled with a rule of the form
+     ```
+     [..., Recv(V, msg), ...]-[...]->[...]
+     ```
+   * The **secure distance-bounding** claim by a verifier `V` about a prover `P` for a fast phase delimited by the challenge `chal` and the response `resp` is modeled with a rule of the form
+     ```
+     [...]-[..., DBSec(V, P, chal, resp), ...]->[...]
+     ```
+1. Add the line `//GENERIC CODE AFTER THIS LINE` into `protocol.spthy` right before the keyword `end`.
 
-For the sake of presentation, we recommend you indent with 2-space tabs in your editor.
+1. Open a terminal at [/tamarin/](/tamarin/).
+
+1. Run `make`.
+
+1. Run `python collect.py` to gather the results in `results.html`.
+
+1. \*Inspect the trace that falsifies the `dbsec` lemma, if any, in order to confirm the attack, specially if it's about distance hijacking. This inspection is required for **uncommon** protocols in which the aforementioned requirements in step 1 are not sufficient to label every adversary action.
 
 ## Contact
 
-Should you have any inquiries or should you want to report bugs, please [contact me](https://jorgetp.github.io/contact/).
+Should you have any inquiries on the Tamarin stuff or should you want to report bugs, please [contact me](https://jorgetp.github.io/contact/). For ProVerif stuff please contact [Zach Smith](https://satoss.uni.lu/members/zach/).
 
 ## Acknowledgment
 
-This work is supported by Luxembourg [FNR](https://www.fnr.lu/)'s grant **AFR-PhD-10188265**.
-
-
+This work was supported by Luxembourg [FNR](https://www.fnr.lu/)'s grant **AFR-PhD-10188265**. Also, thanks to [S. Delaune](https://people.irisa.fr/Stephanie.Delaune/) and [A. Debant](http://people.irisa.fr/Alexandre.Debant/) for providing us with interesting protocols, which led to the step 6 above about the need for trace inspection.

@@ -1,0 +1,97 @@
+(* Example protocol *)
+free c.
+
+private fun getSharedKey/1.
+fun enc/2.
+reduc dec(k, enc(k, m)) = m.
+
+fun hash/1.
+fun twoHash/2.
+
+data Ready/0.
+
+let Verifier =
+  in(c, commitHash);
+  startTimer;
+  new challenge;
+  out(c, challenge);
+  in(c, response);
+  stopTimer;
+  in(c, unwrapper);
+  let message = dec(getSharedKey(idV), unwrapper) in
+  if commitHash = hash(message) then
+  if response = twoHash(challenge, message) then
+  event Verified(idV).
+
+let Prover =
+  new message;
+  out(c, hash(message));
+  in(c, challenge);
+  out(c, twoHash(challenge, message));
+  out(c, (message, enc(getSharedKey(idP), message)) ).
+
+let DishonestProver =
+  out(c, (idP, getSharedKey(idP))).
+
+let DishonestTerroristProver =
+  (in(c, encryptedMessage);
+  let message = dec(getSharedKey(idP), encryptedMessage) in
+  out(c, message))
+  | (in(c, message);
+  let encryptedMessage = enc(getSharedKey(idP), message) in
+  out(c, encryptedMessage))
+  | in(c, message);
+  out(c, hash(message))
+  | in(c, (x,y,z));
+  out(c, twoHash(x,y,z))
+  | out(c, idP).
+
+(* ---------------------------------------- *)
+(*  Reachability Test (query AND process)   *)
+(* ---------------------------------------- *)
+(*
+query ev:Verified(a) ==> ev:StartProof(a).
+process
+  [ !Verifier | !(new id; let idP = id in !(event StartProof(idP); Prover)) ]
+*)
+
+(* ---------------------------------------- *)
+(* ------------ Security Query ------------ *)
+(* ---------------------------------------- *)
+query ev:Verified(id).
+
+(* ---------------------------------------- *)
+(* ------ Mafia Fraud (ONLY process) ------ *)
+(* ---------------------------------------- *)
+
+(*
+process
+  [ !Verifier ] | [ !(new id; let idP = id in !Prover) ]
+
+*)
+
+(* ---------------------------------------- *)
+(* ---------- UDB (ONLY process) ---------- *)
+(* ---------------------------------------- *)
+
+(*
+process
+  [ !Verifier | (new id2; let idP = id2 in DishonestProver) ]
+| [ !(new id; let idP = id in !Prover) | (new id2; let idP = id2 in DishonestProver) ]
+*)
+
+(* ---------------------------------------- *)
+(* ---- Terrorist Fraud (ONLY process) ---- *)
+(* ---------------------------------------- *)
+(*
+process
+  [ !Verifier ]
+| [ !(new id; let idP = id in !DishonestTerroristProver) ]
+*)
+
+(* ---------------------------------------- *)
+(* --- Distance Hijacking (ONLY process) -- *)
+(* ---------------------------------------- *)
+process
+  [ !Verifier | (new id2; let idP = id2 in !Prover) ]
+| [ !(new id; let idP = id in !DishonestProver) ]

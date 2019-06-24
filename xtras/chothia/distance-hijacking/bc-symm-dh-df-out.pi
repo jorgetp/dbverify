@@ -1,0 +1,220 @@
+private free priv.
+free c.
+private fun getSharedKey/1.
+fun enc/2.
+reduc dec(k, enc(k, m)) = m.
+fun hash/1.
+fun twoHash/2.
+data Ready/0.
+let Verifier =
+in(c, commitHash);
+phase 1;
+new challenge;
+out(priv, challenge);
+in(priv, response);
+phase 2;
+in(c, unwrapper);
+let message = dec(getSharedKey(idV), unwrapper) in
+if commitHash = hash(message) then
+if response = twoHash(challenge, message) then
+event Verified(idV).
+let Prover =
+new message;
+out(c, hash(message));
+in(c, challenge);
+out(c, twoHash(challenge, message));
+out(c, (message, enc(getSharedKey(idP), message))).
+let DishonestProver =
+out(c, (idP, getSharedKey(idP))).
+let DishonestTerroristProver =
+(in(c, encryptedMessage);
+let message = dec(getSharedKey(idP), encryptedMessage) in
+out(c, message))|((in(c, message);
+let encryptedMessage = enc(getSharedKey(idP), message) in
+out(c, encryptedMessage))|(in(c, message);
+(out(c, hash(message)))|(in(c, (x, y, z));
+(out(c, twoHash(x, y, z)))|(out(c, idP))))).
+query ev:Verified(id).
+
+
+(* New local process declarations *)
+
+let Prover_L3 =
+new message;
+out(c, hash(message));
+in(c, challenge);
+out(c, twoHash(challenge, message));
+out(c, (message, enc(getSharedKey(idP), message))).
+
+let Prover_L2 =
+new message;
+out(c, hash(message));
+phase 2;
+in(c, challenge);
+out(c, twoHash(challenge, message));
+out(c, (message, enc(getSharedKey(idP), message))).
+
+let Prover_L1 =
+new message;
+out(c, hash(message));
+in(c, challenge);
+out(c, twoHash(challenge, message));
+out(c, (message, enc(getSharedKey(idP), message))).
+
+let Prover_L0 =
+new message;
+out(c, hash(message));
+phase 1;
+in(priv, challenge);
+out(priv, twoHash(challenge, message));
+out(priv, (message, enc(getSharedKey(idP), message))).
+
+let Verifier_L10 =
+in(c, commitHash);
+new challenge;
+out(c, challenge);
+in(c, response);
+in(c, unwrapper);
+let message = dec(getSharedKey(idV), unwrapper) in
+if commitHash = hash(message) then
+if response = twoHash(challenge, message) then
+0.
+
+let Verifier_L9 =
+in(c, commitHash);
+new challenge;
+out(c, challenge);
+in(c, response);
+phase 2;
+in(c, unwrapper);
+let message = dec(getSharedKey(idV), unwrapper) in
+if commitHash = hash(message) then
+if response = twoHash(challenge, message) then
+0.
+
+let Verifier_L8 =
+in(c, commitHash);
+new challenge;
+out(c, challenge);
+phase 2;
+in(c, response);
+in(c, unwrapper);
+let message = dec(getSharedKey(idV), unwrapper) in
+if commitHash = hash(message) then
+if response = twoHash(challenge, message) then
+0.
+
+let Verifier_L7 =
+phase 2;
+in(c, commitHash);
+new challenge;
+out(c, challenge);
+in(c, response);
+in(c, unwrapper);
+let message = dec(getSharedKey(idV), unwrapper) in
+if commitHash = hash(message) then
+if response = twoHash(challenge, message) then
+0.
+
+let Verifier_L6 =
+in(c, commitHash);
+new challenge;
+out(c, challenge);
+in(c, response);
+in(c, unwrapper);
+let message = dec(getSharedKey(idV), unwrapper) in
+if commitHash = hash(message) then
+if response = twoHash(challenge, message) then
+0.
+
+let Verifier_L5 =
+in(c, commitHash);
+new challenge;
+out(c, challenge);
+in(c, response);
+phase 1;
+in(priv, unwrapper);
+let message = dec(getSharedKey(idV), unwrapper) in
+if commitHash = hash(message) then
+if response = twoHash(challenge, message) then
+0.
+
+let Verifier_L4 =
+in(c, commitHash);
+new challenge;
+out(c, challenge);
+phase 1;
+in(priv, response);
+in(priv, unwrapper);
+let message = dec(getSharedKey(idV), unwrapper) in
+if commitHash = hash(message) then
+if response = twoHash(challenge, message) then
+0.
+
+let Verifier_L3 =
+in(c, commitHash);
+new challenge;
+out(c, challenge);
+phase 1;
+in(priv, response);
+phase 2;
+in(c, unwrapper);
+let message = dec(getSharedKey(idV), unwrapper) in
+if commitHash = hash(message) then
+if response = twoHash(challenge, message) then
+0.
+
+let Verifier_L2 =
+phase 1;
+in(priv, commitHash);
+new challenge;
+out(priv, challenge);
+in(priv, response);
+in(priv, unwrapper);
+let message = dec(getSharedKey(idV), unwrapper) in
+if commitHash = hash(message) then
+if response = twoHash(challenge, message) then
+0.
+
+let Verifier_L1 =
+phase 1;
+in(priv, commitHash);
+new challenge;
+out(priv, challenge);
+in(priv, response);
+phase 2;
+in(c, unwrapper);
+let message = dec(getSharedKey(idV), unwrapper) in
+if commitHash = hash(message) then
+if response = twoHash(challenge, message) then
+0.
+
+let Verifier_L0 =
+phase 1;
+in(priv, commitHash);
+new challenge;
+out(priv, challenge);
+phase 2;
+in(c, response);
+in(c, unwrapper);
+let message = dec(getSharedKey(idV), unwrapper) in
+if commitHash = hash(message) then
+if response = twoHash(challenge, message) then
+0.
+
+(* New remote process declarations *)
+
+let DishonestProver_R0 =
+out(c, (idP, getSharedKey(idP))).
+
+process
+(((!(Verifier_L0)|((Verifier_L1)|((Verifier_L2)|((Verifier_L3)|((Verifier_L4)|((Verifier_L5)|((Verifier_L6)|((Verifier_L7)|((Verifier_L8)|((Verifier_L9)|((Verifier_L10)|(Verifier))))))))))))|(new id2;
+let idP = id2 in
+!(Prover_L0)|((Prover_L1)|((Prover_L2)|(Prover_L3)))))|(!new id;
+let idP = id in
+!DishonestProver_R0))|((!in(c, m);
+phase 1;
+out(priv, m))|(!phase 1;
+in(priv, m);
+phase 2;
+out(c, m)))

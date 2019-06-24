@@ -1,0 +1,288 @@
+free c.
+private fun getSharedKey/1.
+fun commit/2.
+fun mac/2.
+fun xor/2.
+reduc unpackXor(xor(a, b), a) = b otherwise unpackXor(xor(a, b), b) = a.
+let Verifier =
+in(c, idV);
+in(c, commitment);
+phase 1;
+new b;
+out(c, b);
+in(c, xorP);
+phase 2;
+in(c, (s', macP));
+let s = unpackXor(xorP, b) in
+if macP = mac(getSharedKey(idV), (b, s)) then
+if commitment = commit(s, s') then
+event Verified(idV).
+let Prover =
+out(c, idP);
+new s;
+new s';
+out(c, commit(s, s'));
+in(c, b);
+out(c, xor(b, s));
+out(c, (s', mac(getSharedKey(idP), (b, s)))).
+let DishonestProver =
+out(c, (idP, getSharedKey(idP))).
+let DishonestTerroristProver =
+(in(c, message);
+let macMessage = mac(getSharedKey(idP), message) in
+out(c, macMessage))|(out(c, idP)).
+query ev:Verified(id).
+
+
+(* New local process declarations *)
+
+let DishonestProver_L1 =
+out(c, (idP, getSharedKey(idP))).
+
+let DishonestProver_L0 =
+out(c, (idP, getSharedKey(idP))).
+
+let Verifier_L15 =
+in(c, idV);
+in(c, commitment);
+new b;
+out(c, b);
+in(c, xorP);
+in(c, (s', macP));
+let s = unpackXor(xorP, b) in
+if macP = mac(getSharedKey(idV), (b, s)) then
+if commitment = commit(s, s') then
+0.
+
+let Verifier_L14 =
+in(c, idV);
+in(c, commitment);
+new b;
+out(c, b);
+in(c, xorP);
+phase 2;
+in(c, (s', macP));
+let s = unpackXor(xorP, b) in
+if macP = mac(getSharedKey(idV), (b, s)) then
+if commitment = commit(s, s') then
+0.
+
+let Verifier_L13 =
+in(c, idV);
+in(c, commitment);
+new b;
+out(c, b);
+phase 2;
+in(c, xorP);
+in(c, (s', macP));
+let s = unpackXor(xorP, b) in
+if macP = mac(getSharedKey(idV), (b, s)) then
+if commitment = commit(s, s') then
+0.
+
+let Verifier_L12 =
+in(c, idV);
+phase 2;
+in(c, commitment);
+new b;
+out(c, b);
+in(c, xorP);
+in(c, (s', macP));
+let s = unpackXor(xorP, b) in
+if macP = mac(getSharedKey(idV), (b, s)) then
+if commitment = commit(s, s') then
+0.
+
+let Verifier_L11 =
+phase 2;
+in(c, idV);
+in(c, commitment);
+new b;
+out(c, b);
+in(c, xorP);
+in(c, (s', macP));
+let s = unpackXor(xorP, b) in
+if macP = mac(getSharedKey(idV), (b, s)) then
+if commitment = commit(s, s') then
+0.
+
+let Verifier_L10 =
+in(c, idV);
+in(c, commitment);
+new b;
+out(c, b);
+in(c, xorP);
+in(c, (s', macP));
+let s = unpackXor(xorP, b) in
+if macP = mac(getSharedKey(idV), (b, s)) then
+if commitment = commit(s, s') then
+0.
+
+let Verifier_L9 =
+in(c, idV);
+in(c, commitment);
+new b;
+out(c, b);
+in(c, xorP);
+phase 1;
+in(c, (s', macP));
+let s = unpackXor(xorP, b) in
+if macP = mac(getSharedKey(idV), (b, s)) then
+if commitment = commit(s, s') then
+0.
+
+let Verifier_L8 =
+in(c, idV);
+in(c, commitment);
+new b;
+out(c, b);
+phase 1;
+in(c, xorP);
+in(c, (s', macP));
+let s = unpackXor(xorP, b) in
+if macP = mac(getSharedKey(idV), (b, s)) then
+if commitment = commit(s, s') then
+0.
+
+let Verifier_L7 =
+in(c, idV);
+in(c, commitment);
+new b;
+out(c, b);
+phase 1;
+in(c, xorP);
+phase 2;
+in(c, (s', macP));
+let s = unpackXor(xorP, b) in
+if macP = mac(getSharedKey(idV), (b, s)) then
+if commitment = commit(s, s') then
+0.
+
+let Verifier_L6 =
+in(c, idV);
+phase 1;
+in(c, commitment);
+new b;
+out(c, b);
+in(c, xorP);
+in(c, (s', macP));
+let s = unpackXor(xorP, b) in
+if macP = mac(getSharedKey(idV), (b, s)) then
+if commitment = commit(s, s') then
+0.
+
+let Verifier_L5 =
+in(c, idV);
+phase 1;
+in(c, commitment);
+new b;
+out(c, b);
+in(c, xorP);
+phase 2;
+in(c, (s', macP));
+let s = unpackXor(xorP, b) in
+if macP = mac(getSharedKey(idV), (b, s)) then
+if commitment = commit(s, s') then
+0.
+
+let Verifier_L4 =
+in(c, idV);
+phase 1;
+in(c, commitment);
+new b;
+out(c, b);
+phase 2;
+in(c, xorP);
+in(c, (s', macP));
+let s = unpackXor(xorP, b) in
+if macP = mac(getSharedKey(idV), (b, s)) then
+if commitment = commit(s, s') then
+0.
+
+let Verifier_L3 =
+phase 1;
+in(c, idV);
+in(c, commitment);
+new b;
+out(c, b);
+in(c, xorP);
+in(c, (s', macP));
+let s = unpackXor(xorP, b) in
+if macP = mac(getSharedKey(idV), (b, s)) then
+if commitment = commit(s, s') then
+0.
+
+let Verifier_L2 =
+phase 1;
+in(c, idV);
+in(c, commitment);
+new b;
+out(c, b);
+in(c, xorP);
+phase 2;
+in(c, (s', macP));
+let s = unpackXor(xorP, b) in
+if macP = mac(getSharedKey(idV), (b, s)) then
+if commitment = commit(s, s') then
+0.
+
+let Verifier_L1 =
+phase 1;
+in(c, idV);
+in(c, commitment);
+new b;
+out(c, b);
+phase 2;
+in(c, xorP);
+in(c, (s', macP));
+let s = unpackXor(xorP, b) in
+if macP = mac(getSharedKey(idV), (b, s)) then
+if commitment = commit(s, s') then
+0.
+
+let Verifier_L0 =
+phase 1;
+in(c, idV);
+phase 2;
+in(c, commitment);
+new b;
+out(c, b);
+in(c, xorP);
+in(c, (s', macP));
+let s = unpackXor(xorP, b) in
+if macP = mac(getSharedKey(idV), (b, s)) then
+if commitment = commit(s, s') then
+0.
+
+(* New remote process declarations *)
+
+let DishonestProver_R0 =
+out(c, (idP, getSharedKey(idP))).
+
+let Prover_R1 =
+out(c, idP);
+new s;
+new s';
+out(c, commit(s, s'));
+in(c, b);
+out(c, xor(b, s));
+out(c, (s', mac(getSharedKey(idP), (b, s)))).
+
+let Prover_R0 =
+out(c, idP);
+new s;
+new s';
+out(c, commit(s, s'));
+phase 2;
+in(c, b);
+out(c, xor(b, s));
+out(c, (s', mac(getSharedKey(idP), (b, s)))).
+
+process
+((!(Verifier_L0)|((Verifier_L1)|((Verifier_L2)|((Verifier_L3)|((Verifier_L4)|((Verifier_L5)|((Verifier_L6)|((Verifier_L7)|((Verifier_L8)|((Verifier_L9)|((Verifier_L10)|((Verifier_L11)|((Verifier_L12)|((Verifier_L13)|((Verifier_L14)|((Verifier_L15)|(Verifier)))))))))))))))))|(new id2;
+let idP = id2 in
+(DishonestProver_L0)|(DishonestProver_L1)))|((!new id;
+let idP = id in
+!(Prover_R0)|(Prover_R1))|(new id2;
+let idP = id2 in
+DishonestProver_R0))

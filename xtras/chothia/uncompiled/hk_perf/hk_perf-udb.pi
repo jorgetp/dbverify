@@ -1,0 +1,95 @@
+(* Example protocol *)
+free c.
+
+private fun getSharedKey/1.
+fun enc/2.
+reduc dec(k, enc(k, m)) = m.
+
+fun hash/1.
+
+data Ready/0.
+
+let Verifier =
+  in(c, idV);
+  new nonceV;
+  out(c, nonceV);
+  in(c, nonceR);
+  startTimer;
+  new b;
+  out(c, b);
+  in(c, responseHash);
+  stopTimer;
+  if responseHash = hash((nonceV, nonceR, b, getSharedKey(idV))) then
+  event Verified(idV).
+
+let Prover =
+  out(c, idP);
+  in(c, nonceV);
+  new nonceR;
+  out(c, nonceR);
+  in(c, b);
+  out(c, hash((nonceV, nonceR, b, getSharedKey(idP)))).
+
+let DishonestProver =
+  out(c, (idP, getSharedKey(idP))).
+
+let DishonestTerroristProver =
+  (in(c, encryptedMessage);
+  let message = dec(getSharedKey(idP), encryptedMessage) in
+  out(c, message))
+  | (in(c, message);
+  let encryptedMessage = enc(getSharedKey(idP), message) in
+  out(c, encryptedMessage))
+  | out(c, idP).
+
+(* ---------------------------------------- *)
+(*  Reachability Test (query AND process)   *)
+(* ---------------------------------------- *)
+(*
+query ev:Verified(a) ==> ev:StartProof(a).
+process
+  [ !Verifier | !(new id; let idP = id in !(event StartProof(idP); Prover)) ]
+*)
+
+(* ---------------------------------------- *)
+(* ------------ Security Query ------------ *)
+(* ---------------------------------------- *)
+query ev:Verified(id).
+
+(* ---------------------------------------- *)
+(* ------ Mafia Fraud (ONLY process) ------ *)
+(* ---------------------------------------- *)
+
+(*
+process
+  [ !Verifier ] | [ !(new id; let idP = id in !Prover) ]
+
+*)
+
+(* ---------------------------------------- *)
+(* ---------- UDB (ONLY process) ---------- *)
+(* ---------------------------------------- *)
+
+
+process
+  [ !Verifier | (new id2; let idP = id2 in DishonestProver) ]
+| [ !(new id; let idP = id in !Prover) | (new id2; let idP = id2 in DishonestProver) ]
+
+
+(* ---------------------------------------- *)
+(* ---- Terrorist Fraud (ONLY process) ---- *)
+(* ---------------------------------------- *)
+(*
+process
+  [ !Verifier ]
+| [ !(new id; let idP = id in !DishonestTerroristProver) ]
+*)
+
+(* ---------------------------------------- *)
+(* ----- Distance Fraud (ONLY process) ---- *)
+(* ---------------------------------------- *)
+(*
+process
+  [ !Verifier ]
+| [ !(new id; let idP = id in !DishonestProver) ]
+*)

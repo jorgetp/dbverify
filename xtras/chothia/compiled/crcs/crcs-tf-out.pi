@@ -1,0 +1,266 @@
+free c.
+private fun getPrivateKey/1.
+fun getPublicKey/1.
+fun encAsym/2.
+reduc decAsym(getPrivateKey(i), encAsym(getPublicKey(i), m)) = m.
+fun sign/2.
+reduc checksign(getPublicKey(y), sign(getPrivateKey(y), x)) = x.
+fun hash/1.
+fun CRCS/2.
+let Verifier =
+in(c, idV);
+in(c, commitment);
+phase 1;
+new nV;
+out(c, nV);
+in(c, crcsResult);
+phase 2;
+in(c, signature);
+let (nP, =nV) = checksign(getPublicKey(idV), signature) in
+if crcsResult = CRCS(nP, nV) then
+if commitment = hash(nP) then
+event Verified(idV).
+let Prover =
+out(c, idP);
+new nP;
+out(c, sign(getPrivateKey(idP), hash(nP)));
+in(c, nV);
+out(c, CRCS(nP, nV));
+out(c, sign(getPrivateKey(idP), (nP, nV))).
+let DishonestProver =
+out(c, (idP, getPrivateKey(idP))).
+let DishonestTerroristProver =
+(in(c, message);
+let signature = sign(getPrivateKey(idP), message) in
+out(c, signature))|(out(c, idP)).
+query ev:Verified(id).
+
+
+(* New local process declarations *)
+
+let Verifier_L15 =
+in(c, idV);
+in(c, commitment);
+new nV;
+out(c, nV);
+in(c, crcsResult);
+in(c, signature);
+let (nP, =nV) = checksign(getPublicKey(idV), signature) in
+if crcsResult = CRCS(nP, nV) then
+if commitment = hash(nP) then
+0.
+
+let Verifier_L14 =
+in(c, idV);
+in(c, commitment);
+new nV;
+out(c, nV);
+in(c, crcsResult);
+phase 2;
+in(c, signature);
+let (nP, =nV) = checksign(getPublicKey(idV), signature) in
+if crcsResult = CRCS(nP, nV) then
+if commitment = hash(nP) then
+0.
+
+let Verifier_L13 =
+in(c, idV);
+in(c, commitment);
+new nV;
+out(c, nV);
+phase 2;
+in(c, crcsResult);
+in(c, signature);
+let (nP, =nV) = checksign(getPublicKey(idV), signature) in
+if crcsResult = CRCS(nP, nV) then
+if commitment = hash(nP) then
+0.
+
+let Verifier_L12 =
+in(c, idV);
+phase 2;
+in(c, commitment);
+new nV;
+out(c, nV);
+in(c, crcsResult);
+in(c, signature);
+let (nP, =nV) = checksign(getPublicKey(idV), signature) in
+if crcsResult = CRCS(nP, nV) then
+if commitment = hash(nP) then
+0.
+
+let Verifier_L11 =
+phase 2;
+in(c, idV);
+in(c, commitment);
+new nV;
+out(c, nV);
+in(c, crcsResult);
+in(c, signature);
+let (nP, =nV) = checksign(getPublicKey(idV), signature) in
+if crcsResult = CRCS(nP, nV) then
+if commitment = hash(nP) then
+0.
+
+let Verifier_L10 =
+in(c, idV);
+in(c, commitment);
+new nV;
+out(c, nV);
+in(c, crcsResult);
+in(c, signature);
+let (nP, =nV) = checksign(getPublicKey(idV), signature) in
+if crcsResult = CRCS(nP, nV) then
+if commitment = hash(nP) then
+0.
+
+let Verifier_L9 =
+in(c, idV);
+in(c, commitment);
+new nV;
+out(c, nV);
+in(c, crcsResult);
+phase 1;
+in(c, signature);
+let (nP, =nV) = checksign(getPublicKey(idV), signature) in
+if crcsResult = CRCS(nP, nV) then
+if commitment = hash(nP) then
+0.
+
+let Verifier_L8 =
+in(c, idV);
+in(c, commitment);
+new nV;
+out(c, nV);
+phase 1;
+in(c, crcsResult);
+in(c, signature);
+let (nP, =nV) = checksign(getPublicKey(idV), signature) in
+if crcsResult = CRCS(nP, nV) then
+if commitment = hash(nP) then
+0.
+
+let Verifier_L7 =
+in(c, idV);
+in(c, commitment);
+new nV;
+out(c, nV);
+phase 1;
+in(c, crcsResult);
+phase 2;
+in(c, signature);
+let (nP, =nV) = checksign(getPublicKey(idV), signature) in
+if crcsResult = CRCS(nP, nV) then
+if commitment = hash(nP) then
+0.
+
+let Verifier_L6 =
+in(c, idV);
+phase 1;
+in(c, commitment);
+new nV;
+out(c, nV);
+in(c, crcsResult);
+in(c, signature);
+let (nP, =nV) = checksign(getPublicKey(idV), signature) in
+if crcsResult = CRCS(nP, nV) then
+if commitment = hash(nP) then
+0.
+
+let Verifier_L5 =
+in(c, idV);
+phase 1;
+in(c, commitment);
+new nV;
+out(c, nV);
+in(c, crcsResult);
+phase 2;
+in(c, signature);
+let (nP, =nV) = checksign(getPublicKey(idV), signature) in
+if crcsResult = CRCS(nP, nV) then
+if commitment = hash(nP) then
+0.
+
+let Verifier_L4 =
+in(c, idV);
+phase 1;
+in(c, commitment);
+new nV;
+out(c, nV);
+phase 2;
+in(c, crcsResult);
+in(c, signature);
+let (nP, =nV) = checksign(getPublicKey(idV), signature) in
+if crcsResult = CRCS(nP, nV) then
+if commitment = hash(nP) then
+0.
+
+let Verifier_L3 =
+phase 1;
+in(c, idV);
+in(c, commitment);
+new nV;
+out(c, nV);
+in(c, crcsResult);
+in(c, signature);
+let (nP, =nV) = checksign(getPublicKey(idV), signature) in
+if crcsResult = CRCS(nP, nV) then
+if commitment = hash(nP) then
+0.
+
+let Verifier_L2 =
+phase 1;
+in(c, idV);
+in(c, commitment);
+new nV;
+out(c, nV);
+in(c, crcsResult);
+phase 2;
+in(c, signature);
+let (nP, =nV) = checksign(getPublicKey(idV), signature) in
+if crcsResult = CRCS(nP, nV) then
+if commitment = hash(nP) then
+0.
+
+let Verifier_L1 =
+phase 1;
+in(c, idV);
+in(c, commitment);
+new nV;
+out(c, nV);
+phase 2;
+in(c, crcsResult);
+in(c, signature);
+let (nP, =nV) = checksign(getPublicKey(idV), signature) in
+if crcsResult = CRCS(nP, nV) then
+if commitment = hash(nP) then
+0.
+
+let Verifier_L0 =
+phase 1;
+in(c, idV);
+phase 2;
+in(c, commitment);
+new nV;
+out(c, nV);
+in(c, crcsResult);
+in(c, signature);
+let (nP, =nV) = checksign(getPublicKey(idV), signature) in
+if crcsResult = CRCS(nP, nV) then
+if commitment = hash(nP) then
+0.
+
+(* New remote process declarations *)
+
+let DishonestTerroristProver_R0 =
+(((0)|(phase 2;
+in(c, message);
+let signature = sign(getPrivateKey(idP), message) in
+out(c, signature)))|(in(c, message);
+let signature = sign(getPrivateKey(idP), message) in
+out(c, signature)))|(out(c, idP)).
+
+process
+(!(Verifier_L0)|((Verifier_L1)|((Verifier_L2)|((Verifier_L3)|((Verifier_L4)|((Verifier_L5)|((Verifier_L6)|((Verifier_L7)|((Verifier_L8)|((Verifier_L9)|((Verifier_L10)|((Verifier_L11)|((Verifier_L12)|((Verifier_L13)|((Verifier_L14)|((Verifier_L15)|(Verifier)))))))))))))))))|(!new id;
+let idP = id in
+!DishonestTerroristProver_R0)

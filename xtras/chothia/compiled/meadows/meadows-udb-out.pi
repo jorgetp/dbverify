@@ -1,0 +1,148 @@
+free c.
+private fun getSharedKey/1.
+fun xor/2.
+reduc unpackXor(xor(a, b), a) = b otherwise unpackXor(xor(a, b), b) = a.
+fun mac/2.
+data Ready/0.
+let Verifier =
+phase 1;
+new nonceV;
+out(c, nonceV);
+in(c, (=nonceV, xorP));
+phase 2;
+in(c, (idV, nonceP, =nonceV, macP));
+if xorP = xor(nonceP, idV) then
+if macP = mac(getSharedKey(idV), (idV, nonceP, nonceV)) then
+event Verified(idV).
+let Prover =
+in(c, nonceV);
+new nonceP;
+out(c, (nonceV, xor(nonceP, idP)));
+in(c, b);
+let macP = mac(getSharedKey(idP), (idP, nonceP, nonceV)) in
+out(c, (idP, nonceP, nonceV, macP)).
+let DishonestProver =
+out(c, (idP, getSharedKey(idP))).
+let DishonestTerroristProver =
+(in(c, message);
+let macMessage = mac(getSharedKey(idP), message) in
+out(c, macMessage))|(out(c, idP)).
+query ev:Verified(id).
+
+
+(* New local process declarations *)
+
+let DishonestProver_L1 =
+out(c, (idP, getSharedKey(idP))).
+
+let DishonestProver_L0 =
+out(c, (idP, getSharedKey(idP))).
+
+let Verifier_L6 =
+new nonceV;
+out(c, nonceV);
+in(c, (=nonceV, xorP));
+in(c, (idV, nonceP, =nonceV, macP));
+if xorP = xor(nonceP, idV) then
+if macP = mac(getSharedKey(idV), (idV, nonceP, nonceV)) then
+0.
+
+let Verifier_L5 =
+new nonceV;
+out(c, nonceV);
+in(c, (=nonceV, xorP));
+phase 2;
+in(c, (idV, nonceP, =nonceV, macP));
+if xorP = xor(nonceP, idV) then
+if macP = mac(getSharedKey(idV), (idV, nonceP, nonceV)) then
+0.
+
+let Verifier_L4 =
+new nonceV;
+out(c, nonceV);
+phase 2;
+in(c, (=nonceV, xorP));
+in(c, (idV, nonceP, =nonceV, macP));
+if xorP = xor(nonceP, idV) then
+if macP = mac(getSharedKey(idV), (idV, nonceP, nonceV)) then
+0.
+
+let Verifier_L3 =
+new nonceV;
+out(c, nonceV);
+in(c, (=nonceV, xorP));
+in(c, (idV, nonceP, =nonceV, macP));
+if xorP = xor(nonceP, idV) then
+if macP = mac(getSharedKey(idV), (idV, nonceP, nonceV)) then
+0.
+
+let Verifier_L2 =
+new nonceV;
+out(c, nonceV);
+in(c, (=nonceV, xorP));
+phase 1;
+in(c, (idV, nonceP, =nonceV, macP));
+if xorP = xor(nonceP, idV) then
+if macP = mac(getSharedKey(idV), (idV, nonceP, nonceV)) then
+0.
+
+let Verifier_L1 =
+new nonceV;
+out(c, nonceV);
+phase 1;
+in(c, (=nonceV, xorP));
+in(c, (idV, nonceP, =nonceV, macP));
+if xorP = xor(nonceP, idV) then
+if macP = mac(getSharedKey(idV), (idV, nonceP, nonceV)) then
+0.
+
+let Verifier_L0 =
+new nonceV;
+out(c, nonceV);
+phase 1;
+in(c, (=nonceV, xorP));
+phase 2;
+in(c, (idV, nonceP, =nonceV, macP));
+if xorP = xor(nonceP, idV) then
+if macP = mac(getSharedKey(idV), (idV, nonceP, nonceV)) then
+0.
+
+(* New remote process declarations *)
+
+let DishonestProver_R0 =
+out(c, (idP, getSharedKey(idP))).
+
+let Prover_R2 =
+in(c, nonceV);
+new nonceP;
+out(c, (nonceV, xor(nonceP, idP)));
+in(c, b);
+let macP = mac(getSharedKey(idP), (idP, nonceP, nonceV)) in
+out(c, (idP, nonceP, nonceV, macP)).
+
+let Prover_R1 =
+in(c, nonceV);
+new nonceP;
+out(c, (nonceV, xor(nonceP, idP)));
+phase 2;
+in(c, b);
+let macP = mac(getSharedKey(idP), (idP, nonceP, nonceV)) in
+out(c, (idP, nonceP, nonceV, macP)).
+
+let Prover_R0 =
+phase 2;
+in(c, nonceV);
+new nonceP;
+out(c, (nonceV, xor(nonceP, idP)));
+in(c, b);
+let macP = mac(getSharedKey(idP), (idP, nonceP, nonceV)) in
+out(c, (idP, nonceP, nonceV, macP)).
+
+process
+((!(Verifier_L0)|((Verifier_L1)|((Verifier_L2)|((Verifier_L3)|((Verifier_L4)|((Verifier_L5)|((Verifier_L6)|(Verifier))))))))|(new id2;
+let idP = id2 in
+(DishonestProver_L0)|(DishonestProver_L1)))|((!new id;
+let idP = id in
+!(Prover_R0)|((Prover_R1)|(Prover_R2)))|(new id2;
+let idP = id2 in
+DishonestProver_R0))

@@ -1,0 +1,1068 @@
+theory MIFARE_Plus_Fix begin
+
+// Function signature and definition of the equational theory E
+
+functions: MAC/4, adec/2, aenc/2, fst/1, pair/2, pk/1, sdec/2, senc/2,
+           snd/1
+equations:
+    adec(aenc(x.1, pk(x.2)), x.2) = x.1,
+    fst(<x.1, x.2>) = x.1,
+    sdec(senc(x.1, x.2), x.2) = x.1,
+    snd(<x.1, x.2>) = x.2
+
+
+
+rule (modulo E) Card1:
+   [ Fr( ~nC ), !Shk( $R, $C, k ) ]
+  --[ Start( ~nC ) ]->
+   [
+   Send( $C, $C ), CardSt1( $C, $R, ~nC, MAC(k, ~nC, '1', '2') ),
+   MayLeak( $C, <~nC, MAC(k, ~nC, '1', '2')> )
+   ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Reader1:
+   [ In( $C ), Fr( ~nR ) ]
+  --[ Start( ~nR ), Send( $R, <'PC', ~nR> ) ]->
+   [ Out( <'PC', ~nR> ), ReaderSt1( $R, ~nR ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Card2:
+   [ CardSt1( C, R, nC, hashed ), In( <'PC', nR> ) ]
+  -->
+   [ Send( C, <nC, hashed, nR> ), CardSt2( C, R, nC, nR ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Reader2:
+   [
+   ReaderSt1( R, nR ), Recv( R, <nC, MAC(k, nC, '1', '2'), nR> ),
+   !Shk( R, $C, k )
+   ]
+  -->
+   [ ReaderSt2( R, $C, nR, nC ), Out( MAC(k, 'VPC', nC, nR) ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Card3:
+   [ CardSt2( C, R, nC, nR ), !Shk( R, C, k ), In( MAC(k, 'VPC', nC, nR) ) ]
+  --[ End( nC ) ]->
+   [ Send( C, MAC(k, 'CK', nC, nR) ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Reader3:
+   [ ReaderSt2( R, C, nR, nC ), In( MAC(k, 'CK', nC, nR) ), !Shk( R, C, k )
+   ]
+  --[ DBSec( R, C, <'PC', nR>, <nC, MAC(k, nC, '1', '2'), nR> ), End( nR )
+  ]->
+   [ ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) LtkGen:
+   [ Fr( ~k ) ]
+  --[ Once( $X ) ]->
+   [ !Ltk( $X, ~k ), !Pk( $X, pk(~k) ), Out( pk(~k) ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) ShkGen:
+   [ Fr( ~k ) ] --[ Once( <$X, $Y> ) ]-> [ !Shk( $X, $Y, ~k ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) LtkReveal:
+   [ !Ltk( $X, k ) ]
+  --[ !Compromise( $X ) ]->
+   [ Out( k ), !Compromise( $X ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) ShkRevealX:
+   [ !Shk( $X, $Y, k ) ]
+  --[ !Compromise( $X ) ]->
+   [ Out( k ), !Compromise( $X ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) ShkRevealY:
+   [ !Shk( $X, $Y, k ) ]
+  --[ !Compromise( $Y ) ]->
+   [ Out( k ), !Compromise( $Y ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) DBInject:
+   [ In( m ), !Compromise( $X ) ] --> [ Send( $X, m ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) DBSend:
+   [ Send( $X, m ) ]
+  --[ Send( $X, m ), Action( $X ) ]->
+   [ Net( m ), Out( m ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) DBRecv:
+   [ Net( m ) ] --[ Action( $Y ), Recv( $Y, m ) ]-> [ Recv( $Y, m ) ]
+
+  /* has exactly the trivial AC variant */
+
+rule (modulo E) Leak:
+   [ MayLeak( $X, m ) ] --[ Action( $X ), Collusion( ) ]-> [ Out( m ) ]
+
+  /* has exactly the trivial AC variant */
+
+lemma reachability:
+  exists-trace
+  "∃ V P chal resp #i #j #k #l.
+    ((((((((Send( V, chal ) @ #i) ∧ (Send( P, resp ) @ #j)) ∧
+          (Recv( V, resp ) @ #k)) ∧
+         (DBSec( V, P, chal, resp ) @ #l)) ∧
+        (#i < #j)) ∧
+       (#j < #k)) ∧
+      (#k < #l)) ∧
+     (¬(∃ C #r. !Compromise( C ) @ #r))) ∧
+    (¬(∃ #c. Collusion( ) @ #c))"
+/*
+guarded formula characterizing all satisfying traces:
+"∃ V P chal resp #i #j #k #l.
+  (Send( V, chal ) @ #i) ∧
+  (Send( P, resp ) @ #j) ∧
+  (Recv( V, resp ) @ #k) ∧
+  (DBSec( V, P, chal, resp ) @ #l)
+ ∧
+  (#i < #j) ∧
+  (#j < #k) ∧
+  (#k < #l) ∧
+  (∀ C #r. (!Compromise( C ) @ #r) ⇒ ⊥) ∧
+  (∀ #c. (Collusion( ) @ #c) ⇒ ⊥)"
+*/
+simplify
+solve( Net( <nC, MAC(k.1, nC, '1', '2'), nR> ) ▶₀ #k )
+  case DBSend_case_1
+  solve( ReaderSt2( $Y, P, nR, ~nC ) ▶₀ #l )
+    case Reader2_case_1
+    solve( !Shk( $R, $X, ~k.1 ) ▶₂ #l )
+      case ShkGen
+      solve( Send( $R, <'PC', ~nR> ) @ #i )
+        case Reader1
+        solve( Send( $X, <~nC, MAC(~k.1, ~nC, '1', '2'), ~nR> ) @ #j )
+          case DBSend
+          solve( Send( $X, <~nC, MAC(~k, ~nC, '1', '2'), ~nR> ) ▶₀ #j )
+            case Card2
+            solve( !KU( MAC(~k, 'CK', ~nC, ~nR) ) @ #vk )
+              case DBSend
+              solve( !KU( ~nR ) @ #vk.3 )
+                case Reader1
+                solve( !KU( MAC(~k, 'VPC', ~nC, ~nR) ) @ #vk.5 )
+                  case Reader2
+                  SOLVED // trace found
+                qed
+              qed
+            qed
+          qed
+        qed
+      qed
+    qed
+  qed
+qed
+
+lemma unique_runid:
+  all-traces
+  "∀ x #i #j. ((Start( x ) @ #i) ∧ (Start( x ) @ #j)) ⇒ (#i = #j)"
+/*
+guarded formula characterizing all counter-examples:
+"∃ x #i #j. (Start( x ) @ #i) ∧ (Start( x ) @ #j) ∧ ¬(#i = #j)"
+*/
+simplify
+solve( (#i < #j)  ∥ (#j < #i) )
+  case case_1
+  solve( Start( x ) @ #i )
+    case Card1
+    solve( !Shk( $R, $C, k ) ▶₁ #i )
+      case ShkGen
+      solve( Start( ~nC ) @ #j )
+        case Card1
+        by contradiction /* cyclic */
+      qed
+    qed
+  next
+    case Reader1
+    solve( Start( ~nR ) @ #j )
+      case Reader1
+      by contradiction /* cyclic */
+    qed
+  qed
+next
+  case case_2
+  solve( Start( x ) @ #i )
+    case Card1
+    solve( !Shk( $R, $C, k ) ▶₁ #i )
+      case ShkGen
+      solve( Start( ~nC ) @ #j )
+        case Card1
+        by contradiction /* cyclic */
+      qed
+    qed
+  next
+    case Reader1
+    solve( Start( ~nR ) @ #j )
+      case Reader1
+      by contradiction /* cyclic */
+    qed
+  qed
+qed
+
+lemma end_after_start:
+  all-traces
+  "∀ x #j.
+    (End( x ) @ #j) ⇒ (∃ #i. (Start( x ) @ #i) ∧ ((#i = #j) ∨ (#i < #j)))"
+/*
+guarded formula characterizing all counter-examples:
+"∃ x #j.
+  (End( x ) @ #j) ∧ ∀ #i. (Start( x ) @ #i) ⇒ (¬(#i = #j)) ∧ (¬(#i < #j))"
+*/
+simplify
+solve( End( x ) @ #j )
+  case Card3
+  solve( CardSt2( C, R, x, nR ) ▶₀ #j )
+    case Card2
+    by contradiction /* from formulas */
+  qed
+next
+  case Reader3
+  solve( ReaderSt2( R, C, x, nC ) ▶₀ #j )
+    case Reader2_case_1
+    by contradiction /* from formulas */
+  next
+    case Reader2_case_2
+    by contradiction /* from formulas */
+  next
+    case Reader2_case_3
+    by contradiction /* from formulas */
+  next
+    case Reader2_case_4
+    by contradiction /* from formulas */
+  qed
+qed
+
+lemma fast_before_claim:
+  all-traces
+  "∀ V P chal resp #l.
+    (DBSec( V, P, chal, resp ) @ #l) ⇒
+    ((∃ #i #j.
+       (((Send( V, chal ) @ #i) ∧ (Recv( V, resp ) @ #j)) ∧ (#i < #l)) ∧
+       (#j < #l)) ∨
+     (∃ #j. !Compromise( V ) @ #j))"
+/*
+guarded formula characterizing all counter-examples:
+"∃ V P chal resp #l.
+  (DBSec( V, P, chal, resp ) @ #l)
+ ∧
+  (∀ #i #j.
+    (Send( V, chal ) @ #i) ∧ (Recv( V, resp ) @ #j)
+   ⇒
+    ((¬(#i < #l)) ∨ (¬(#j < #l)))) ∧
+  (∀ #j. (!Compromise( V ) @ #j) ⇒ ⊥)"
+*/
+simplify
+solve( ReaderSt2( V, P, nR, nC ) ▶₀ #l )
+  case Reader2_case_1
+  solve( !Shk( $R, $C, k ) ▶₂ #l )
+    case ShkGen
+    by contradiction /* from formulas */
+  qed
+next
+  case Reader2_case_2
+  solve( !Shk( $R, $C, k ) ▶₂ #l )
+    case ShkGen
+    by contradiction /* from formulas */
+  qed
+next
+  case Reader2_case_3
+  solve( !Shk( $R, $C, k ) ▶₂ #l )
+    case ShkGen
+    by contradiction /* from formulas */
+  qed
+next
+  case Reader2_case_4
+  solve( !Shk( $R, $C, k ) ▶₂ #l )
+    case ShkGen
+    by contradiction /* from formulas */
+  qed
+qed
+
+restriction once:
+  "∀ x #i #j. ((Once( x ) @ #i) ∧ (Once( x ) @ #j)) ⇒ (#i = #j)"
+  // safety formula
+
+rule (modulo E) SetExpiry:
+   [ ] --[ Expiry( ), Once( 'expiry' ) ]-> [ ]
+
+  /* has exactly the trivial AC variant */
+
+restriction no_collusion_after_expiry:
+  "∀ #i #j. ((Expiry( ) @ #i) ∧ (Collusion( ) @ #j)) ⇒ (#j < #i)"
+  // safety formula
+
+restriction sessions_complete_before_expiry:
+  "∀ x #i #e.
+    (((Start( x ) @ #i) ∧ (Expiry( ) @ #e)) ∧ (#i < #e)) ⇒
+    (∃ #j. (End( x ) @ #j) ∧ (#j < #e))"
+
+lemma dbsec:
+  all-traces
+  "∀ V P chal resp #l.
+    (DBSec( V, P, chal, resp ) @ #l) ⇒
+    ((((∃ #i #j #k.
+         ((((Send( V, chal ) @ #i) ∧ (Action( P ) @ #j)) ∧
+           (Recv( V, resp ) @ #k)) ∧
+          (#i < #j)) ∧
+         (#j < #k)) ∨
+       (∃ P2 #p #p2 #i #j #k.
+         ((((((!Compromise( P ) @ #p) ∧ (!Compromise( P2 ) @ #p2)) ∧
+             (Send( V, chal ) @ #i)) ∧
+            (Action( P2 ) @ #j)) ∧
+           (Recv( V, resp ) @ #k)) ∧
+          (#i < #j)) ∧
+         (#j < #k))) ∨
+      (∃ #j. !Compromise( V ) @ #j)) ∨
+     (∃ #j. Collusion( ) @ #j))"
+/*
+guarded formula characterizing all counter-examples:
+"∃ V P chal resp #l.
+  (DBSec( V, P, chal, resp ) @ #l)
+ ∧
+  (∀ #i #j #k.
+    (Send( V, chal ) @ #i) ∧ (Action( P ) @ #j) ∧ (Recv( V, resp ) @ #k)
+   ⇒
+    ((¬(#i < #j)) ∨ (¬(#j < #k)))) ∧
+  (∀ P2 #p #p2 #i #j #k.
+    (!Compromise( P ) @ #p) ∧
+    (!Compromise( P2 ) @ #p2) ∧
+    (Send( V, chal ) @ #i) ∧
+    (Action( P2 ) @ #j) ∧
+    (Recv( V, resp ) @ #k)
+   ⇒
+    ((¬(#i < #j)) ∨ (¬(#j < #k)))) ∧
+  (∀ #j. (!Compromise( V ) @ #j) ⇒ ⊥) ∧
+  (∀ #j. (Collusion( ) @ #j) ⇒ ⊥)"
+*/
+simplify
+solve( ReaderSt2( V, P, nR, nC ) ▶₀ #l )
+  case Reader2_case_1
+  solve( !Shk( $R, $C, k ) ▶₂ #l )
+    case ShkGen
+    solve( !KU( ~nR ) @ #vk.4 )
+      case Reader1
+      by contradiction /* cyclic */
+    qed
+  qed
+next
+  case Reader2_case_2
+  solve( !Shk( $R, $C, k ) ▶₂ #l )
+    case ShkGen
+    solve( !KU( MAC(~k, 'CK', nC, ~nR) ) @ #vk )
+      case DBSend
+      solve( (¬(#vr.1 < #vr.8))  ∥ (¬(#vr.8 < #vr.2)) )
+        case case_1
+        solve( !KU( ~nR ) @ #vk.6 )
+          case Reader1
+          by contradiction /* cyclic */
+        qed
+      next
+        case case_2
+        solve( !KU( ~nC ) @ #vk.3 )
+          case DBSend
+          solve( !KU( ~nR ) @ #vk.6 )
+            case Reader1
+            by contradiction /* cyclic */
+          qed
+        next
+          case Leak
+          by contradiction /* from formulas */
+        qed
+      qed
+    next
+      case c_MAC
+      solve( !KU( ~k ) @ #vk.7 )
+        case ShkRevealX
+        by contradiction /* from formulas */
+      next
+        case ShkRevealY
+        solve( !KU( ~nR ) @ #vk.7 )
+          case Reader1
+          by contradiction /* cyclic */
+        qed
+      qed
+    qed
+  qed
+next
+  case Reader2_case_3
+  solve( !Shk( $R, $C, k ) ▶₂ #l )
+    case ShkGen
+    solve( !KU( MAC(~k, 'CK', nC, ~nR) ) @ #vk )
+      case DBSend
+      solve( (¬(#vr.1 < #vr.8))  ∥ (¬(#vr.8 < #vr.2)) )
+        case case_1
+        solve( !KU( ~nR ) @ #vk.6 )
+          case Reader1
+          by contradiction /* cyclic */
+        qed
+      next
+        case case_2
+        solve( !KU( ~nC ) @ #vk.3 )
+          case DBSend
+          solve( !KU( ~nR ) @ #vk.6 )
+            case Reader1
+            by contradiction /* cyclic */
+          qed
+        next
+          case Leak
+          by contradiction /* from formulas */
+        qed
+      qed
+    next
+      case c_MAC
+      solve( !KU( ~k ) @ #vk.7 )
+        case ShkRevealX
+        by contradiction /* from formulas */
+      next
+        case ShkRevealY
+        solve( !KU( ~nR ) @ #vk.7 )
+          case Reader1
+          by contradiction /* cyclic */
+        qed
+      qed
+    qed
+  qed
+next
+  case Reader2_case_4
+  solve( !Shk( $R, $C, k ) ▶₂ #l )
+    case ShkGen
+    solve( !KU( MAC(~k, 'CK', nC, ~nR) ) @ #vk )
+      case DBSend
+      solve( (¬(#vr.1 < #vr.8))  ∥ (¬(#vr.8 < #vr.2)) )
+        case case_1
+        solve( !KU( ~nR ) @ #vk.6 )
+          case Reader1
+          by contradiction /* cyclic */
+        qed
+      next
+        case case_2
+        solve( !KU( ~nC ) @ #vk.3 )
+          case DBSend
+          solve( !KU( ~nR ) @ #vk.6 )
+            case Reader1
+            by contradiction /* cyclic */
+          qed
+        next
+          case Leak
+          by contradiction /* from formulas */
+        qed
+      qed
+    next
+      case c_MAC
+      solve( !KU( ~k ) @ #vk.7 )
+        case ShkRevealX
+        by contradiction /* from formulas */
+      next
+        case ShkRevealY
+        solve( !KU( ~nR ) @ #vk.7 )
+          case Reader1
+          by contradiction /* cyclic */
+        qed
+      qed
+    qed
+  qed
+qed
+
+lemma dbsec_hnst:
+  all-traces
+  "∀ V P chal resp #l.
+    (DBSec( V, P, chal, resp ) @ #l) ⇒
+    ((((∃ #i #j #k.
+         ((((Send( V, chal ) @ #i) ∧ (Action( P ) @ #j)) ∧
+           (Recv( V, resp ) @ #k)) ∧
+          (#i < #j)) ∧
+         (#j < #k)) ∨
+       (∃ #j. !Compromise( V ) @ #j)) ∨
+      (∃ #j. !Compromise( P ) @ #j)) ∨
+     (∃ #j. Collusion( ) @ #j))"
+/*
+guarded formula characterizing all counter-examples:
+"∃ V P chal resp #l.
+  (DBSec( V, P, chal, resp ) @ #l)
+ ∧
+  (∀ #i #j #k.
+    (Send( V, chal ) @ #i) ∧ (Action( P ) @ #j) ∧ (Recv( V, resp ) @ #k)
+   ⇒
+    ((¬(#i < #j)) ∨ (¬(#j < #k)))) ∧
+  (∀ #j. (!Compromise( V ) @ #j) ⇒ ⊥) ∧
+  (∀ #j. (!Compromise( P ) @ #j) ⇒ ⊥) ∧
+  (∀ #j. (Collusion( ) @ #j) ⇒ ⊥)"
+*/
+simplify
+solve( ReaderSt2( V, P, nR, nC ) ▶₀ #l )
+  case Reader2_case_1
+  solve( !Shk( $R, $C, k ) ▶₂ #l )
+    case ShkGen
+    solve( !KU( ~nR ) @ #vk.4 )
+      case Reader1
+      by contradiction /* cyclic */
+    qed
+  qed
+next
+  case Reader2_case_2
+  solve( !Shk( $R, $C, k ) ▶₂ #l )
+    case ShkGen
+    solve( !KU( MAC(~k, 'CK', nC, ~nR) ) @ #vk )
+      case DBSend
+      solve( (¬(#vr.1 < #vr.8))  ∥ (¬(#vr.8 < #vr.2)) )
+        case case_1
+        solve( !KU( ~nR ) @ #vk.6 )
+          case Reader1
+          by contradiction /* cyclic */
+        qed
+      next
+        case case_2
+        solve( !KU( ~nC ) @ #vk.3 )
+          case DBSend
+          solve( !KU( ~nR ) @ #vk.6 )
+            case Reader1
+            by contradiction /* cyclic */
+          qed
+        next
+          case Leak
+          by contradiction /* from formulas */
+        qed
+      qed
+    next
+      case c_MAC
+      solve( !KU( ~k ) @ #vk.7 )
+        case ShkRevealX
+        by contradiction /* from formulas */
+      next
+        case ShkRevealY
+        by contradiction /* from formulas */
+      qed
+    qed
+  qed
+next
+  case Reader2_case_3
+  solve( !Shk( $R, $C, k ) ▶₂ #l )
+    case ShkGen
+    solve( !KU( MAC(~k, 'CK', nC, ~nR) ) @ #vk )
+      case DBSend
+      solve( (¬(#vr.1 < #vr.8))  ∥ (¬(#vr.8 < #vr.2)) )
+        case case_1
+        solve( !KU( ~nR ) @ #vk.6 )
+          case Reader1
+          by contradiction /* cyclic */
+        qed
+      next
+        case case_2
+        solve( !KU( ~nC ) @ #vk.3 )
+          case DBSend
+          solve( !KU( ~nR ) @ #vk.6 )
+            case Reader1
+            by contradiction /* cyclic */
+          qed
+        next
+          case Leak
+          by contradiction /* from formulas */
+        qed
+      qed
+    next
+      case c_MAC
+      solve( !KU( ~k ) @ #vk.7 )
+        case ShkRevealX
+        by contradiction /* from formulas */
+      next
+        case ShkRevealY
+        by contradiction /* from formulas */
+      qed
+    qed
+  qed
+next
+  case Reader2_case_4
+  solve( !Shk( $R, $C, k ) ▶₂ #l )
+    case ShkGen
+    solve( !KU( MAC(~k, 'CK', nC, ~nR) ) @ #vk )
+      case DBSend
+      solve( (¬(#vr.1 < #vr.8))  ∥ (¬(#vr.8 < #vr.2)) )
+        case case_1
+        solve( !KU( ~nR ) @ #vk.6 )
+          case Reader1
+          by contradiction /* cyclic */
+        qed
+      next
+        case case_2
+        solve( !KU( ~nC ) @ #vk.3 )
+          case DBSend
+          solve( !KU( ~nR ) @ #vk.6 )
+            case Reader1
+            by contradiction /* cyclic */
+          qed
+        next
+          case Leak
+          by contradiction /* from formulas */
+        qed
+      qed
+    next
+      case c_MAC
+      solve( !KU( ~k ) @ #vk.7 )
+        case ShkRevealX
+        by contradiction /* from formulas */
+      next
+        case ShkRevealY
+        by contradiction /* from formulas */
+      qed
+    qed
+  qed
+qed
+
+lemma dbsec_hnst_collusion:
+  all-traces
+  "∀ V P chal resp #l.
+    (DBSec( V, P, chal, resp ) @ #l) ⇒
+    (((∃ #i #j #k.
+        ((((Send( V, chal ) @ #i) ∧ (Action( P ) @ #j)) ∧
+          (Recv( V, resp ) @ #k)) ∧
+         (#i < #j)) ∧
+        (#j < #k)) ∨
+      (∃ #j. !Compromise( V ) @ #j)) ∨
+     (∃ #j. !Compromise( P ) @ #j))"
+/*
+guarded formula characterizing all counter-examples:
+"∃ V P chal resp #l.
+  (DBSec( V, P, chal, resp ) @ #l)
+ ∧
+  (∀ #i #j #k.
+    (Send( V, chal ) @ #i) ∧ (Action( P ) @ #j) ∧ (Recv( V, resp ) @ #k)
+   ⇒
+    ((¬(#i < #j)) ∨ (¬(#j < #k)))) ∧
+  (∀ #j. (!Compromise( V ) @ #j) ⇒ ⊥) ∧
+  (∀ #j. (!Compromise( P ) @ #j) ⇒ ⊥)"
+*/
+simplify
+solve( ReaderSt2( V, P, nR, nC ) ▶₀ #l )
+  case Reader2_case_2
+  solve( !Shk( $R, $C, k ) ▶₂ #l )
+    case ShkGen
+    solve( !KU( MAC(~k, 'CK', nC, ~nR) ) @ #vk )
+      case DBSend
+      solve( (¬(#vr.1 < #vr.8))  ∥ (¬(#vr.8 < #vr.2)) )
+        case case_2
+        solve( !KU( ~nC ) @ #vk.3 )
+          case Leak
+          solve( !KU( ~nR ) @ #vk.6 )
+            case Reader1
+            solve( !KU( MAC(~k, ~nC, '1', '2') ) @ #vk.6 )
+              case Leak
+              solve( !KU( MAC(~k, 'VPC', ~nC, ~nR) ) @ #vk.8 )
+                case Reader2
+                SOLVED // trace found
+              qed
+            qed
+          qed
+        qed
+      qed
+    qed
+  qed
+qed
+
+lemma dbsec_hnst_star:
+  all-traces
+  "∀ V P chal resp #e #l.
+    (((DBSec( V, P, chal, resp ) @ #l) ∧ (Expiry( ) @ #e)) ∧ (#e < #l)) ⇒
+    (((∃ #i #j #k.
+        ((((Send( V, chal ) @ #i) ∧ (Action( P ) @ #j)) ∧
+          (Recv( V, resp ) @ #k)) ∧
+         (#i < #j)) ∧
+        (#j < #k)) ∨
+      (∃ #j. !Compromise( V ) @ #j)) ∨
+     (∃ #j. !Compromise( P ) @ #j))"
+/*
+guarded formula characterizing all counter-examples:
+"∃ V P chal resp #e #l.
+  (DBSec( V, P, chal, resp ) @ #l) ∧ (Expiry( ) @ #e)
+ ∧
+  (#e < #l) ∧
+  (∀ #i #j #k.
+    (Send( V, chal ) @ #i) ∧ (Action( P ) @ #j) ∧ (Recv( V, resp ) @ #k)
+   ⇒
+    ((¬(#i < #j)) ∨ (¬(#j < #k)))) ∧
+  (∀ #j. (!Compromise( V ) @ #j) ⇒ ⊥) ∧
+  (∀ #j. (!Compromise( P ) @ #j) ⇒ ⊥)"
+*/
+simplify
+solve( ReaderSt2( V, P, nR, nC ) ▶₀ #l )
+  case Reader2_case_1
+  solve( (¬(#vr.1 < #e))  ∥ (∃ #j. (End( ~nR ) @ #j) ∧ #j < #e) )
+    case case_1
+    solve( (¬(#vr.6 < #e))  ∥ (∃ #j. (End( ~nC ) @ #j) ∧ #j < #e) )
+      case case_1
+      solve( !Shk( $R, $C, k ) ▶₂ #l )
+        case ShkGen
+        solve( !KU( ~nR ) @ #vk.4 )
+          case Reader1
+          by contradiction /* cyclic */
+        qed
+      qed
+    next
+      case case_2
+      solve( !Shk( $R, $C, k ) ▶₂ #l )
+        case ShkGen
+        solve( End( ~nC ) @ #j )
+          case Card3
+          solve( CardSt2( C, R, ~nC, nR ) ▶₀ #j )
+            case Card2
+            solve( !Shk( $R, $C, k ) ▶₁ #j )
+              case ShkGen
+              solve( !KU( ~nR ) @ #vk.4 )
+                case Reader1
+                by contradiction /* cyclic */
+              qed
+            qed
+          qed
+        next
+          case Reader3
+          by solve( ReaderSt2( R, C, ~nC, nC.1 ) ▶₀ #j )
+        qed
+      qed
+    qed
+  next
+    case case_2
+    solve( (¬(#vr.6 < #e))  ∥ (∃ #j. (End( ~nC ) @ #j) ∧ #j < #e) )
+      case case_1
+      solve( !Shk( $R, $C, k ) ▶₂ #l )
+        case ShkGen
+        solve( End( ~nR ) @ #j )
+          case Card3
+          by solve( CardSt2( C, R, ~nR, nR.1 ) ▶₀ #j )
+        next
+          case Reader3
+          solve( ReaderSt2( R, C, ~nR, nC ) ▶₀ #j )
+            case Reader2
+            by contradiction /* cyclic */
+          qed
+        qed
+      qed
+    next
+      case case_2
+      solve( !Shk( $R, $C, k ) ▶₂ #l )
+        case ShkGen
+        solve( End( ~nR ) @ #j )
+          case Card3
+          by solve( CardSt2( C, R, ~nR, nR.1 ) ▶₀ #j )
+        next
+          case Reader3
+          solve( ReaderSt2( R, C, ~nR, nC ) ▶₀ #j )
+            case Reader2
+            by contradiction /* cyclic */
+          qed
+        qed
+      qed
+    qed
+  qed
+next
+  case Reader2_case_2
+  solve( (¬(#vr.1 < #e))  ∥ (∃ #j. (End( ~nR ) @ #j) ∧ #j < #e) )
+    case case_1
+    solve( !Shk( $R, $C, k ) ▶₂ #l )
+      case ShkGen
+      solve( !KU( MAC(~k, 'CK', nC, ~nR) ) @ #vk )
+        case DBSend
+        solve( (¬(#vr.11 < #e))  ∥ (∃ #j. (End( ~nC ) @ #j) ∧ #j < #e) )
+          case case_1
+          solve( (¬(#vr.1 < #vr.8))  ∥ (¬(#vr.8 < #vr.2)) )
+            case case_1
+            solve( !KU( ~nR ) @ #vk.6 )
+              case Reader1
+              by contradiction /* cyclic */
+            qed
+          next
+            case case_2
+            solve( !KU( ~nC ) @ #vk.3 )
+              case DBSend
+              solve( !KU( ~nR ) @ #vk.6 )
+                case Reader1
+                by contradiction /* cyclic */
+              qed
+            next
+              case Leak
+              by contradiction /* cyclic */
+            qed
+          qed
+        next
+          case case_2
+          solve( (¬(#vr.1 < #vr.8))  ∥ (¬(#vr.8 < #vr.2)) )
+            case case_1
+            solve( End( ~nC ) @ #j )
+              case Card3
+              solve( CardSt2( C, R, ~nC, nR ) ▶₀ #j )
+                case Card2
+                solve( !KU( ~nR ) @ #vk.6 )
+                  case Reader1
+                  by contradiction /* cyclic */
+                qed
+              qed
+            next
+              case Reader3
+              by solve( ReaderSt2( R, C, ~nC, nC.1 ) ▶₀ #j )
+            qed
+          next
+            case case_2
+            solve( End( ~nC ) @ #j )
+              case Card3
+              solve( CardSt2( C, R, ~nC, nR ) ▶₀ #j )
+                case Card2
+                solve( !KU( ~nR ) @ #vk.6 )
+                  case Reader1
+                  by contradiction /* cyclic */
+                qed
+              qed
+            next
+              case Reader3
+              by solve( ReaderSt2( R, C, ~nC, nC.1 ) ▶₀ #j )
+            qed
+          qed
+        qed
+      next
+        case c_MAC
+        solve( !KU( ~k ) @ #vk.7 )
+          case ShkRevealX
+          by contradiction /* from formulas */
+        next
+          case ShkRevealY
+          by contradiction /* from formulas */
+        qed
+      qed
+    qed
+  next
+    case case_2
+    solve( !Shk( $R, $C, k ) ▶₂ #l )
+      case ShkGen
+      solve( End( ~nR ) @ #j )
+        case Card3
+        by solve( CardSt2( C, R, ~nR, nR.1 ) ▶₀ #j )
+      next
+        case Reader3
+        solve( ReaderSt2( R, C, ~nR, nC ) ▶₀ #j )
+          case Reader2
+          by contradiction /* cyclic */
+        qed
+      qed
+    qed
+  qed
+next
+  case Reader2_case_3
+  solve( (¬(#vr.1 < #e))  ∥ (∃ #j. (End( ~nR ) @ #j) ∧ #j < #e) )
+    case case_1
+    solve( !Shk( $R, $C, k ) ▶₂ #l )
+      case ShkGen
+      solve( !KU( MAC(~k, 'CK', nC, ~nR) ) @ #vk )
+        case DBSend
+        solve( (¬(#vr.11 < #e))  ∥ (∃ #j. (End( ~nC ) @ #j) ∧ #j < #e) )
+          case case_1
+          solve( (¬(#vr.1 < #vr.8))  ∥ (¬(#vr.8 < #vr.2)) )
+            case case_1
+            solve( !KU( ~nR ) @ #vk.6 )
+              case Reader1
+              by contradiction /* cyclic */
+            qed
+          next
+            case case_2
+            solve( !KU( ~nC ) @ #vk.3 )
+              case DBSend
+              solve( !KU( ~nR ) @ #vk.6 )
+                case Reader1
+                by contradiction /* cyclic */
+              qed
+            next
+              case Leak
+              by contradiction /* cyclic */
+            qed
+          qed
+        next
+          case case_2
+          solve( (¬(#vr.1 < #vr.8))  ∥ (¬(#vr.8 < #vr.2)) )
+            case case_1
+            solve( End( ~nC ) @ #j )
+              case Card3
+              solve( CardSt2( C, R, ~nC, nR ) ▶₀ #j )
+                case Card2
+                solve( !KU( ~nR ) @ #vk.6 )
+                  case Reader1
+                  by contradiction /* cyclic */
+                qed
+              qed
+            next
+              case Reader3
+              by solve( ReaderSt2( R, C, ~nC, nC.1 ) ▶₀ #j )
+            qed
+          next
+            case case_2
+            solve( End( ~nC ) @ #j )
+              case Card3
+              solve( CardSt2( C, R, ~nC, nR ) ▶₀ #j )
+                case Card2
+                solve( !KU( ~nR ) @ #vk.6 )
+                  case Reader1
+                  by contradiction /* cyclic */
+                qed
+              qed
+            next
+              case Reader3
+              by solve( ReaderSt2( R, C, ~nC, nC.1 ) ▶₀ #j )
+            qed
+          qed
+        qed
+      next
+        case c_MAC
+        solve( !KU( ~k ) @ #vk.7 )
+          case ShkRevealX
+          by contradiction /* from formulas */
+        next
+          case ShkRevealY
+          by contradiction /* from formulas */
+        qed
+      qed
+    qed
+  next
+    case case_2
+    solve( !Shk( $R, $C, k ) ▶₂ #l )
+      case ShkGen
+      solve( End( ~nR ) @ #j )
+        case Card3
+        by solve( CardSt2( C, R, ~nR, nR.1 ) ▶₀ #j )
+      next
+        case Reader3
+        solve( ReaderSt2( R, C, ~nR, nC ) ▶₀ #j )
+          case Reader2
+          by contradiction /* cyclic */
+        qed
+      qed
+    qed
+  qed
+next
+  case Reader2_case_4
+  solve( (¬(#vr.1 < #e))  ∥ (∃ #j. (End( ~nR ) @ #j) ∧ #j < #e) )
+    case case_1
+    solve( !Shk( $R, $C, k ) ▶₂ #l )
+      case ShkGen
+      solve( !KU( MAC(~k, 'CK', nC, ~nR) ) @ #vk )
+        case DBSend
+        solve( (¬(#vr.11 < #e))  ∥ (∃ #j. (End( ~nC ) @ #j) ∧ #j < #e) )
+          case case_1
+          solve( (¬(#vr.1 < #vr.8))  ∥ (¬(#vr.8 < #vr.2)) )
+            case case_1
+            solve( !KU( ~nR ) @ #vk.6 )
+              case Reader1
+              by contradiction /* cyclic */
+            qed
+          next
+            case case_2
+            solve( !KU( ~nC ) @ #vk.3 )
+              case DBSend
+              solve( !KU( ~nR ) @ #vk.6 )
+                case Reader1
+                by contradiction /* cyclic */
+              qed
+            next
+              case Leak
+              by contradiction /* cyclic */
+            qed
+          qed
+        next
+          case case_2
+          solve( (¬(#vr.1 < #vr.8))  ∥ (¬(#vr.8 < #vr.2)) )
+            case case_1
+            solve( End( ~nC ) @ #j )
+              case Card3
+              solve( CardSt2( C, R, ~nC, nR ) ▶₀ #j )
+                case Card2
+                solve( !KU( ~nR ) @ #vk.6 )
+                  case Reader1
+                  by contradiction /* cyclic */
+                qed
+              qed
+            next
+              case Reader3
+              by solve( ReaderSt2( R, C, ~nC, nC.1 ) ▶₀ #j )
+            qed
+          next
+            case case_2
+            solve( End( ~nC ) @ #j )
+              case Card3
+              solve( CardSt2( C, R, ~nC, nR ) ▶₀ #j )
+                case Card2
+                solve( !KU( ~nR ) @ #vk.6 )
+                  case Reader1
+                  by contradiction /* cyclic */
+                qed
+              qed
+            next
+              case Reader3
+              by solve( ReaderSt2( R, C, ~nC, nC.1 ) ▶₀ #j )
+            qed
+          qed
+        qed
+      next
+        case c_MAC
+        solve( !KU( ~k ) @ #vk.7 )
+          case ShkRevealX
+          by contradiction /* from formulas */
+        next
+          case ShkRevealY
+          by contradiction /* from formulas */
+        qed
+      qed
+    qed
+  next
+    case case_2
+    solve( !Shk( $R, $C, k ) ▶₂ #l )
+      case ShkGen
+      solve( End( ~nR ) @ #j )
+        case Card3
+        by solve( CardSt2( C, R, ~nR, nR.1 ) ▶₀ #j )
+      next
+        case Reader3
+        solve( ReaderSt2( R, C, ~nR, nC ) ▶₀ #j )
+          case Reader2
+          by contradiction /* cyclic */
+        qed
+      qed
+    qed
+  qed
+qed
+
+/* All well-formedness checks were successful. */
+
+end
+
+==============================================================================
+summary of summaries:
+
+analyzed: MIFARE_Plus_Fix.spthy
+
+  reachability (exists-trace): verified (11 steps)
+  unique_runid (all-traces): verified (14 steps)
+  end_after_start (all-traces): verified (9 steps)
+  fast_before_claim (all-traces): verified (10 steps)
+  dbsec (all-traces): verified (44 steps)
+  dbsec_hnst (all-traces): verified (41 steps)
+  dbsec_hnst_collusion (all-traces): falsified - found trace (10 steps)
+  dbsec_hnst_star (all-traces): verified (115 steps)
+
+==============================================================================
+
+real	0m1.560s
+user	0m8.507s
+sys	0m0.897s
