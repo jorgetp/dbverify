@@ -1,4 +1,4 @@
-theory UWB_PKI begin
+theory UWB_AEnc begin
 
 // Function signature and definition of the equational theory E
 
@@ -823,7 +823,7 @@ end
 ==============================================================================
 summary of summaries:
 
-analyzed: UWB_PKI.spthy
+analyzed: UWB_AEnc.spthy
 
   reachability (exists-trace): verified (14 steps)
   unique_runid (all-traces): verified (16 steps)
@@ -836,6 +836,6 @@ analyzed: UWB_PKI.spthy
 
 ==============================================================================
 
-real	0m4.064s
-user	0m21.819s
-sys	0m2.011s
+real	0m4.403s
+user	0m16.477s
+sys	0m6.483s

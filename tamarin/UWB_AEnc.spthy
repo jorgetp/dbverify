@@ -6,7 +6,7 @@
 		prover identification via a signature included in the final message.
 */
 
-theory UWB_PKI
+theory UWB_AEnc
 
 begin
 
