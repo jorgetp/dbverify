@@ -44,7 +44,7 @@ Each `.proof` file has a row in `results.html`. The columns are composed of the 
 
 To identify the type of attack(s), if any, against a given protocol, locate the protocol's entry in the table and follow the hints:
   * If lemma `dbsec_hnst` fails, then a **mafia fraud** exists.
-  * If lemma `dbsec_hnst` holds and `dbsec` does not, then a **distance fraud** and/or a **distance hijacking** attack exist \* (trace inspection is recommended, details in step 6 later on).
+  * If lemma `dbsec_hnst` holds and `dbsec` does not, then a **distance fraud** and/or a **distance hijacking** attack exist (trace inspection is recommended, details in step 6 later on).
   * If lemma `dbsec_hnst_collusion` fails and `dbsec_hnst_star` holds, then a **terrorist fraud** exists.
 
 Alternatively, you can run Tamarin in interactive mode
@@ -83,7 +83,7 @@ Follow the steps:
 
 1. Run `python collect.py` to gather the results in `results.html`.
 
-1. \*Inspect the trace that falsifies the `dbsec` lemma, if any, in order to confirm the attack, specially if it's about distance hijacking. This inspection is required for *uncommon* protocols in which the aforementioned requirements in step 1 are not sufficient to label every adversary action with an `Action` fact.
+1. If applicable (i.e. if `dbsec_hnst` holds and `dbsec` does not), run Tamarin in interactive mode and inspect the trace that falsifies `dbsec` in order to visually assert the existence of the attack, specially if it's about distance hijacking. This inspection is required for *uncommon* protocols in which the aforementioned requirements in step 1 are not sufficient to label every adversary action with an `Action` fact.
 
 ## Contact
 
