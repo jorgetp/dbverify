@@ -2,7 +2,7 @@
 
 This repository contains a set of [Tamarin](https://tamarin-prover.github.io) models and (in)security proofs of a number of distance-bounding protocols. The verification accounts for the sophisiticated *terrorist fraud* attack by reasoning on *post-collusion security*.
 
-This is the complementary material for our papers *Distance-Bounding Protocols: Verification without Time and Location*, published at [S&P'18](https://www.ieee-security.org/TC/SP2018/), and *Post-Collusion Security and Distance Bounding*, to be published at [CCS'19](https://www.sigsac.org/ccs/CCS2019/). If you were directed here because of the first paper, simply ignore the lemmas `dbsec_hnst_collusion` and `dbsec_hnst_star` as they're to do with post-collusion security and terrorist fraud.
+This is the complementary material for our papers *Distance-Bounding Protocols: Verification without Time and Location*, published at [S&P'18](https://www.ieee-security.org/TC/SP2018/), and *Post-Collusion Security and Distance Bounding*, published at [CCS'19](https://www.sigsac.org/ccs/CCS2019/). If you were directed here because of the first paper, simply ignore the lemmas `dbsec_hnst_collusion` and `dbsec_hnst_star` as they're to do with post-collusion security and terrorist fraud.
 
 For the sake of presentation, we recommend you use **2**-space tab indent in your editor when viewing our Tamarin code.
 
