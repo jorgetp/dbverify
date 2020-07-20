@@ -87,7 +87,7 @@ Follow the steps:
 
 ## Contact
 
-Should you have any inquiries on the Tamarin stuff or should you want to report bugs, please [contact me](https://jorgetp.github.io/contact/). For ProVerif stuff please contact [Zach Smith](https://satoss.uni.lu/members/zach/).
+Should you have any inquiries on the Tamarin stuff or should you want to report bugs, please [contact me](https://jorgetp.github.io). For ProVerif stuff please contact [Zach Smith](https://satoss.uni.lu/members/zach/).
 
 ## Acknowledgment
 
